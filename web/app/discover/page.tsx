@@ -55,7 +55,7 @@ export default function Discover() {
   return (
     <div className="space-y-5">
       <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-        {DOMAINS.filter((x) => !m || m.domains[x.name]?.count).map((x) => (
+        {DOMAINS.filter((x) => !m || x.name === "films" || m.domains[x.name]?.count).map((x) => (
           <button key={x.name} className="chip shrink-0" data-on={x.name === domain} onClick={() => { setD(x.name); setTag(null); }}>{x.emoji} {x.short}</button>
         ))}
       </div>

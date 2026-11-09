@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import urllib.parse
 
 from .base import Http, Item
@@ -13,19 +14,29 @@ log = logging.getLogger(__name__)
 API = "https://api.deezer.com"
 
 
+def _json(http: Http, url: str, **params) -> dict:
+    """Deezer answers HTTP 200 with {"error": {"code": 4, ...}} when the quota (50 req / 5 s) is hit."""
+    for _ in range(5):
+        data = http.get(url, **params).json()
+        if not (isinstance(data, dict) and data.get("error")):
+            return data
+        time.sleep(5)
+    return {}
+
+
 def collect(per_genre: int = 60, related: bool = True) -> list[Item]:
-    http = Http(min_interval=0.15)  # Deezer allows 50 requests / 5 s
-    genres = [g for g in http.get(f"{API}/genre").json().get("data", []) if g["id"] != 0]
+    http = Http(min_interval=0.12)
+    genres = [g for g in _json(http, f"{API}/genre").get("data", []) if g["id"] != 0]
     artists: dict[int, dict] = {}
     for g in genres:
         try:
-            data = http.get(f"{API}/genre/{g['id']}/artists").json().get("data", [])[:per_genre]
+            data = _json(http, f"{API}/genre/{g['id']}/artists").get("data", [])[:per_genre]
         except Exception as e:  # noqa: BLE001
             log.warning("deezer genre %s failed: %s", g["name"], e)
             continue
         for a in data:
             artists.setdefault(a["id"], {**a, "genres": []})["genres"].append(g["name"])
-    for a in http.get(f"{API}/chart/0/artists", limit=100).json().get("data", []):
+    for a in _json(http, f"{API}/chart/0/artists", limit=100).get("data", []):
         artists.setdefault(a["id"], {**a, "genres": []})
     items = []
     for aid, a in artists.items():
@@ -33,9 +44,9 @@ def collect(per_genre: int = 60, related: bool = True) -> list[Item]:
         fans = 0
         if related:
             try:
-                rel = [f"music:{r['id']}" for r in http.get(f"{API}/artist/{aid}/related", limit=10).json()
+                rel = [f"music:{r['id']}" for r in _json(http, f"{API}/artist/{aid}/related", limit=10)
                        .get("data", [])]
-                fans = http.get(f"{API}/artist/{aid}").json().get("nb_fan", 0)
+                fans = _json(http, f"{API}/artist/{aid}").get("nb_fan", 0)
             except Exception:  # noqa: BLE001
                 pass
         name = a["name"]

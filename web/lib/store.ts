@@ -4,7 +4,7 @@
  * when sync is on. `history` is append-only, so every model can be rebuilt from it; everything
  * else is derived state kept for speed.
  */
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 
 export type Action =
   | "loved"
@@ -213,26 +213,32 @@ export function replaceState(s: State) {
   persist();
 }
 
+const EMPTY = emptyState();
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+
+/** Select from the store; the selection is memoised per state version so selectors may build objects. */
 export function useStore<T>(select: (s: State) => T): T {
+  const memo = useRef<{ s: State | null; v: T | undefined; server?: T }>({ s: null, v: undefined });
   return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
+    subscribe,
+    () => {
+      if (memo.current.s !== state) memo.current = { ...memo.current, s: state, v: select(state) };
+      return memo.current.v as T;
     },
-    () => select(state),
-    () => select(emptyState()),
+    () => {
+      if (!("server" in memo.current)) memo.current.server = select(EMPTY);
+      return memo.current.server as T;
+    },
   );
 }
 
 export function useLoaded(): boolean {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => loaded,
-    () => false,
-  );
+  return useSyncExternalStore(subscribe, () => loaded, () => false);
 }
 
 // ------------------------------------------------------------------ mutations

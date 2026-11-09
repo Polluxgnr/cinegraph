@@ -21,7 +21,7 @@ export default function Me() {
 
   useEffect(() => {
     if (!m) return;
-    Promise.all(Object.keys(m.domains).map((d) => loadDomain(d).catch(() => null))).then((x) => setData(x.filter((d): d is DomainData => !!d)));
+    Promise.all([...new Set(["films", ...Object.keys(m.domains)])].map((d) => loadDomain(d).catch(() => null))).then((x) => setData(x.filter((d): d is DomainData => !!d)));
   }, [m]);
 
   const sums = useMemo(

@@ -7,6 +7,7 @@ import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
 import { DOMAINS } from "@/lib/domains";
 import { calibration } from "@/lib/engine/active";
 import { runQuery, type QueryResult } from "@/lib/engine/query";
+import type { FilmData } from "@/lib/data";
 import { useDomain, useFilms, useManifest } from "@/lib/hooks";
 import { getState, useLoaded, useStore } from "@/lib/store";
 import { useRecs } from "@/lib/useRecs";
@@ -82,7 +83,7 @@ export default function Home() {
         </Link>
       )}
 
-      {films && <ContinueRow />}
+      {films && <ContinueRow films={films} />}
       {films && <DomainRow name="films" title="For you" hint="films & series, ranked by your model" />}
       {m && DOMAINS.filter((d) => d.name !== "films" && m.domains[d.name]?.count).map((d) => (
         <DomainRow key={d.name} name={d.name} title={`${d.emoji} ${d.label}`} />
@@ -113,8 +114,7 @@ function DomainRow({ name, title, hint }: { name: string; title: string; hint?: 
 }
 
 /** Series you're watching, sagas you started (next entry + progress bar), and your list. */
-function ContinueRow() {
-  const films = useFilms().data!;
+function ContinueRow({ films }: { films: FilmData }) {
   const lists = useStore((s) => s.lists);
   const feedback = useStore((s) => s.feedback);
   const progress = useStore((s) => s.progress);

@@ -249,11 +249,18 @@ export function features(c: Ctx, row: number): Scored {
   return { row, x, path, nearest };
 }
 
+function jitter(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 1000) / 1000;
+}
+
 /** Stage-1 score: cheap enough for the whole catalogue (one dot product + lookups). */
 export function quickScore(c: Ctx, row: number): number {
   const { d, p } = c;
   const e = d.entities[row];
-  let s = e.pop / 30;
+  // small stable jitter so cold-start lists aren't alphabetical when a domain has no popularity data
+  let s = e.pop / 30 + 0.08 * jitter(e.key);
   if (d.emb && p.vector) s += (2 * d.emb.dot(row, p.vector)) / d.norms[row];
   let ta = 0;
   for (const t of e.tags.slice(0, 6)) ta += p.tagAff.get(t.toLowerCase()) ?? 0;

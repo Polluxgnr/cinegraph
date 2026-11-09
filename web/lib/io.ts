@@ -124,7 +124,7 @@ export async function exportObsidian() {
   const root = zip.folder("CineGraph")!;
   const m = await manifest();
   const index: string[] = ["# CineGraph — my taste", "", `Exported ${new Date().toISOString().slice(0, 10)}.`, ""];
-  for (const name of Object.keys(m.domains)) {
+  for (const name of new Set(["films", ...Object.keys(m.domains)])) {
     const d = await loadDomain(name).catch(() => null);
     if (!d) continue;
     const answers = Object.values(s.feedback).filter((f) => f.domain === name && f.action !== "unknown" && f.action !== "never");

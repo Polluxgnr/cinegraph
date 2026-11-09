@@ -27,8 +27,9 @@ def parse_feed(xml: bytes | str, ch: dict) -> list[Item]:
     for e in root.findall("a:entry", NS):
         vid = e.findtext("yt:videoId", namespaces=NS)
         title = e.findtext("a:title", namespaces=NS) or ""
-        if not vid or "#shorts" in title.lower():
-            continue
+        link = (e.find("a:link", NS).get("href") if e.find("a:link", NS) is not None else "") or ""
+        if not vid or "#shorts" in title.lower() or "/shorts/" in link:
+            continue  # vertical Shorts aren't the long-form content we want
         group = e.find("media:group", NS)
         desc = (group.findtext("media:description", namespaces=NS) if group is not None else "") or ""
         views = 0

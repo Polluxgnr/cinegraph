@@ -75,7 +75,7 @@ def fetch_wikipedia_images(batch: int = 50, size: int = 500) -> int:
             chunk = rows[i:i + batch]
             try:
                 r = client.get(f"https://{host}.wikipedia.org/w/api.php", params={
-                    "action": "query", "prop": "pageimages", "piprop": "thumbnail", "pithumbsize": size,
+                    "action": "query", "prop": "pageimages", "piprop": "thumbnail", "pithumbsize": size, "pilicense": "any",
                     "titles": "|".join(c["page"] for c in chunk), "format": "json", "formatversion": 2,
                     "redirects": 1})
                 r.raise_for_status()

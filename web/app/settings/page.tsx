@@ -108,7 +108,7 @@ export default function Settings() {
 
       <Section title="Models" hint={m ? `Catalogue built ${new Date(m.built_at).toLocaleString("fr-FR")} · embeddings ${m.embed_model}` : ""}>
         <div className="flex flex-wrap gap-2">
-          {DOMAINS.filter((d) => m?.domains[d.name]?.count).map((d) => (
+          {DOMAINS.filter((d) => (d.name === "films" || m?.domains[d.name]?.count)).map((d) => (
             <button key={d.name} className="btn-ghost text-sm" disabled={busy}
                     onClick={() => run(`Relearn ${d.short}`, async () => { const r = await relearn(d.name); return `${d.short}: ranker retrained on ${r.examples} answers`; })}>
               Relearn {d.short}

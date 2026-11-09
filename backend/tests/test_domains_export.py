@@ -13,6 +13,7 @@ FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
   <media:group><media:description>Un documentaire.</media:description>
    <media:community><media:statistics views="12345"/></media:community></media:group></entry>
  <entry><yt:videoId>short1</yt:videoId><title>Quick one #shorts</title><published>2026-11-02T10:00:00+00:00</published></entry>
+ <entry><yt:videoId>short2</yt:videoId><title>Untagged short</title><link rel="alternate" href="https://www.youtube.com/shorts/short2"/></entry>
 </feed>"""
 
 

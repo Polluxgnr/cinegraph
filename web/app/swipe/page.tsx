@@ -22,7 +22,7 @@ export default function SwipePage() {
   const [dParam, setD] = useQueryParam("d");
   const domain = dParam && DOMAIN[dParam] ? dParam : "films";
   const m = useManifest().data;
-  const available = DOMAINS.filter((d) => !m || m.domains[d.name]?.count);
+  const available = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
   return (
     <div className="mx-auto max-w-md">
       <div className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4">
@@ -103,7 +103,7 @@ function Deck({ domain }: { domain: string }) {
       <div className="mb-4 w-full">
         <div className="flex items-baseline justify-between">
           <h1 className="font-display text-3xl">{cfg?.emoji} {cfg?.label}</h1>
-          <span className="text-xs text-muted">{card ? `${card.info.labels} answers` : ""}</span>
+          <span className="text-xs text-muted">{card ? `${card.info.labels} answer${card.info.labels === 1 ? "" : "s"}` : ""}</span>
         </div>
         <Progress className="mt-2" value={cal} />
         <p className="mt-1 text-[11px] text-muted">
@@ -111,7 +111,15 @@ function Deck({ domain }: { domain: string }) {
         </p>
       </div>
 
-      <div className="relative w-full" style={{ aspectRatio: cfg?.aspect === "2/3" ? "2/3.05" : "4/4.6", touchAction: "none" }}>
+      <div
+        className="relative mx-auto w-full"
+        style={{
+          aspectRatio: cfg?.aspect === "2/3" ? "2/3.05" : "4/4.6",
+          // keep the whole card + answers on screen
+          maxWidth: cfg?.aspect === "2/3" ? "calc(58dvh * 0.656)" : "calc(58dvh * 0.87)",
+          touchAction: "none",
+        }}
+      >
         {e ? (
           <motion.div
             key={e.key}

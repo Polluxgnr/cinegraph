@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def _rows(query: str) -> list[dict]:
-    return Sparql(min_interval=1.0).query(query)
+    return Sparql(min_interval=1.0).query(query, retries=2)
 
 
 def _group(res: list[dict], multi: tuple[str, ...]) -> dict[str, dict]:

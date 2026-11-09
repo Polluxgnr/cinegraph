@@ -16,6 +16,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -127,6 +128,10 @@ FILM_KEYS = {
 }
 
 
+NOT_A_SAGA = re.compile(r"(list of|greatest|best |feature film|animated feature|films$|movies$|top \d+|\d+ (films|movies)|"
+                        r"criterion|registry|canon|filmography|anthology film|productions$)", re.I)
+
+
 def export_films(out: Path) -> dict:
     rows = db.fetchall("""
         SELECT t.*, e.embedding FROM titles t JOIN title_embeddings e ON e.title_id = t.id
@@ -163,7 +168,8 @@ def export_films(out: Path) -> dict:
     collections = []
     coll_of: dict[int, str] = {}
     for g in groups.values():
-        if len(g["items"]) < 2:
+        # Wikidata "part of the series" also covers lists and studio filmographies: not sagas
+        if len(g["items"]) < 2 or len(g["items"]) > 40 or NOT_A_SAGA.search(g["name"] or ""):
             continue
         g["items"].sort()
         ids = [i for _, _, i in g["items"]]
@@ -255,9 +261,22 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
     out.mkdir(parents=True, exist_ok=True)
     manifest_path = out / "manifest.json"
     manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.exists() else {"domains": {}}
+    emb = get_embedder()
+
+    def save() -> None:
+        # register domains exported by earlier runs (a slow source shouldn't drop them)
+        for d in out.iterdir():
+            if d.is_dir() and (d / "items.json").exists() and d.name not in manifest["domains"]:
+                items = json.loads((d / "items.json").read_text("utf-8"))
+                manifest["domains"][d.name] = {"label": DOMAINS.get(d.name, (d.name,))[0], "count": len(items),
+                                               "images": sum(1 for i in items if i.get("image"))}
+        manifest.update(version=2, built_at=dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
+                        embed_model=emb.name, film_keys=FILM_KEYS)
+        write_json(manifest_path, manifest)
+
     if not skip_films:
         manifest["domains"]["films"] = {"label": "Films & series", **export_films(out)}
-    emb = get_embedder()
+        save()
     for name in domains if domains is not None else list(DOMAINS):
         label, mod, fn = DOMAINS[name]
         try:
@@ -265,7 +284,6 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
             manifest["domains"][name] = export_domain(out, name, label, items, emb)
         except Exception as e:  # noqa: BLE001 - keep the previous export of that domain
             log.exception("domain %s failed: %s", name, e)
-    manifest.update(version=2, built_at=dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
-                    embed_model=emb.name, film_keys=FILM_KEYS)
-    write_json(manifest_path, manifest)
+        save()
+    save()
     return manifest

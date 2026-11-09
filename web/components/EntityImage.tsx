@@ -10,7 +10,10 @@ function hue(s: string) {
   return h;
 }
 
-/** Real image when there is one; otherwise a typographic cover so nothing looks broken. */
+/** Images whose framing we control (TMDB posters, YouTube/recipe/artist thumbnails) fill the card;
+ *  anything else (Wikipedia / Commons) is shown whole over a blurred copy so nothing gets cropped badly. */
+const FILL_HOSTS = ["image.tmdb.org", "i.ytimg.com", "themealdb.com", "dzcdn.net"];
+
 export default function EntityImage({
   e,
   aspect = "2/3",
@@ -26,17 +29,20 @@ export default function EntityImage({
 }) {
   const [failed, setFailed] = useState(false);
   if (e.image && !failed) {
+    const fill = FILL_HOSTS.some((h) => e.image!.includes(h));
+    if (fill) {
+      return (
+        <img src={e.image} alt={e.title} loading="lazy" draggable={false} referrerPolicy="no-referrer" onError={() => setFailed(true)}
+             className={`w-full select-none object-cover ${className}`} style={{ aspectRatio: aspect }} />
+      );
+    }
     return (
-      <img
-        src={e.image}
-        alt={e.title}
-        loading="lazy"
-        draggable={false}
-        referrerPolicy="no-referrer"
-        onError={() => setFailed(true)}
-        className={`w-full select-none object-cover ${className}`}
-        style={{ aspectRatio: aspect }}
-      />
+      <div className={`relative w-full select-none overflow-hidden bg-panel-2 ${className}`} style={{ aspectRatio: aspect }}>
+        <img src={e.image} alt="" aria-hidden loading="lazy" draggable={false} referrerPolicy="no-referrer"
+             className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-xl" />
+        <img src={e.image} alt={e.title} loading="lazy" draggable={false} referrerPolicy="no-referrer" onError={() => setFailed(true)}
+             className="relative h-full w-full object-contain" />
+      </div>
     );
   }
   const h = hue(e.title);
