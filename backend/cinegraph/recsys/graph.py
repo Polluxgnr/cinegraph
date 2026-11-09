@@ -260,8 +260,8 @@ def ego_graph(title_id: int, max_entities: int = 25, titles_per_entity: int = 4)
         others = db.fetchall(
             """
             SELECT tn.id, e2.rel FROM kg_edges e2 JOIN kg_nodes tn ON tn.id = e2.src
-            LEFT JOIN user_ratings r ON r.title_id = tn.key::int
-            LEFT JOIN titles t ON t.id = tn.key::int
+            LEFT JOIN user_ratings r ON r.title_id::text = tn.key
+            LEFT JOIN titles t ON t.id::text = tn.key
             WHERE e2.dst = %s AND tn.id <> %s AND tn.type = 'title'
             ORDER BY r.rating DESC NULLS LAST, t.popularity DESC NULLS LAST LIMIT %s
             """, (e["id"], center["id"], titles_per_entity))
@@ -301,8 +301,8 @@ def _node_details(node_ids: list[int]) -> list[dict]:
         """
         SELECT n.id, n.type, n.label, n.key, t.poster_path, t.year, t.kind, r.rating
         FROM kg_nodes n
-        LEFT JOIN titles t ON n.type = 'title' AND t.id = n.key::int
-        LEFT JOIN user_ratings r ON n.type = 'title' AND r.title_id = n.key::int
+        LEFT JOIN titles t ON n.type = 'title' AND t.id::text = n.key
+        LEFT JOIN user_ratings r ON n.type = 'title' AND r.title_id::text = n.key
         WHERE n.id = ANY(%s)
         """, (node_ids,))
     return [{"id": r["id"], "type": r["type"], "label": r["label"],

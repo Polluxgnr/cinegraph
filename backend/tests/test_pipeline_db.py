@@ -130,3 +130,20 @@ def test_end_to_end(testdb):
     services.rate(11, 4.5)
     [doc] = render_csv("ratings", fetch_records("ratings"))
     assert "Title 11" in doc and "Title 1," not in doc  # Letterboxd-sourced ratings aren't re-exported
+
+
+def test_ltr_trains_from_swipes_and_takes_over(testdb):
+    """After enough feedback the LightGBM ranker replaces the default blend."""
+    from cinegraph import services
+    from cinegraph.recsys import ltr
+    from cinegraph.recsys.pipeline import recommend
+
+    for tid in range(12, 41):
+        if tid in (25,):
+            continue
+        services.swipe(tid, "love" if tid <= 20 else "dislike")
+    res = ltr.train()
+    assert res["trained"], res
+    assert res["examples"] >= 30
+    out = recommend(n=5, log_impressions=False, explore=False)
+    assert out["model"] == "ltr"

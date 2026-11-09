@@ -24,6 +24,18 @@ app = FastAPI(title="CineGraph", version="0.1.0")
 def _startup() -> None:
     db.init_schema()
 
+    def warm() -> None:
+        # load the embedding matrix and the swipe deck so the first request isn't slow
+        try:
+            active._build_deck()
+            recommend(n=5, log_impressions=False, explore=False)
+        except Exception:  # noqa: BLE001 - empty catalogue on first boot is fine
+            logging.getLogger(__name__).info("warm-up skipped (no catalogue yet?)")
+
+    import threading
+
+    threading.Thread(target=warm, daemon=True).start()
+
 
 # ------------------------------------------------------------------ meta
 @app.get("/health")

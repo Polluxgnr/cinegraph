@@ -202,7 +202,7 @@ def _apply_core(conn, title_id: int, facts: dict[str, list[tuple[str, str]]]) ->
     countries = [lab for _, lab in facts.get("country", [])]
     conn.execute(
         """
-        UPDATE titles SET genres = CASE WHEN cardinality(%(g)s::text[]) > 0 THEN %(g)s ELSE genres END,
+        UPDATE titles SET genres = CASE WHEN cardinality(genres) = 0 THEN %(g)s ELSE genres END,
             keywords = COALESCE((SELECT array_agg(DISTINCT k) FROM unnest(keywords || %(k)s::text[]) k), keywords),
             year = COALESCE(year, %(y)s), runtime = COALESCE(runtime, %(r)s),
             number_of_seasons = COALESCE(number_of_seasons, %(s)s),
@@ -267,6 +267,32 @@ def fetch_facts(batch: int = 60, limit: int | None = None, sp: Sparql | None = N
 
 
 # ----------------------------------------------------------------- TV bootstrap
+# television series, miniseries, animated series, anime series, web series, docuseries, sitcom, drama series...
+SERIES_TYPES = ("wd:Q5398426 wd:Q1259759 wd:Q117467246 wd:Q581714 wd:Q63952888 wd:Q526877 wd:Q15416 "
+                "wd:Q1366112 wd:Q21191270 wd:Q24862 wd:Q7725310 wd:Q20650540 wd:Q113671041 wd:Q186124")
+
+
+def prune_non_series(sp: Sparql | None = None) -> int:
+    """Drop Wikidata-bootstrapped 'series' that are award shows, talk shows, etc.
+    Titles you rated, swiped or listed are kept."""
+    sp = sp or Sparql()
+    rows = db.fetchall("SELECT id, wikidata_id FROM titles WHERE kind = 'tv' AND source = 'wikidata' "
+                       "AND wikidata_id IS NOT NULL")
+    keep: set[str] = set()
+    for i in range(0, len(rows), 300):
+        values = " ".join(f"wd:{r['wikidata_id']}" for r in rows[i:i + 300])
+        res = sp.query(f"SELECT DISTINCT ?item WHERE {{ VALUES ?item {{ {values} }} "
+                       f"?item wdt:P31 ?type . VALUES ?type {{ {SERIES_TYPES} }} }}")
+        keep |= {_qid(_val(b, "item")) for b in res}
+    drop = [r["id"] for r in rows if r["wikidata_id"] not in keep]
+    if drop:
+        db.execute(
+            """DELETE FROM titles t WHERE t.id = ANY(%s)
+               AND NOT EXISTS (SELECT 1 FROM user_ratings WHERE title_id = t.id)
+               AND NOT EXISTS (SELECT 1 FROM swipes WHERE title_id = t.id)
+               AND NOT EXISTS (SELECT 1 FROM watchlist WHERE title_id = t.id)""", (drop,))
+    log.info("pruned %d non-series TV stubs", len(drop))
+    return len(drop)
 def bootstrap_tv(n: int = 1500, min_sitelinks: int = 15, sp: Sparql | None = None) -> int:
     """Seed well-known TV series from Wikidata (keyed by their TMDB TV id, so a later
     TMDB crawl fills the same rows)."""
@@ -275,6 +301,8 @@ def bootstrap_tv(n: int = 1500, min_sitelinks: int = 15, sp: Sparql | None = Non
     SELECT ?item ?tmdb ?itemLabel ?orig ?links WHERE {{
       ?item wdt:P4983 ?tmdb ; wikibase:sitelinks ?links .
       FILTER(?links >= {int(min_sitelinks)})
+      # TMDB's TV ids also cover award shows and talk shows: keep series only
+      ?item wdt:P31 ?type . VALUES ?type {{ {SERIES_TYPES} }}
       OPTIONAL {{ ?item wdt:P1476 ?orig }}
       SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,fr,mul". }}
     }} ORDER BY DESC(?links) LIMIT {int(n)}"""

@@ -86,6 +86,7 @@ def ingest_wikidata(
     sp = wikidata.Sparql()
     if tv_bootstrap:
         typer.echo(f"tv series seeded: {wikidata.bootstrap_tv(tv_bootstrap, sp=sp)}")
+        typer.echo(f"non-series removed: {wikidata.prune_non_series(sp=sp)}")
     typer.echo(f"ids resolved: {wikidata.resolve_qids(sp=sp)}")
     typer.echo(f"titles enriched: {wikidata.fetch_facts(limit=limit, sp=sp)}")
 

@@ -106,6 +106,7 @@ def import_movielens(variant: str | None = None, min_ratings: int = 5) -> dict:
                 VALUES ('movie', %s, %s, %s, %s, %s, %s, %s, %s, %s, 'movielens')
                 ON CONFLICT (kind, tmdb_id) DO UPDATE SET
                     imdb_id = COALESCE(titles.imdb_id, EXCLUDED.imdb_id),
+                    genres = CASE WHEN titles.source = 'movielens' THEN EXCLUDED.genres ELSE titles.genres END,
                     keywords = CASE WHEN titles.source = 'movielens' THEN EXCLUDED.keywords ELSE titles.keywords END
                 RETURNING id, (xmax = 0) AS inserted
                 """,
