@@ -107,6 +107,12 @@ def unrate(title_id: int) -> None:
         conn.commit()
 
 
+def hide(title_id: int) -> None:
+    db.execute("INSERT INTO hidden_titles (title_id) VALUES (%s) ON CONFLICT DO NOTHING", (title_id,))
+    db.execute("DELETE FROM watchlist WHERE title_id = %s", (title_id,))
+    bandit.update(title_id, 0.0)
+
+
 def watchlist_add(title_id: int, status: str = "want", note: str | None = None) -> None:
     db.execute("INSERT INTO watchlist (title_id, status, source, note) VALUES (%s, %s, 'app', %s) "
                "ON CONFLICT (title_id) DO UPDATE SET status = EXCLUDED.status", (title_id, status, note))

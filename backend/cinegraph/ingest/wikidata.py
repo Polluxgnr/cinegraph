@@ -80,7 +80,15 @@ class Sparql:
                 delay *= 2
                 continue
             r.raise_for_status()
-            return r.json()["results"]["bindings"]
+            try:
+                return r.json()["results"]["bindings"]
+            except ValueError:
+                # the endpoint sometimes cuts a response short when a query nears its timeout
+                if attempt == retries:
+                    raise
+                log.warning("truncated SPARQL response, retry in %.0fs", delay)
+                time.sleep(delay)
+                delay *= 2
         return []
 
 
@@ -229,10 +237,17 @@ def fetch_facts(batch: int = 60, limit: int | None = None, sp: Sparql | None = N
         chunk = rows[i:i + batch]
         core = any(r["source"] != "tmdb" for r in chunk)
         try:
-            facts = parse_facts(sp.query(_facts_query([r["wikidata_id"] for r in chunk], core)))
-        except httpx.HTTPError as e:
-            log.warning("facts batch failed (%s); will retry next run", e)
-            continue
+            facts = parse_facts(sp.query(_facts_query([r["wikidata_id"] for r in chunk], core), retries=2))
+        except (httpx.HTTPError, ValueError):
+            # big result sets (long cast lists) can time out: retry in small slices
+            facts = {}
+            for k in range(0, len(chunk), 10):
+                part = chunk[k:k + 10]
+                try:
+                    facts.update(parse_facts(sp.query(_facts_query([r["wikidata_id"] for r in part], core))))
+                except (httpx.HTTPError, ValueError) as e:
+                    log.warning("facts slice failed (%s); will retry next run", e)
+                    chunk = [r for r in chunk if r not in part]
         with db.connect() as conn:
             for r in chunk:
                 f = facts.get(r["wikidata_id"], {})
@@ -290,3 +305,78 @@ def bootstrap_tv(n: int = 1500, min_sitelinks: int = 15, sp: Sparql | None = Non
         conn.commit()
     log.info("wikidata tv bootstrap: %d results, %d new", len(res), added)
     return added
+
+
+# ----------------------------------------------------------------- title lookup (keyless fallback)
+def lookup_title(name: str, year: int | None, kind: str | None, sp: Sparql | None = None) -> int | None:
+    """Find a film/series on Wikidata by name (+year) and add it as a stub keyed by its TMDB id.
+    Used by the matcher when a title isn't local and no TMDB key is configured."""
+    from ..userdata.matcher import Candidate, best_match
+
+    sp = sp or Sparql()
+    try:
+        r = sp.client.get("https://www.wikidata.org/w/api.php", params={
+            "action": "wbsearchentities", "search": name, "language": "en", "uselang": "en", "type": "item",
+            "limit": 40, "format": "json"})
+        r.raise_for_status()
+        hits = r.json().get("search", [])
+        qids = [h["id"] for h in hits]
+        # the alias the search matched on ("LOL : Qui rit sort" -> the French LOL series)
+        matched_alias = {h["id"]: norm_title((h.get("match") or {}).get("text")) for h in hits}
+        if not qids:
+            return None
+        values = " ".join(f"wd:{q}" for q in qids)
+        res = sp.query(f"""
+        SELECT ?item ?itemLabel ?orig ?mv ?tv (MIN(?d) AS ?date) WHERE {{
+          VALUES ?item {{ {values} }}
+          OPTIONAL {{ ?item wdt:P4947 ?mv }} OPTIONAL {{ ?item wdt:P4983 ?tv }}
+          FILTER(BOUND(?mv) || BOUND(?tv))
+          OPTIONAL {{ ?item wdt:P1476 ?orig }}
+          OPTIONAL {{ ?item wdt:P577|wdt:P580 ?d }}
+          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,fr,mul". }}
+        }} GROUP BY ?item ?itemLabel ?orig ?mv ?tv""")
+    except (httpx.HTTPError, ValueError) as e:
+        log.warning("wikidata lookup failed for %r: %s", name, e)
+        return None
+    cands, info = [], {}
+    for b in res:
+        q = _qid(_val(b, "item"))
+        for k, var in (("movie", "mv"), ("tv", "tv")):
+            v = _val(b, var)
+            if not v or not v.isdigit():
+                continue
+            d = _val(b, "date")
+            y = int(d[:4]) if d and d[:4].isdigit() else None
+            label = _val(b, "itemLabel") or ""
+            c = Candidate(id=len(cands), kind=k, title=label, original_title=_val(b, "orig"), year=y,
+                          aliases=tuple(a for a in [matched_alias.get(q, "")] if a))
+            cands.append(c)
+            info[c.id] = (q, int(v), k, label, _val(b, "orig"), y)
+    m = best_match(name, year, cands, kind_hint=kind)
+    if not m:
+        return None
+    q, tmdb, k, label, orig, y = info[m.candidate.id]
+    with db.connect() as conn:
+        row = conn.execute(
+            """INSERT INTO titles (kind, tmdb_id, wikidata_id, title, original_title, norm_title, year, source)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, 'wikidata')
+               ON CONFLICT (kind, tmdb_id) DO UPDATE SET wikidata_id = COALESCE(titles.wikidata_id, EXCLUDED.wikidata_id)
+               RETURNING id""", (k, tmdb, q, label, orig, norm_title(label), y)).fetchone()
+        if orig and norm_title(orig) != norm_title(label):
+            conn.execute("INSERT INTO title_aliases VALUES (%s,%s) ON CONFLICT DO NOTHING", (row["id"], norm_title(orig)))
+        if m.score >= 0.95:
+            conn.execute("INSERT INTO title_aliases VALUES (%s,%s) ON CONFLICT DO NOTHING", (row["id"], norm_title(name)))
+        conn.commit()
+    # pull its facts (director, cast, genres, awards...) right away
+    rows = db.fetchall("SELECT id, wikidata_id, source FROM titles WHERE id = %s", (row["id"],))
+    facts = parse_facts(sp.query(_facts_query([q], core=True)))
+    with db.connect() as conn:
+        for prop in ENRICH_PROPS:
+            for oq, lab in facts.get(q, {}).get(prop, []):
+                conn.execute("INSERT INTO wikidata_facts VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING",
+                             (row["id"], prop, oq, lab))
+        if rows and rows[0]["source"] != "tmdb":
+            _apply_core(conn, row["id"], facts.get(q, {}))
+        conn.execute("UPDATE titles SET wikidata_fetched_at = now() WHERE id = %s", (row["id"],))
+        conn.commit()
+    return row["id"]

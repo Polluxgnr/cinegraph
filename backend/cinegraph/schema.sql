@@ -161,6 +161,12 @@ CREATE TABLE IF NOT EXISTS swipes (
 );
 CREATE INDEX IF NOT EXISTS swipes_title_idx ON swipes (title_id);
 
+-- "Not for me" from a recommendation card: a mild negative, never counted as watched
+CREATE TABLE IF NOT EXISTS hidden_titles (
+    title_id   integer PRIMARY KEY REFERENCES titles(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Imports we could not match to a title; kept for manual resolution / retry
 CREATE TABLE IF NOT EXISTS pending_matches (
     id         serial PRIMARY KEY,

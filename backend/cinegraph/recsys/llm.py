@@ -106,12 +106,23 @@ class OllamaLLM(LLM):
             return None
 
 
+def _anthropic_credentials(key: str) -> bool:
+    import os
+    from pathlib import Path
+
+    return bool(key or os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+                or os.environ.get("ANTHROPIC_PROFILE") or (Path.home() / ".config" / "anthropic").exists())
+
+
 @lru_cache
 def get_llm() -> LLM:
     s = get_settings()
     p = s.llm_provider.lower()
     try:
         if p == "anthropic":
+            if not _anthropic_credentials(s.anthropic_api_key):
+                log.info("no Anthropic credentials: natural-language queries use the rule parser, no LLM rerank")
+                return LLM()
             return AnthropicLLM(s.llm_model or "claude-opus-5-5", s.anthropic_api_key)
         if p == "openai_compat" and s.llm_base_url:
             return OpenAICompatLLM(s.llm_model, s.llm_base_url, s.llm_api_key)

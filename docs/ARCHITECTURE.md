@@ -71,12 +71,17 @@ Streaming availability is TMDB's watch-provider data (JustWatch), region FR, leg
 Title normalisation (accents, punctuation, leading articles, roman numerals) → candidates from the exact
 normalised title, aliases and trigram similarity → score = title similarity (exact / rapidfuzz) × year factor
 (same 1.0, ±1 0.95, ±2 0.8, else 0.45) × kind factor, threshold 0.72. If nothing matches locally and a TMDB key
-is set, TMDB search is tried and the hit is ingested on the spot. Misses land in `pending_matches`.
+is set, TMDB search is tried and the hit is ingested on the spot; otherwise Wikidata's entity search is used
+(it knows the TMDB id of most notable titles, so the stub lines up with a later TMDB crawl). A query whose words
+are a strict superset or subset of a title ("Lupin III" vs "Lupin") is capped below the threshold, except a short
+name equal to the main title before a subtitle ("Big Vape" → "Big Vape: The Rise and Fall of Juul").
+Misses land in `pending_matches` and are retried on the next import / seed run.
 
 ## Recommender
 
 1. **Profile** (`profile.py`): read fresh per request: explicit stars > latest swipe (love 5, like 4,
-   dislike 1.5) > Letterboxd heart (4.5) > watched. Weight `w = (stars − 3)/2 ∈ [−1, 1]`.
+   dislike 1.5) > Letterboxd heart (4.5) > watched. "Not for me" on a card is a mild negative (2 stars) that
+   hides the title without marking it watched. Weight `w = (stars − 3)/2 ∈ [−1, 1]`.
 2. **Candidates**: embedding kNN from the profile vector and from each top anchor, ALS top-250 from the
    folded-in user vector, 2-hop graph neighbours of titles you rated ≥ 4, and a quality fallback per kind.
 3. **Hard filters** (`config/hard_filters.yaml`): romance as main genre or rom-com/romantic drama, musicals,

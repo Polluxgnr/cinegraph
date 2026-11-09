@@ -6,6 +6,7 @@ be unit-tested without Postgres.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 from rapidfuzz import fuzz
@@ -34,17 +35,26 @@ class Match:
 
 
 def _title_sim(q: str, cand: Candidate) -> tuple[float, str]:
-    names = {norm_title(cand.title), norm_title(cand.original_title)} | set(cand.aliases)
+    raw = [t for t in (cand.title, cand.original_title) if t]
+    names = {norm_title(t) for t in raw} | set(cand.aliases)
     names.discard("")
+    # "Big Vape: The Rise and Fall of Juul" is also known as "Big Vape"
+    mains = {norm_title(re.split(r"\s*[:–—]\s+|\s+-\s+", t)[0]) for t in raw} - names - {""}
     best, how = 0.0, ""
     for n in names:
         if n == q:
             return 1.0, "exact title"
         s = fuzz.ratio(q, n) / 100.0
-        # token-set handles "Lupin III" vs "Lupin the Third Part III" style variations a bit
-        s = max(s, 0.92 * fuzz.token_set_ratio(q, n) / 100.0 if min(len(q), len(n)) >= 6 else 0)
+        qa, na = set(q.split()), set(n.split())
+        if min(len(q), len(n)) >= 6:
+            s = max(s, 0.92 * fuzz.token_set_ratio(q, n) / 100.0)
+        # "Lupin III" is not "Lupin", and a bare word isn't a long title containing it
+        if qa != na and (qa < na or na < qa):
+            s = min(s, 0.75)
         if s > best:
             best, how = s, "fuzzy title"
+    if q in mains and len(q) >= 4:
+        return max(best, 0.95), "main title before subtitle"
     return best, how
 
 
@@ -120,19 +130,25 @@ def resolve(query: str, year: int | None, kind_hint: str | None = None,
         return m
     from ..config import get_settings
 
-    if not get_settings().tmdb_api_key:
-        return None
-    import asyncio
-
-    from ..ingest.tmdb_ingest import search_and_add
-
     kinds = [kind_hint] if kind_hint else ["movie", "tv"]
-    for k in kinds:
-        try:
-            tid = asyncio.run(search_and_add(k, query, year))
-        except Exception:  # noqa: BLE001
-            tid = None
-        if tid:
-            return match_local(query, year, kind_hint) or Match(
-                Candidate(id=tid, kind=k, title=query, year=year), 0.75, "tmdb search")
+    if get_settings().tmdb_api_key:
+        import asyncio
+
+        from ..ingest.tmdb_ingest import search_and_add
+
+        for k in kinds:
+            try:
+                tid = asyncio.run(search_and_add(k, query, year))
+            except Exception:  # noqa: BLE001
+                tid = None
+            if tid:
+                return match_local(query, year, kind_hint) or Match(
+                    Candidate(id=tid, kind=k, title=query, year=year), 0.75, "tmdb search")
+    # keyless fallback: Wikidata knows the TMDB id of most notable films and series
+    from ..ingest.wikidata import lookup_title
+
+    tid = lookup_title(query, year, kind_hint)
+    if tid:
+        return match_local(query, year, kind_hint) or Match(
+            Candidate(id=tid, kind=kind_hint or "movie", title=query, year=year), 0.75, "wikidata search")
     return None

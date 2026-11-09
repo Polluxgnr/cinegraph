@@ -31,7 +31,7 @@ def grade(rating: float | None, kind: str) -> int | None:
         return 3
     if kind == "like":
         return 2
-    if kind == "dislike":
+    if kind in ("dislike", "hidden"):
         return 0
     if rating is None:
         return None

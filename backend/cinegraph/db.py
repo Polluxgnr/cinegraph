@@ -50,7 +50,12 @@ def connect() -> Iterator[psycopg.Connection]:
 def init_schema() -> None:
     sql = resources.files("cinegraph").joinpath("schema.sql").read_text(encoding="utf-8")
     with psycopg.connect(get_settings().database_url, autocommit=True) as conn:
-        conn.execute(sql)
+        # api and worker start together: serialise the DDL
+        conn.execute("SELECT pg_advisory_lock(424242)")
+        try:
+            conn.execute(sql)
+        finally:
+            conn.execute("SELECT pg_advisory_unlock(424242)")
     # pool connections created before the extension existed lack the vector type
     global _pool
     if _pool is not None:

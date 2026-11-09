@@ -31,6 +31,7 @@ class Profile:
     unseen: set[int] = field(default_factory=set)       # swiped "not seen"
     watchlist: set[int] = field(default_factory=set)
     swiped: set[int] = field(default_factory=set)
+    hidden: set[int] = field(default_factory=set)
 
     @property
     def rated(self) -> dict[int, float]:
@@ -75,6 +76,10 @@ def load_profile() -> Profile:
         p.signals[r["title_id"]] = Signal(float(r["rating"]), "rating", r["title"])
         p.seen.add(r["title_id"])
         p.unseen.discard(r["title_id"])
+    for r in db.fetchall("SELECT h.title_id, t.title FROM hidden_titles h JOIN titles t ON t.id = h.title_id"):
+        p.hidden.add(r["title_id"])
+        if r["title_id"] not in p.signals:
+            p.signals[r["title_id"]] = Signal(2.0, "hidden", r["title"])
     for r in db.fetchall("SELECT title_id FROM watchlist"):
         p.watchlist.add(r["title_id"])
     return p

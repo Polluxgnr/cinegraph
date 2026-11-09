@@ -112,7 +112,7 @@ def generate_candidates(prof: Profile, n_emb: int = 400, extra: list[int] | None
 def passes(t: dict, c: Constraints, prof: Profile) -> bool:
     if not filters.allowed(t):
         return False
-    if t["id"] in prof.seen:
+    if t["id"] in prof.seen or t["id"] in prof.hidden:
         return False
     if not c.include_watchlist and t["id"] in prof.watchlist:
         return False
@@ -159,6 +159,14 @@ def _mmr(ids: list[int], scores: np.ndarray, vec_of, n: int, lam: float = 0.8) -
     return chosen
 
 
+GENERIC_KEYWORDS = {
+    "drama", "comedy", "thriller", "action", "adventure", "science fiction", "sci-fi", "fantasy", "horror", "crime",
+    "mystery", "romance", "animation", "documentary", "family", "history", "war", "western", "music", "film",
+    "television series", "drama television series", "comedy-drama", "based on novel or book", "duringcreditsstinger",
+    "aftercreditsstinger", "woman director", "action film", "drama film", "thriller film", "netflix", "imdb top 250",
+}
+
+
 def explain(tid: int, t: dict, taste: TasteInputs, prof: Profile, feats: dict) -> str:
     kg = taste.kg.get(tid)
     if kg and kg["best"] is not None and kg["best"].contribution >= 0.08:
@@ -179,7 +187,8 @@ def explain(tid: int, t: dict, taste: TasteInputs, prof: Profile, feats: dict) -
             a_id = taste.pos_ids[k]
             a = prof.signals[a_id]
             a_meta = titles_by_id([a_id]).get(a_id, {})
-            shared = [kw for kw in (t.get("keywords") or []) if kw in set(a_meta.get("keywords") or [])][:2]
+            theirs = set(a_meta.get("keywords") or [])
+            shared = [kw for kw in (t.get("keywords") or []) if kw in theirs and kw.lower() not in GENERIC_KEYWORDS][:2]
             if shared:
                 return f"Like {a.title}: {', '.join(shared)}"
             return f"Close in tone and themes to {a.title}"
@@ -217,8 +226,9 @@ def recommend(n: int = 20, constraints: Constraints | None = None, surface: str 
     n_exploit = n - n_explore
     top_pool = ranked[: max(4 * n, 60)]
     if balance_kinds and not c.kinds:
-        movies = [t for t in top_pool if cands[t]["kind"] == "movie"]
-        tvs = [t for t in top_pool if cands[t]["kind"] == "tv"]
+        # half films, half series: each kind gets its own pool from the full ranking
+        movies = [t for t in ranked if cands[t]["kind"] == "movie"][: 3 * n]
+        tvs = [t for t in ranked if cands[t]["kind"] == "tv"][: 3 * n]
         half = n_exploit // 2
         picked = (_mmr(movies, np.array([score_of[t] for t in movies]), idx.vec, n_exploit - min(half, len(tvs)))
                   if movies else [])

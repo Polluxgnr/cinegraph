@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .. import db
 from ..textnorm import strip_accents
 from ..userdata.matcher import match_local
 from .catalog import MOODS, PLATFORM_ALIASES, emb_index, titles_by_id
@@ -216,7 +217,12 @@ def query(q: str, n: int = 10) -> dict:
             if tid not in anchor_ids:
                 extra.append(tid)
                 boost[tid] = 0.6 * float(sims[j])
-    c = Constraints(kinds=kinds, mood=intent.mood, platforms=set(intent.platforms) or None,
+    notes = []
+    platforms = set(intent.platforms) or None
+    if platforms and not db.fetchone("SELECT EXISTS (SELECT 1 FROM providers) e")["e"]:
+        platforms = None
+        notes.append("No streaming data yet (needs the TMDB crawl), so the platform filter was ignored.")
+    c = Constraints(kinds=kinds, mood=intent.mood, platforms=platforms,
                     max_runtime=intent.max_runtime, min_year=intent.min_year, max_year=intent.max_year,
                     include_genres=set(intent.include_genres), exclude_genres=set(intent.exclude_genres))
     res = recommend(n=max(30, n * 3), constraints=c, surface="query", extra_candidates=extra, boost=boost,
@@ -225,9 +231,19 @@ def query(q: str, n: int = 10) -> dict:
     prof = load_profile()
     taste = [s.title for _, s in sorted(prof.signals.items(), key=lambda x: -x[1].weight) if s.weight > 0.5]
     reranked = _rerank(q, intent, items, taste, n)
+    if not reranked and anchor_ids:
+        from .pipeline import GENERIC_KEYWORDS
+
+        a_kw = set(titles_by_id(anchor_ids)[anchor_ids[0]]["keywords"] or [])
+        for it in items[:n]:
+            shared = [k for k in it.get("keywords") or [] if k in a_kw and k.lower() not in GENERIC_KEYWORDS][:2]
+            it["why_signal"] = it["why"]
+            detail = f" ({', '.join(shared)})" if shared else ""
+            it["why"] = f"Close to {anchor_titles[0]}{detail} · {it['why']}"
     return {
         "query": q, "parser": parser, "intent": intent.__dict__, "anchors": anchor_titles,
         "reranked_by": get_llm().name if reranked else None,
         "items": reranked or items[:n],
+        "notes": notes,
         "request_id": res["request_id"],
     }

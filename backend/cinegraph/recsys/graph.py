@@ -66,19 +66,19 @@ WHERE c.role <> 'cast' OR c.ord < 10
 ON CONFLICT DO NOTHING;
 
 INSERT INTO kg_edges (src, dst, rel)
-SELECT tn.id, kn.id, 'has_keyword' FROM titles t, unnest(t.keywords) k
+SELECT tn.id, kn.id, 'has_keyword' FROM titles t CROSS JOIN LATERAL unnest(t.keywords) AS k
 JOIN kg_nodes kn ON kn.type = 'keyword' AND kn.key = lower(k)
 JOIN kg_nodes tn ON tn.type = 'title' AND tn.key = t.id::text
 ON CONFLICT DO NOTHING;
 
 INSERT INTO kg_edges (src, dst, rel)
-SELECT tn.id, gn.id, 'has_genre' FROM titles t, unnest(t.genres) g
+SELECT tn.id, gn.id, 'has_genre' FROM titles t CROSS JOIN LATERAL unnest(t.genres) AS g
 JOIN kg_nodes gn ON gn.type = 'genre' AND gn.key = g
 JOIN kg_nodes tn ON tn.type = 'title' AND tn.key = t.id::text
 ON CONFLICT DO NOTHING;
 
 INSERT INTO kg_edges (src, dst, rel)
-SELECT tn.id, cn.id, 'from_country' FROM titles t, unnest(t.countries) c
+SELECT tn.id, cn.id, 'from_country' FROM titles t CROSS JOIN LATERAL unnest(t.countries) AS c
 JOIN kg_nodes cn ON cn.type = 'country' AND cn.key = c
 JOIN kg_nodes tn ON tn.type = 'title' AND tn.key = t.id::text
 ON CONFLICT DO NOTHING;
@@ -167,6 +167,8 @@ def anchor_label(rating: float | None, signal: str) -> str:
         return "which you liked"
     if signal == "dislike":
         return "which you disliked"
+    if signal == "hidden":
+        return "which you passed on"
     if signal == "heart":
         return "which you liked on Letterboxd"
     if signal == "watched":

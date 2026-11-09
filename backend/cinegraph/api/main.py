@@ -223,6 +223,12 @@ def watchlist_remove(title_id: int) -> dict:
     return {"ok": True}
 
 
+@app.post("/hide/{title_id}")
+def hide(title_id: int) -> dict:
+    services.hide(title_id)
+    return {"ok": True}
+
+
 @app.get("/pending")
 def pending() -> list[dict]:
     return db.fetchall("SELECT id, source, name, year, kind_hint FROM pending_matches ORDER BY created_at DESC")

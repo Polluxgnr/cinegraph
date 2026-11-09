@@ -90,3 +90,12 @@ def test_repo_seed_file_parses():
     kinds = {k: sum(1 for i in items if i.kind == k) for k in ("movie", "tv")}
     assert len(items) == 52 and kinds == {"movie": 28, "tv": 24}
     assert sum(i.status == "watching" for i in items) == 3
+
+
+def test_subset_title_is_not_a_match():
+    cands = [Candidate(1, "tv", "Lupin", year=2021, popularity=50)]
+    assert best_match("Lupin III", None, cands, kind_hint="tv") is None
+    # ...but a short name matching the main title before a subtitle is fine
+    m = best_match("Big Vape", None, [Candidate(2, "tv", "Big Vape: The Rise and Fall of Juul", year=2023)])
+    assert m and m.candidate.id == 2
+    assert best_match("Vape", None, [Candidate(2, "tv", "Big Vape: The Rise and Fall of Juul", year=2023)]) is None

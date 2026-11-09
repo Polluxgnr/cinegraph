@@ -19,6 +19,11 @@ app.add_typer(build_app, name="build")
 
 @app.callback()
 def _main(verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
+    import sys
+
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles default to cp1252
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)

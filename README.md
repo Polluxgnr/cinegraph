@@ -46,8 +46,10 @@ docker compose exec api cinegraph build all                           # graph, e
 docker compose exec api cinegraph seed-watchlist                      # docs/seed_watchlist.md
 ```
 
-No TMDB key yet? Skip the `ingest tmdb` line: MovieLens + Wikidata give a working catalogue (no posters,
-no streaming data). Run it later and then `cinegraph build all` again; the crawl is resumable
+No TMDB key yet? Skip the `ingest tmdb` line: MovieLens + Wikidata give a working catalogue of ~3.6k films
+and ~1.1k series (no posters, no streaming data, so "Tonight" needs "any availability"). Titles that aren't in
+the catalogue are looked up on Wikidata by name when you import or seed. Run the TMDB crawl later and then
+`cinegraph build all` again, plus `cinegraph seed-watchlist` to retry unmatched titles; the crawl is resumable
 (`--limit 500` to do it in chunks, `--full` for the whole TMDB catalogue, which takes days).
 For more CF signal: `MOVIELENS_VARIANT=ml-32m` in `.env`, then `cinegraph ingest movielens` and `cinegraph build cf`.
 
@@ -63,7 +65,8 @@ network, browse to the PC's address (the ports are bound to 127.0.0.1 by default
   docker compose cp ~/Downloads/letterboxd-polluxgnr-*.zip api:/tmp/lb.zip
   docker compose exec api cinegraph import-letterboxd /tmp/lb.zip
   ```
-  Unmatched titles are listed (and kept in `pending_matches`).
+  Unmatched titles are listed (and kept in `pending_matches`). To try the flow first, there's a small sample
+  export with the five films from your brief: `backend/tests/fixtures/sample-letterboxd-export.zip`.
 - **New diary entries**: the worker polls `https://letterboxd.com/polluxgnr/rss/` every 30 min
   (`cinegraph sync-rss` to do it now).
 - **Back to Letterboxd**: *Import* page → "Download Letterboxd CSVs" (or `cinegraph export-letterboxd`),

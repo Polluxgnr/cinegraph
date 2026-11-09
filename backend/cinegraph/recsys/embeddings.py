@@ -146,12 +146,17 @@ def build(force: bool = False, batch: int = 256) -> dict:
     return {"model": emb.name, "computed": len(todo), "total": len(texts)}
 
 
+def _np(v) -> np.ndarray:
+    # pgvector >= 0.4 returns a Vector object, older versions a numpy array
+    return np.asarray(v.to_numpy() if hasattr(v, "to_numpy") else v, dtype=np.float32)
+
+
 def load_matrix() -> tuple[np.ndarray, np.ndarray]:
     """All embeddings as (ids, unit-normalised matrix). Cached per process by callers."""
     rows = db.fetchall("SELECT title_id, embedding FROM title_embeddings ORDER BY title_id")
     if not rows:
         return np.zeros(0, dtype=np.int64), np.zeros((0, DIM), dtype=np.float32)
     ids = np.asarray([r["title_id"] for r in rows], dtype=np.int64)
-    m = np.vstack([np.asarray(r["embedding"], dtype=np.float32) for r in rows])
+    m = np.vstack([_np(r["embedding"]) for r in rows])
     m /= np.maximum(np.linalg.norm(m, axis=1, keepdims=True), 1e-9)
     return ids, m
