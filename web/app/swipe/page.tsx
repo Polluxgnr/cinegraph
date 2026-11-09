@@ -2,143 +2,119 @@
 
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import Poster from "@/components/Poster";
-import { api, kindLabel, runtimeLabel, type Title } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AnswerPanel from "@/components/AnswerPanel";
+import EntityImage from "@/components/EntityImage";
+import Match from "@/components/Match";
+import { detailHref, Progress } from "@/components/RecCard";
+import type { DomainData, FilmData } from "@/lib/data";
+import { isFilmData } from "@/lib/data";
+import { DOMAIN, DOMAINS } from "@/lib/domains";
+import { calibration, type Card, nextCard } from "@/lib/engine/active";
+import { answer } from "@/lib/engine/learn";
+import { useDomain, useManifest, useQueryParam } from "@/lib/hooks";
+import { type Action, getState, undoLast, useLoaded, useStore } from "@/lib/store";
+import { fmtRuntime, LANG_NAMES } from "@/lib/text";
 
-type Action = "like" | "dislike" | "love" | "unseen";
-
-interface Card {
-  card: Title;
-  why: { uncertainty: number; coverage: number; p_seen: number; predicted: number; n_labels: number };
-  progress: { labelled: number; target: number; swipes: number };
-}
-
-const ACTIONS: Record<Action, { label: string; color: string; key: string; dx: number; dy: number }> = {
-  dislike: { label: "Nope", color: "var(--nope)", key: "←", dx: -1, dy: 0 },
-  unseen: { label: "Not seen", color: "var(--unseen)", key: "↓", dx: 0, dy: 1 },
-  love: { label: "Loved", color: "var(--love)", key: "↑", dx: 0, dy: -1 },
-  like: { label: "Liked", color: "var(--like)", key: "→", dx: 1, dy: 0 },
-};
 const THRESHOLD = 110;
 
 export default function SwipePage() {
-  const [queue, setQueue] = useState<Card[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [last, setLast] = useState<{ c: Card; a: Action } | null>(null);
+  const [dParam, setD] = useQueryParam("d");
+  const domain = dParam && DOMAIN[dParam] ? dParam : "films";
+  const m = useManifest().data;
+  const available = DOMAINS.filter((d) => !m || m.domains[d.name]?.count);
+  return (
+    <div className="mx-auto max-w-md">
+      <div className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4">
+        {available.map((d) => (
+          <button key={d.name} className="chip shrink-0" data-on={d.name === domain} onClick={() => setD(d.name)}>
+            {d.emoji} {d.short}
+          </button>
+        ))}
+      </div>
+      <Deck key={domain} domain={domain} />
+    </div>
+  );
+}
+
+function Deck({ domain }: { domain: string }) {
+  const { data: d, error } = useDomain(domain);
+  const loaded = useLoaded();
+  const version = useStore((s) => s.updatedAt);
+  const [skip, setSkip] = useState<Set<string>>(new Set());
   const [count, setCount] = useState(0);
   const busy = useRef(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 300], [-14, 14]);
+  const rotate = useTransform(x, [-300, 300], [-12, 12]);
   const likeO = useTransform(x, [20, THRESHOLD], [0, 1]);
   const nopeO = useTransform(x, [-THRESHOLD, -20], [1, 0]);
   const loveO = useTransform(y, [-THRESHOLD, -20], [1, 0]);
   const unseenO = useTransform(y, [20, THRESHOLD], [0, 1]);
+  const [unseenMode, setUnseenMode] = useState(false);
 
-  const fetchCard = useCallback(async (skip: number[]) => {
-    const c = await api.get<Card>(`/swipe/next${skip.length ? `?skip=${skip.join(",")}` : ""}`);
-    return c;
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const a = await fetchCard([]);
-        const b = await fetchCard([a.card.id]).catch(() => null);
-        setQueue(b ? [a, b] : [a]);
-      } catch (e) {
-        setErr((e as Error).message);
-      }
-    })();
-  }, [fetchCard]);
+  const card: Card | null = useMemo(
+    () => (d && loaded ? nextCard(d, getState(), skip) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [d, loaded, version, skip],
+  );
+  const cal = useMemo(() => (d ? calibration(d, getState()) : 0), [d, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cfg = DOMAIN[domain];
 
   const decide = useCallback(
-    async (a: Action) => {
-      const cur = queue[0];
-      if (!cur || busy.current) return;
+    async (a: Action, extra: { chips?: string[] } = {}, fly: [number, number] = [0, 0]) => {
+      if (!card || busy.current) return;
       busy.current = true;
-      const s = ACTIONS[a];
-      await Promise.all([
-        animate(x, s.dx * 600, { duration: 0.28 }),
-        animate(y, s.dy * 700, { duration: 0.28 }),
-      ]);
-      try {
-        await api.post("/swipe", { title_id: cur.card.id, action: a });
-        setLast({ c: cur, a });
-        setCount((n) => n + 1);
-        const rest = queue.slice(1);
-        x.set(0);
-        y.set(0);
-        setQueue(rest);
-        const next = await fetchCard(rest.map((c) => c.card.id)).catch(() => null);
-        setQueue((q) => (next && !q.some((c) => c.card.id === next.card.id) ? [...q, next] : q));
-      } catch (e) {
-        setErr((e as Error).message);
-        x.set(0);
-        y.set(0);
-      } finally {
-        busy.current = false;
-      }
+      await Promise.all([animate(x, fly[0] * 600, { duration: 0.25 }), animate(y, fly[1] * 700, { duration: 0.25 })]);
+      await answer(card.rec.entity.key, domain, a, { ...extra, source: "swipe" });
+      setCount((n) => n + 1);
+      setUnseenMode(false);
+      x.set(0);
+      y.set(0);
+      busy.current = false;
     },
-    [queue, x, y, fetchCard],
+    [card, domain, x, y],
   );
 
-  async function undo() {
-    if (!last) return;
-    await api.post("/swipe/undo");
-    // put the undone title back on top
-    setQueue((q) => [last.c, ...q.filter((c) => c.card.id !== last.c.card.id)]);
-    setLast(null);
-    setCount((n) => Math.max(0, n - 1));
-  }
-
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const m: Record<string, Action> = { ArrowRight: "like", ArrowLeft: "dislike", ArrowUp: "love", ArrowDown: "unseen" };
-      if (m[e.key]) {
-        e.preventDefault();
-        decide(m[e.key]);
-      } else if (e.key === "Backspace" || e.key === "z") undo();
+    const onKey = (ev: KeyboardEvent) => {
+      if ((ev.target as HTMLElement)?.tagName === "INPUT") return;
+      if (ev.key === "ArrowRight") decide("liked", {}, [1, 0]);
+      else if (ev.key === "ArrowLeft") decide("disliked", {}, [-1, 0]);
+      else if (ev.key === "ArrowUp") decide("loved", {}, [0, -1]);
+      else if (ev.key === "ArrowDown") setUnseenMode(true);
+      else if (ev.key === "Backspace" || ev.key === "z") undo();
+      else return;
+      ev.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const cur = queue[0];
-  const nxt = queue[1];
-  const progress = cur ? Math.min(1, cur.progress.labelled / cur.progress.target) : 0;
+  function undo() {
+    const last = undoLast();
+    if (last) setSkip(new Set());
+  }
 
+  if (error) return <p className="card p-4 text-sm text-nope">Couldn&apos;t load {cfg?.label}: {error}</p>;
+  const e = card?.rec.entity;
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center">
+    <div className="flex flex-col items-center">
       <div className="mb-4 w-full">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-3xl">Calibrate</h1>
-          <span className="text-xs text-muted">
-            {cur ? `${cur.progress.labelled} / ${cur.progress.target} taste signals` : ""}
-          </span>
+          <h1 className="font-display text-3xl">{cfg?.emoji} {cfg?.label}</h1>
+          <span className="text-xs text-muted">{card ? `${card.info.labels} answers` : ""}</span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-2">
-          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress * 100}%` }} />
-        </div>
-        {progress >= 1 && (
-          <p className="mt-2 text-xs text-like">
-            Profile ready. <Link href="/" className="underline">See your recommendations</Link>, or keep going to sharpen it.
-          </p>
-        )}
+        <Progress className="mt-2" value={cal} />
+        <p className="mt-1 text-[11px] text-muted">
+          {cal < 0.5 ? "Learning the basics: cards cover very different things on purpose." : cal < 1 ? "Getting sharper: more cards it expects you to like." : "Calibrated. Keep going to refine, or check your recommendations."}
+        </p>
       </div>
 
-      {err && <p className="card w-full p-4 text-sm text-nope">{err}</p>}
-
-      <div className="relative aspect-[2/3] w-full max-w-[360px]" style={{ touchAction: "none" }}>
-        {nxt && (
-          <div className="absolute inset-0 scale-[0.96] overflow-hidden rounded-3xl border border-line opacity-60">
-            <Poster t={nxt.card} big />
-          </div>
-        )}
-        {cur ? (
+      <div className="relative w-full" style={{ aspectRatio: cfg?.aspect === "2/3" ? "2/3.05" : "4/4.6", touchAction: "none" }}>
+        {e ? (
           <motion.div
-            key={cur.card.id}
+            key={e.key}
             data-testid="swipe-card"
             className="absolute inset-0 cursor-grab overflow-hidden rounded-3xl border border-line bg-panel shadow-2xl shadow-black/60 active:cursor-grabbing"
             style={{ x, y, rotate }}
@@ -148,82 +124,94 @@ export default function SwipePage() {
             onDragEnd={(_, info) => {
               const { x: ox, y: oy } = info.offset;
               if (Math.abs(ox) > Math.abs(oy)) {
-                if (ox > THRESHOLD) decide("like");
-                else if (ox < -THRESHOLD) decide("dislike");
-              } else if (oy < -THRESHOLD) decide("love");
-              else if (oy > THRESHOLD) decide("unseen");
+                if (ox > THRESHOLD) decide("liked", {}, [1, 0]);
+                else if (ox < -THRESHOLD) decide("disliked", {}, [-1, 0]);
+              } else if (oy < -THRESHOLD) decide("loved", {}, [0, -1]);
+              else if (oy > THRESHOLD) setUnseenMode(true);
             }}
-            initial={{ scale: 0.96, opacity: 0.6 }}
+            initial={{ scale: 0.96, opacity: 0.5 }}
             animate={{ scale: 1, opacity: 1 }}
           >
-            <Poster t={cur.card} big bare />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 pt-16">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/60">
-                {[kindLabel(cur.card.kind), cur.card.year, runtimeLabel(cur.card)].filter(Boolean).join(" · ")}
-              </p>
-              <h2 className="font-display text-3xl leading-tight text-white">{cur.card.title}</h2>
-              <p className="mt-1 line-clamp-3 text-sm text-white/75">
-                {cur.card.overview || cur.card.genres.join(", ")}
-              </p>
+            <EntityImage e={e} aspect={cfg?.aspect === "2/3" ? "2/3" : "4/3"} className="h-full" big bare />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-24">
+              <CardMeta d={d!} card={card!} />
             </div>
             <Stamp o={likeO} text="LIKED" color="var(--like)" className="left-5 top-6 -rotate-12" />
             <Stamp o={nopeO} text="NOPE" color="var(--nope)" className="right-5 top-6 rotate-12" />
             <Stamp o={loveO} text="LOVED" color="var(--love)" className="left-1/2 top-1/3 -translate-x-1/2" />
-            <Stamp o={unseenO} text="NOT SEEN" color="var(--unseen)" className="left-1/2 top-10 -translate-x-1/2" />
+            <Stamp o={unseenO} text={cfg?.unseen?.toUpperCase() || "SKIP"} color="var(--unseen)" className="left-1/2 top-10 -translate-x-1/2" />
           </motion.div>
         ) : (
-          !err && <div className="absolute inset-0 animate-pulse rounded-3xl bg-panel-2" />
+          <div className="absolute inset-0 animate-pulse rounded-3xl bg-panel-2" />
         )}
       </div>
 
-      <div className="mt-6 grid w-full max-w-[360px] grid-cols-4 gap-2">
-        {(Object.keys(ACTIONS) as Action[]).map((a) => (
-          <button
-            key={a}
-            onClick={() => decide(a)}
-            disabled={!cur}
-            className="flex flex-col items-center gap-1 rounded-2xl border border-line bg-panel py-3 text-xs transition hover:bg-panel-2 disabled:opacity-40"
-            style={{ color: ACTIONS[a].color }}
-            aria-label={ACTIONS[a].label}
-          >
-            <span className="text-xl leading-none">{ACTIONS[a].key}</span>
-            {ACTIONS[a].label}
-          </button>
-        ))}
-      </div>
+      {e && (
+        <div className="mt-4 w-full">
+          {unseenMode && cfg && !cfg.singleStep ? (
+            <div className="grid grid-cols-2 gap-2">
+              {cfg.unseenActions.map(([a, l]) => (
+                <button key={a} className="rounded-xl border border-unseen/40 bg-panel py-2.5 text-sm text-unseen hover:bg-panel-2" onClick={() => decide(a, {}, [0, 1])}>{l}</button>
+              ))}
+              <button className="col-span-2 text-xs text-muted" onClick={() => setUnseenMode(false)}>← back</button>
+            </div>
+          ) : (
+            <AnswerPanel key={e.key} e={e} onAnswer={(a, extra) => decide(a, extra, a === "loved" ? [0, -1] : ["disliked", "never"].includes(a) ? [-1, 0] : [1, 0])} />
+          )}
+        </div>
+      )}
 
-      <div className="mt-4 flex w-full max-w-[360px] items-center justify-between text-xs text-muted">
-        <span>{count} swiped this session</span>
-        <button onClick={undo} disabled={!last} className="hover:text-ink disabled:opacity-40">
-          ↶ Undo {last ? `“${last.c.card.title}”` : ""}
-        </button>
+      <div className="mt-4 flex w-full items-center justify-between text-xs text-muted">
+        <span>{count} this session · ← → ↑ ↓ keys</span>
+        <div className="flex gap-3">
+          {e && <button onClick={() => setSkip((s) => new Set(s).add(e.key))} className="hover:text-ink">Skip</button>}
+          <button onClick={undo} className="hover:text-ink">↶ Undo</button>
+          {e && <Link href={detailHref(e.key)} className="hover:text-ink">Details</Link>}
+        </div>
       </div>
-      {cur && (
-        <p className="mt-3 w-full max-w-[360px] text-[11px] leading-relaxed text-muted/70">
-          Picked to learn the most: uncertainty {cur.why.uncertainty}, novelty {cur.why.coverage}, likely seen{" "}
-          {Math.round(cur.why.p_seen * 100)}%.
+      {card && (
+        <p className="mt-3 w-full text-[11px] leading-relaxed text-muted/70">
+          Why this card: uncertainty {card.info.uncertainty}, novelty {card.info.coverage}, likely known {Math.round(card.info.pSeen * 100)}%.
         </p>
       )}
     </div>
   );
 }
 
-function Stamp({
-  o,
-  text,
-  color,
-  className,
-}: {
-  o: ReturnType<typeof useTransform<number, number>>;
-  text: string;
-  color: string;
-  className: string;
-}) {
+function CardMeta({ d, card }: { d: DomainData; card: Card }) {
+  const e = card.rec.entity;
+  const f = e.film;
+  if (f && isFilmData(d)) {
+    const fd = d as FilmData;
+    const names = (ids?: number[], n = 3) => (ids ?? []).slice(0, n).map((i) => fd.people[i]).join(", ");
+    const head = [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} seasons` : "") : fmtRuntime(f.rt), f.lang ? `VO ${LANG_NAMES[f.lang] ?? f.lang}` : ""];
+    return (
+      <>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{head.filter(Boolean).join(" · ")}</p>
+        <h2 className="font-display text-3xl leading-tight text-white">{e.title}</h2>
+        <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
+        <p className="mt-1 line-clamp-1 text-xs text-white/70">
+          {(f.g ?? []).slice(0, 3).join(" / ")}
+          {f.dir?.length ? ` · ${names(f.dir, 1)}` : f.cre?.length ? ` · ${names(f.cre, 1)}` : ""}
+        </p>
+        {f.cast?.length ? <p className="line-clamp-1 text-xs text-white/60">{names(f.cast, 3)}</p> : null}
+        {f.ov && <p className="mt-1 line-clamp-3 text-[13px] text-white/80">{f.ov}</p>}
+      </>
+    );
+  }
   return (
-    <motion.span
-      style={{ opacity: o, color, borderColor: color }}
-      className={`pointer-events-none absolute rounded-lg border-4 px-3 py-1 text-2xl font-black tracking-widest ${className}`}
-    >
+    <>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{e.subtitle}</p>
+      <h2 className="font-display text-3xl leading-tight text-white">{e.title}</h2>
+      <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
+      <p className="mt-1 line-clamp-3 text-[13px] text-white/75">{String(e.item?.meta?.description ?? e.tags.slice(0, 5).join(" · "))}</p>
+    </>
+  );
+}
+
+function Stamp({ o, text, color, className }: { o: ReturnType<typeof useTransform<number, number>>; text: string; color: string; className: string }) {
+  return (
+    <motion.span style={{ opacity: o, color, borderColor: color }} className={`pointer-events-none absolute rounded-lg border-4 px-3 py-1 text-2xl font-black tracking-widest ${className}`}>
       {text}
     </motion.span>
   );

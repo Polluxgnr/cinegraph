@@ -1,0 +1,37 @@
+# Curated YouTube channels (official channels only). Videos come from YouTube's public RSS feed
+# per channel: https://www.youtube.com/feeds/videos.xml?channel_id=<id>
+# Add a channel: open its page, "Share channel" -> "Copy channel ID".
+- {id: UCwI-JbGNsojunnHbFAc0M4Q, name: ARTE, lang: fr, tags: [documentary, culture, arte]}
+- {id: UCLLibJTCy3sXjHLVaDimnpQ, name: ARTE (de), lang: de, tags: [documentary, culture, arte]}
+- {id: UC-smeLB9AnOTeypr1YyjJ3A, name: ARTE Concert, lang: fr, tags: [music, live, arte]}
+- {id: UCB_WkcAGmlt5lOW1uHCvemQ, name: ARTE Tracks, lang: fr, tags: [culture, underground, arte]}
+- {id: UCalZsH8n4r53tXv1sEmqJbg, name: France 5, lang: fr, tags: [documentary, france tv]}
+- {id: UCO6K_kkdP-lnSCiO3tPx7WA, name: franceinfo, lang: fr, tags: [news, investigation, france tv]}
+- {id: UCB9Ryofh48sG51db-Y7kY6g, name: Lumni, lang: fr, tags: [education, france tv]}
+- {id: UCLCyp2cCf8-O9ZaZnVrs-og, name: Ushuaïa TV, lang: fr, tags: [nature, travel, documentary]}
+- {id: UCYti3yTb2QWvLQExSmxnE2A, name: Brut, lang: fr, tags: [society, reportage]}
+- {id: UCQgWpmt02UtJkyO32HGUASQ, name: Thinkerview, lang: fr, tags: [interview, society]}
+- {id: UCaNlbnghtwlsGF-KzAFThqA, name: ScienceEtonnante, lang: fr, tags: [science]}
+- {id: UCin0m13qWv3-051xlWlHamA, name: Veritasium en français, lang: fr, tags: [science]}
+- {id: UC7sXGI8p8PvKosLWagkK9wQ, name: "Heu?reka", lang: fr, tags: [economics, finance]}
+- {id: UCtqICqGbPSbTN09K1_7VZ3Q, name: DirtyBiology, lang: fr, tags: [science, biology]}
+- {id: UC5X4e8ScZI2AFd_vkjSoyoQ, name: AstronoGeek, lang: fr, tags: [space, science]}
+- {id: UC1EacOJoqsKaYxaDomTCTEQ, name: Le Réveilleur, lang: fr, tags: [climate, energy, science]}
+- {id: UCSULDz1yaHLVQWHpm4g_GHA, name: Monsieur Bidouille, lang: fr, tags: [tech, engineering]}
+- {id: UCofQxJWd4qkqc7ZgaLkZfcw, name: Linguisticae, lang: fr, tags: [language, culture]}
+- {id: UCN4yRCI5-4gCJOiwdz96dFw, name: Nota Bene, lang: fr, tags: [history]}
+- {id: UC3PL-cRN0m8QCjGmvcmw6cw, name: Curiosity Fr, lang: fr, tags: [curiosity, science]}
+- {id: UCsXVk37bltHxD1rDPwtNM8Q, name: Kurzgesagt, lang: en, tags: [science, animation]}
+- {id: UCHnyfMqiRRG1u-2MsSQLbXA, name: Veritasium, lang: en, tags: [science, engineering]}
+- {id: UCLXo7UDZvByw2ixzpQCufnA, name: Vox, lang: en, tags: [explainers, society]}
+- {id: UCW39zufHfsuGgpLviKh297Q, name: DW Documentary, lang: en, tags: [documentary, reportage]}
+- {id: UCwmZiChSryoWQCZMIQezgTg, name: BBC Earth, lang: en, tags: [nature, documentary]}
+- {id: UCpVm7bg6pXKo1Pr6k5kxG9A, name: National Geographic, lang: en, tags: [nature, travel, documentary]}
+- {id: UCvv8wDf6RC7swQ0j0GyS-vA, name: Wendover Productions, lang: en, tags: [geography, logistics]}
+- {id: UCgNg3vwj3xt7QOrcIDaHdFg, name: PolyMatter, lang: en, tags: [geopolitics, economics]}
+- {id: UCmGSJVG3mCRXVOP4yZrU1Dw, name: Johnny Harris, lang: en, tags: [geopolitics, travel]}
+- {id: UC6n8I1UDTKP1IWjQMg6_TwA, name: The B1M, lang: en, tags: [architecture, engineering]}
+- {id: UCvXa_XHOMH8c5nZm_2VqpIg, name: ColdFusion, lang: en, tags: [tech, business]}
+- {id: UC2C_jShtL725hvbm1arSV9w, name: CGP Grey, lang: en, tags: [explainers]}
+- {id: UCfdNM3NAhaBOXCafH7krzrA, name: The Infographics Show, lang: en, tags: [explainers, history]}
+- {id: UCsBjURrPoezykLs9EqgamOA, name: Fireship, lang: en, tags: [tech, programming]}

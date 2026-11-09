@@ -91,6 +91,15 @@ def ingest_wikidata(
     typer.echo(f"titles enriched: {wikidata.fetch_facts(limit=limit, sp=sp)}")
 
 
+@ingest_app.command("links")
+def ingest_links() -> None:
+    """AlloCiné / SensCritique / Letterboxd / IMDb ids + Wikipedia images (titles without TMDB posters)."""
+    from .ingest import links
+
+    typer.echo(f"ids: {links.fetch_ids()}")
+    typer.echo(f"wikipedia images: {links.fetch_wikipedia_images()}")
+
+
 @ingest_app.command("quickstart")
 def ingest_quickstart(tv: int = 1200) -> None:
     """No-key bootstrap: MovieLens small + Wikidata TV series + Wikidata facts.
@@ -189,6 +198,19 @@ def seed_watchlist(path: Optional[Path] = None, offline: bool = False) -> None:
     from .userdata.seed_watchlist import load
 
     _echo(load(path, allow_remote=not offline))
+
+
+@app.command("export-static")
+def export_static(
+    out: Optional[Path] = typer.Option(None, help="default: web/public/data"),
+    domain: Optional[list[str]] = typer.Option(None, help="only these domains (repeatable)"),
+    skip_films: bool = False,
+) -> None:
+    """Write the static data the web app loads (films, embeddings, CF, every taste domain)."""
+    from .export_static import export_all
+
+    m = export_all(out, domain, skip_films)
+    _echo({k: v for k, v in m.items() if k != "film_keys"})
 
 
 # ------------------------------------------------------------------ inspect

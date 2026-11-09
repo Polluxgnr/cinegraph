@@ -1,10 +1,14 @@
 import type { NextConfig } from "next";
 
-// The FastAPI backend. Inside docker compose this is http://api:8000 (baked in at build time).
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
+// GitHub Pages serves the site from /<repo>; locally it's served from /.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: "export",
+  basePath,
+  trailingSlash: true,
+  images: { unoptimized: true },
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   turbopack: {
     rules: {
       "*.css": {
@@ -12,20 +16,6 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
-  },
-  async rewrites() {
-    return [{ source: "/api/:path*", destination: `${BACKEND_URL}/:path*` }];
-  },
-  async headers() {
-    return [
-      {
-        source: "/sw.js",
-        headers: [
-          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
-          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
-        ],
-      },
-    ];
   },
 };
 

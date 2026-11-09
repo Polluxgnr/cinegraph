@@ -1,50 +1,67 @@
-// CineGraph service worker: offline app shell + cached posters. API calls always go to the network.
-const SHELL = "cinegraph-shell-v1";
-const IMAGES = "cinegraph-posters-v1";
-const SHELL_URLS = ["/", "/swipe", "/tonight", "/watchlist", "/manifest.webmanifest", "/icons/icon-192.png"];
+// CineGraph service worker. Works under any base path (GitHub Pages serves /<repo>/).
+// - app shell: network first, cached copy offline
+// - catalogue (/data/*): stale-while-revalidate, so the app opens instantly and offline
+// - images (TMDB, Wikimedia, YouTube, TheMealDB, Deezer): cache first
+const VERSION = "v2";
+const SHELL = `cg-shell-${VERSION}`;
+const DATA = `cg-data-${VERSION}`;
+const IMAGES = `cg-img-${VERSION}`;
+const BASE = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+const IMAGE_HOSTS = ["image.tmdb.org", "upload.wikimedia.org", "commons.wikimedia.org", "i.ytimg.com", "www.themealdb.com", "e-cdns-images.dzcdn.net", "cdn-images.dzcdn.net"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(SHELL).then((c) => c.addAll([`${BASE}/`, `${BASE}/manifest.webmanifest`])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => ![SHELL, IMAGES].includes(k)).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => ![SHELL, DATA, IMAGES].includes(k)).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== "GET") return;
-  if (url.pathname.startsWith("/api/")) return; // live data only
+async function staleWhileRevalidate(cacheName, request) {
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(request);
+  const net = fetch(request).then((res) => {
+    if (res.ok) cache.put(request, res.clone());
+    return res;
+  }).catch(() => hit);
+  return hit || net;
+}
 
-  if (url.hostname === "image.tmdb.org") {
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  if (IMAGE_HOSTS.includes(url.hostname)) {
     event.respondWith(
       caches.open(IMAGES).then(async (c) => {
-        const hit = await c.match(event.request);
+        const hit = await c.match(req);
         if (hit) return hit;
-        const res = await fetch(event.request);
-        if (res.ok || res.type === "opaque") c.put(event.request, res.clone());
+        const res = await fetch(req);
+        if (res.ok || res.type === "opaque") c.put(req, res.clone());
         return res;
       }),
     );
     return;
   }
-
-  if (url.origin === self.location.origin) {
-    // network first, fall back to the cached shell when offline
-    event.respondWith(
-      fetch(event.request)
-        .then((res) => {
-          if (res.ok && (event.request.mode === "navigate" || url.pathname.startsWith("/_next/static/"))) {
-            const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(event.request, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match(event.request).then((r) => r || caches.match("/"))),
-    );
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith(`${BASE}/data/`)) {
+    event.respondWith(staleWhileRevalidate(DATA, req));
+    return;
   }
+  event.respondWith(
+    fetch(req)
+      .then((res) => {
+        if (res.ok && (req.mode === "navigate" || url.pathname.includes("/_next/static/"))) {
+          const copy = res.clone();
+          caches.open(SHELL).then((c) => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then((r) => r || caches.match(`${BASE}/`))),
+  );
 });

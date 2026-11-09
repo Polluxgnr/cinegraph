@@ -26,3 +26,7 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 *.log
+
+# generated catalogue (published as a release asset by the data workflow)
+web/public/data/
+web/out/

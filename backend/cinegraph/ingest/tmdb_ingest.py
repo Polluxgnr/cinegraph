@@ -212,6 +212,13 @@ def parse_details(kind: str, d: dict, region: str = "FR") -> dict[str, Any]:
                 "logos": [i["file_path"] for i in images.get("logos", [])[:2]],
                 "in_production": d.get("in_production"),
                 "type": d.get("type"),
+                "collection": ({"id": d["belongs_to_collection"]["id"], "name": d["belongs_to_collection"]["name"]}
+                               if d.get("belongs_to_collection") else None),
+                "watch_link": reg.get("link"),
+                "status_tv": d.get("status") if not is_movie else None,
+                "episodes": d.get("number_of_episodes"),
+                "seasons": [{"n": se.get("season_number"), "episodes": se.get("episode_count"), "name": se.get("name")}
+                            for se in d.get("seasons", []) if se.get("season_number")] if not is_movie else None,
             },
         },
         "people": uniq,
@@ -233,7 +240,7 @@ def upsert_details(conn, title_id: int, parsed: dict, region: str) -> None:
             number_of_seasons = %(number_of_seasons)s, status = %(status)s, popularity = %(popularity)s,
             vote_average = %(vote_average)s, vote_count = %(vote_count)s, poster_path = %(poster_path)s,
             backdrop_path = %(backdrop_path)s, genres = %(genres)s, keywords = %(keywords)s,
-            countries = %(countries)s, networks = %(networks)s, extra = %(extra)s::jsonb,
+            countries = %(countries)s, networks = %(networks)s, extra = extra || %(extra)s::jsonb,
             source = 'tmdb', details_fetched_at = now(), tmdb_error = NULL
         WHERE id = %(id)s
         """,

@@ -1,20 +1,8 @@
 name: cinegraph
 
-x-backend: &backend
-  build: ./backend
-  env_file:
-    - path: .env
-      required: false
-  environment:
-    DATABASE_URL: postgresql://${POSTGRES_USER:-cinegraph}:${POSTGRES_PASSWORD:-cinegraph}@db:5432/${POSTGRES_DB:-cinegraph}
-    DATA_DIR: /data
-  volumes:
-    - ./data:/data
-    - ./docs:/app/docs:ro
-  depends_on:
-    db:
-      condition: service_healthy
-
+# Local data pipeline. The app itself is a static site (web/), deployed to GitHub Pages.
+#   docker compose up -d db
+#   docker compose run --rm pipeline cinegraph ingest movielens   (or run the CLI from backend/.venv)
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -32,27 +20,41 @@ services:
       timeout: 3s
       retries: 30
 
+  pipeline:
+    build: ./backend
+    profiles: ["tools"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cinegraph}:${POSTGRES_PASSWORD:-cinegraph}@db:5432/${POSTGRES_DB:-cinegraph}
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+      - ./docs:/app/docs:ro
+      - ./web/public/data:/app/export
+    command: ["cinegraph", "--help"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Optional v1 server mode (FastAPI). The web app no longer needs it.
   api:
-    <<: *backend
-    command: ["uvicorn", "cinegraph.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    build: ./backend
+    profiles: ["server"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cinegraph}:${POSTGRES_PASSWORD:-cinegraph}@db:5432/${POSTGRES_DB:-cinegraph}
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
     ports:
       - "127.0.0.1:8000:8000"
-
-  worker:
-    <<: *backend
-    command: ["python", "-m", "cinegraph.worker"]
-
-  web:
-    build:
-      context: ./web
-      args:
-        BACKEND_URL: http://api:8000
-    environment:
-      BACKEND_URL: http://api:8000
-    ports:
-      - "127.0.0.1:3000:3000"
     depends_on:
-      - api
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

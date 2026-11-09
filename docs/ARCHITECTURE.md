@@ -1,137 +1,94 @@
 # CineGraph architecture
 
-```
-                 ┌──────────────────────────── ingestion (CLI / worker) ───────────────────────────┐
- TMDB daily ID exports ──► tmdb_export ──► titles (stubs) ──► TMDB details crawl (rate-limited,   │
-                                                              resumable: details_fetched_at)      │
- MovieLens zip ──► ml_links, stub titles, ratings.npz                                             │
- Wikidata SPARQL ──► wikidata_id, wikidata_facts (awards, based on, influences, series, places)   │
- Letterboxd export ZIP / public RSS ──► user_ratings, diary, user_watched, watchlist, user_likes  │
- docs/seed_watchlist.md ──► watchlist                                                             │
-                 └──────────────────────────────────────────────────────────────────────────────────┘
-                                     │ Postgres 16 + pgvector
-        ┌────────────────────────────┼──────────────────────────────────────┐
-        ▼                            ▼                                      ▼
-  knowledge graph               content embeddings                   collaborative filtering
-  kg_nodes / kg_edges           title_embeddings vector(384)         implicit ALS item factors
-  (graph.build)                 (embeddings.build)                   (cf.train → data/models/als.npz)
-        └──────────────┬─────────────┴───────────────┬──────────────────────┘
-                       ▼                             ▼
-              ranking pipeline (recsys/pipeline.py)        swipe deck (recsys/active.py)
-              candidates → hard filters → features         Bayesian linear model in PCA space,
-              → LightGBM LambdaRank (or default blend)     uncertainty × coverage × p(seen)
-              → MMR diversity → bandit exploration
-              → explanations → impression log
-                       │
-             NL query (recsys/nlquery.py): LLM parse → constraints + anchor/vibe boosts → pipeline → LLM rerank
-                       │
-                 FastAPI (api/main.py)  ◄──── Next.js PWA (web/), proxied under /api
-```
+Two halves with a hard boundary: an **offline pipeline** (Python, CI) that turns open data into compact
+static assets, and an **on-device engine** (TypeScript, browser) that personalises, learns and remembers.
 
-## Data sources and the rules we follow
+## 1. Offline pipeline (`backend/`, GitHub Actions weekly)
 
-| Source | How | Why this way |
+| Stage | Module | Notes |
 |---|---|---|
-| TMDB | Official API with your own key, daily ID export files | Terms allow personal use with attribution |
-| Wikidata | Public SPARQL endpoint, ≤1 query/s, User-Agent with contact URL | Wikimedia UA policy |
-| MovieLens | GroupLens download (`ml-latest-small` or `ml-32m`) into `data/` | Personal/research licence, never committed or redistributed |
-| Letterboxd | Official export ZIP, public RSS feed, CSVs for Letterboxd's own importer | No scraping, no automated login/posting (both break Letterboxd's terms) |
+| TMDB crawl | `ingest/tmdb_ingest.py`, `tmdb_client.py` | Daily ID exports → top-N stubs → details with `append_to_response` (credits, keywords, external ids, images, FR watch providers, alternative titles, collection). Async token bucket (30 req/s) + 16 concurrent + backoff on 429/5xx. State in the DB (`details_fetched_at`, `tmdb_attempts`): resumable. |
+| Wikidata | `ingest/wikidata.py` | QIDs from TMDB ids (P4947/P4983); awards, nominations, based on, influenced by, series (sagas), follows, narrative location, main subject; core facts for titles TMDB hasn't filled. Batched SPARQL, ≤1 req/s, retries on truncated responses. |
+| Links & images | `ingest/links.py` | AlloCiné (P1265/P1267), SensCritique (P10100), Letterboxd (P6127), IMDb, Wikipedia sitelinks; Wikipedia `pageimages` as poster fallback (50 titles/request). |
+| MovieLens | `ingest/movielens.py` | `links.csv` → TMDB ids; ratings as a numpy file (not 32M rows in Postgres). |
+| Knowledge graph | `recsys/graph.py` | `kg_nodes`/`kg_edges` in Postgres (typed edges: directed_by, written_by, stars, part_of_series, won, based_on…). |
+| Embeddings | `recsys/embeddings.py` | `BAAI/bge-small-en-v1.5` via fastembed (ONNX, 384-d) on title + genres + keywords + people + overview; pgvector HNSW. LSA fallback offline. |
+| CF | `recsys/cf.py` | Implicit ALS (Hu, Koren & Volinsky) on MovieLens; item factors exported. |
+| Other domains | `domains/*.py` | YouTube RSS, TheMealDB, Deezer (+ related artists), Wikidata places / cars / brands. One `Item` shape for all. |
+| Export | `export_static.py` | `catalog.json` with compact keys (documented in `manifest.film_keys`), people index, sagas, embeddings and CF factors as **int8 + per-row float32 scale** (384 B/title, cosine error < 1 %), reaction chips per title. |
 
-Streaming availability is TMDB's watch-provider data (JustWatch), region FR, legal platforms only.
+The DB is carried between CI runs as a `pg_dump` release asset, so each weekly run is incremental. If a source
+times out, that domain keeps last week's export.
 
-## Schema (backend/cinegraph/schema.sql)
+## 2. On-device engine (`web/lib/engine/`)
 
-- `titles`: one row per film or series, natural key `(kind, tmdb_id)` because TMDB movie and TV ids overlap.
-  `source` says who created the row (`tmdb`, `movielens`, `wikidata`); a TMDB crawl overwrites stubs.
-- `people`, `credits(role)`, `providers(region, offer_type)`, `title_aliases` (normalised alternative titles for matching).
-- `wikidata_facts(prop, object_qid, object_label)`.
-- User data: `user_ratings`, `diary`, `user_watched`, `user_likes`, `watchlist(status want|watching)`, `swipes`,
-  `pending_matches` (imports that couldn't be matched yet).
-- Learning: `impressions` (features at serve time), `bandit_arms` (Beta posteriors per cluster), `job_state`.
-- Graph: `kg_nodes(type, key, label, degree)`, `kg_edges(src, dst, rel, weight)`.
-- `title_embeddings(embedding vector(384))` with an HNSW cosine index.
+### Profile (`profile.ts`)
+Rebuilt from your answers on demand. Each answer has a taste value in [-1, 1] (loved 1, liked .6, ok 0,
+not my thing -1, want .45, maybe .15, never -.6; "no idea" carries none; a star rating overrides).
+Derived: weighted mean embedding (dislikes push at half strength), shrunk-mean affinities per tag, person,
+original language and decade, runtime sweet spot (mean ± sd of liked films), reaction-chip counts
+("Too long" → runtime penalty), and an **ALS user vector folded in** from item factors:
+x = (YᵀY + Yᵤᵀ(Cᵤ−I)Yᵤ + λI)⁻¹ Yᵤᵀ Cᵤ p, solved with a Cholesky in the browser.
 
-## Ingestion
+### Ranking (`score.ts`, `recommend.ts`)
+Two stages, like production recommenders:
+1. **Candidate generation** over the whole catalogue with a cheap score (profile cosine + tag affinity +
+   graph score + popularity); top ~600 kept.
+2. **Ranking** with 16 features: profile cosine, closest liked / disliked item, tag affinity, knowledge-graph
+   score, CF score, people, VO language, decade, runtime fit, community rating, popularity, recency,
+   next-in-saga, listed. A **logistic ranker** turns them into a match probability (shown as % and as
+   predicted stars = 0.5 + 4.5p).
 
-- **TMDB** (`ingest/tmdb_ingest.py`): stage the export into `tmdb_export`, insert the top N per kind as stubs
-  (or everything with `--full`), then crawl every title with `details_fetched_at IS NULL` in batches using
-  `append_to_response=credits,keywords,external_ids,images,watch/providers,alternative_titles`.
-  Token bucket (`TMDB_RATE_LIMIT`, default 30/s) + 16 concurrent requests + exponential backoff on 429/5xx.
-  Failures are counted per title (`tmdb_attempts`, max 3). Kill it any time; rerun continues.
-  Titles referenced by your data (RSS tmdb ids, Letterboxd matches, seed list) are always included.
-- **Wikidata** (`ingest/wikidata.py`): QIDs come from TMDB `external_ids`, or are resolved by TMDB id
-  (P4947 / P4983). Facts are fetched in batches of 60 QIDs. For titles TMDB hasn't filled yet, the core
-  facts (director, writers, cast, creators, genres, countries, year, runtime) are taken from Wikidata too, so
-  the app works before you have a TMDB key. `--tv-bootstrap N` seeds the N best-known series.
-- **MovieLens** (`ingest/movielens.py`): `links.csv` maps to TMDB; ratings are stored as a compressed numpy
-  file for ALS rather than 32M rows in Postgres.
+**Online learning** (`learn.ts`): each answer takes one SGD step on the features the item had *when you
+answered* (no leakage), with an L2 pull towards the default weights so a few answers can't wreck it. The full
+history is kept, so `relearn` replays it after a model change. The UI shows which signals your ranker
+up- or down-weighted, and its running accuracy.
 
-## Matching (userdata/matcher.py)
+**Knowledge-graph paths**: candidate and liked titles share entities (director, writer, creator, cast,
+composer, saga, award, source work, location, subject). Contribution = relation weight × idf(entity) ×
+taste weight, capped per anchor; the strongest positive path is the explanation.
 
-Title normalisation (accents, punctuation, leading articles, roman numerals) → candidates from the exact
-normalised title, aliases and trigram similarity → score = title similarity (exact / rapidfuzz) × year factor
-(same 1.0, ±1 0.95, ±2 0.8, else 0.45) × kind factor, threshold 0.72. If nothing matches locally and a TMDB key
-is set, TMDB search is tried and the hit is ingested on the spot; otherwise Wikidata's entity search is used
-(it knows the TMDB id of most notable titles, so the stub lines up with a later TMDB crawl). A query whose words
-are a strict superset or subset of a title ("Lupin III" vs "Lupin") is capped below the threshold, except a short
-name equal to the main title before a subtitle ("Big Vape" → "Big Vape: The Rise and Fall of Juul").
-Misses land in `pending_matches` and are retried on the next import / seed run.
+**Diversity**: MMR on embeddings (λ = 0.8). **Exploration**: ~12 % of slots; tags are Thompson-sampling arms
+(Beta posteriors updated by every answer), the best-drawn tags get a slot, labelled "Exploring".
 
-## Recommender
+### Swipe deck: active learning (`active.ts`)
+Bayesian linear regression of your taste on a fixed 32-d Gaussian random projection z of each embedding.
+Posterior covariance S = (λI + ZᵀZ/σ²)⁻¹. Next card maximises
 
-1. **Profile** (`profile.py`): read fresh per request: explicit stars > latest swipe (love 5, like 4,
-   dislike 1.5) > Letterboxd heart (4.5) > watched. "Not for me" on a card is a mild negative (2 stars) that
-   hides the title without marking it watched. Weight `w = (stars − 3)/2 ∈ [−1, 1]`.
-2. **Candidates**: embedding kNN from the profile vector and from each top anchor, ALS top-250 from the
-   folded-in user vector, 2-hop graph neighbours of titles you rated ≥ 4, and a quality fallback per kind.
-3. **Hard filters** (`config/hard_filters.yaml`): romance as main genre or rom-com/romantic drama, musicals,
-   laugh-track sitcoms (keywords + an editable title list). Never applied to your own watchlist/ratings.
-4. **Features** (`features.py`): profile cosine, max cosine to liked / disliked anchors, ALS score (NaN for
-   series: MovieLens has no TV), graph path score / path count / negative paths, genre affinity, popularity,
-   TMDB vote average and count, year, kind, runtime, on-my-platforms, in-watchlist, mood match.
-5. **Graph scoring** (`graph.py`): for each candidate C and anchor A: paths `C → entity ← A` weighted by
-   relation (director 1.0, writer 0.9, series 1.2, cast 0.45, keyword 0.35, award 0.25 …) / log(2 + degree) × w(A),
-   plus direct title-title edges (based on, sequel). Per-anchor contribution is capped. The best positive path
-   is the explanation: *"Same writer (Quentin Tarantino) as Pulp Fiction, which you rated 5"*.
-6. **Learning to rank** (`ltr.py`): LightGBM LambdaRank. Training rows = your rated/swiped titles with 5-fold
-   leave-out profiles (no leakage) + logged impressions that later got feedback. Needs ≥ 30 labels; until then
-   a rank-normalised hand blend (`features.DEFAULT_WEIGHTS`) is used. Retrains every 10 new feedback events
-   (background thread) and nightly.
-7. **Diversity**: MMR on embeddings (λ = 0.8). Default lists are half films, half series.
-8. **Exploration** (`bandit.py`): 24 k-means clusters of the embedding space are Thompson-sampling arms; ~12 %
-   of slots go to the best candidate of the sampled arm, marked "Exploring". Any feedback updates the arm.
-9. **NL queries** (`nlquery.py`): the LLM turns the request into a JSON intent (anchors, mood, runtime,
-   platforms, genres, vibe); a regex parser is the fallback. Anchor + vibe embeddings add boosts and extra
-   candidates; the normal pipeline ranks; the LLM reranks the top 30 and writes one line each.
-   Provider is pluggable: `LLM_PROVIDER=anthropic|openai_compat|ollama|none`, default Claude (`claude-opus-5-5`)
-   with structured JSON output, low effort, and the server-side refusal fallback enabled.
+  p_seen · ( √(zᵀSz) + v·coverage + x·match )
 
-## Swipe deck (active learning, `active.py`)
+- uncertainty √(zᵀSz): where an answer teaches most;
+- coverage: distance to everything already answered (visit every corner early);
+- match: ranker probability, with weight x growing with the number of answers, so cards drift from
+  "informative" to "informative *and* likely to please" as the profile firms up;
+- p_seen: logistic on popularity percentile (within films / series), shifted towards well-known items when
+  your recent "not seen / no idea" rate is high.
+Films and series alternate. Sampling among the top 5 avoids a mechanical deck.
 
-Pool = the ~3000 most popular allowed titles with embeddings, PCA to 48 dims. Bayesian linear regression
-(prior λI) on your labels gives a posterior covariance S. Next card maximises
-`p_seen × (√(xᵀSx) + 0.6·coverage + 0.15·|μᵀx|)`, sampled among the top 5. Coverage = 1 − max cosine to
-anything already labelled; `p_seen` is a logistic on popularity percentile (within kind) that shifts toward
-popular titles as your recent "not seen" rate rises. Films and series alternate. Right = like, left = dislike,
-up = love, down = not seen (not a taste signal, but keeps the title eligible for recommendations).
+### Memory (`store.ts`, `sync.ts`)
+One JSON document in IndexedDB: append-only `history` (source of truth), latest `feedback` per item, lists,
+series progress, vault, learned weights and bandit arms, settings. Optional sync to a **private GitHub Gist**
+(your token, kept locally): newest document wins, histories merged by timestamp. Secrets (Gist token,
+Anthropic key) are never uploaded.
 
-## Learning loop
+### AI (`ai.ts`, optional)
+With your Anthropic key (browser-only): Claude parses free-text requests into a JSON intent (structured
+outputs) and writes a taste portrait. Without it, a regex parser handles "like X but funnier, under 2h,
+on Netflix" and summaries are template-based.
 
-Every swipe/rating is written immediately and the next request reads the new profile (CF user vector is
-folded in on the fly, graph and embedding features use the current anchors). The worker container polls RSS
-every 30 min, runs the incremental LTR check every minute and the full retrain (graph, embeddings for new
-titles, clusters, ALS, LTR) nightly at `NIGHTLY_RETRAIN_HOUR`.
+## 3. Web app (`web/`)
+Next.js App Router, `output: "export"` (pure static), Tailwind, `motion` for gestures, `react-force-graph-2d`
+for the graph. Query-string routes (`/item/?k=films:123`) keep the export small. PWA: manifest with a share
+target (share a link from any app into the Vault), service worker caching the shell (network-first), the
+catalogue (stale-while-revalidate) and images (cache-first).
 
-## Letterboxd round trip
+## 4. Quality
+- Python: pytest (unit + a Postgres end-to-end ranking test) in CI with a pgvector service container.
+- TypeScript: ESLint, `tsc --noEmit`, Vitest on the engine.
+- Hard filters (romance / musicals / laugh-track sitcoms) computed in the pipeline (`config/hard_filters.yaml`),
+  switchable in Settings.
 
-- In: export ZIP (Settings → Data), uploaded in the app or `cinegraph import-letterboxd`. RSS for new diary entries.
-- Out: `cinegraph export-letterboxd` or the app's Import/Export page → CSVs with `tmdbID`, `imdbID`, `Title`,
-  `Year`, `Directors`, `Rating`, `WatchedDate`, `Rewatch`, `Tags`, `Review`, split under the 1 MB limit. You
-  upload them at letterboxd.com/import (diary/ratings/watched) and on your watchlist page (watchlist). Only films:
-  Letterboxd doesn't catalogue series. Data that came *from* Letterboxd is not re-exported unless asked.
-  Swipe "likes" are exported as watched, not as star ratings.
-
-## Web app (web/)
-
-Next.js App Router + Tailwind, installable PWA (manifest + service worker). `/api/*` is rewritten to the
-FastAPI service. Screens: Home (for you + NL search), Swipe, Tonight, Watchlist, Graph, Title detail, Import/Export.
+## 5. Legacy server mode
+`backend/cinegraph/api` (FastAPI) and the Postgres-side ranker (`recsys/pipeline.py`, LightGBM LambdaRank)
+are the v1 server implementation. They still run (`docker compose --profile server up`) and their tests still
+pass; the static app reimplements the online parts in the browser.
