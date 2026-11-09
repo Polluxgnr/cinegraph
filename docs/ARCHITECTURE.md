@@ -17,7 +17,7 @@ static assets, and an **on-device engine** (TypeScript, browser) that personalis
 | Other domains | `domains/*.py` | YouTube RSS, TheMealDB, Deezer (+ related artists), Wikidata places / cars / brands. One `Item` shape for all. |
 | Export | `export_static.py` | `catalog.json` with compact keys (documented in `manifest.film_keys`), people index, sagas, embeddings and CF factors as **int8 + per-row float32 scale** (384 B/title, cosine error < 1 %), reaction chips per title. |
 
-The DB is carried between CI runs as a `pg_dump` release asset, so each weekly run is incremental. If a source
+The DB is carried between CI runs as a `pg_dump` in the private Actions cache (never published), so each weekly run is incremental. If a source
 times out, that domain keeps last week's export.
 
 ## 2. On-device engine (`web/lib/engine/`)
