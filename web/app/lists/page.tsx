@@ -94,7 +94,7 @@ export default function Lists() {
             <div className="flex min-w-0 flex-1 flex-col py-1">
               <Link href={detailHref(e.key)} className="truncate font-semibold hover:text-accent">{e.title}</Link>
               <p className="truncate text-xs text-muted">
-                {e.film ? [e.film.k === "tv" ? "Series" : "Film", e.film.y, e.film.k === "tv" ? (e.film.ns ? `${e.film.ns} seasons` : "") : fmtRuntime(e.film.rt)].filter(Boolean).join(" · ") : e.subtitle}
+                {e.film ? [e.film.k === "tv" ? "Series" : "Film", e.film.y, e.film.k === "tv" ? (e.film.ns ? `${e.film.ns} season${e.film.ns === 1 ? "" : "s"}` : "") : fmtRuntime(e.film.rt)].filter(Boolean).join(" · ") : e.subtitle}
               </p>
               {rec && <Match p={rec.p} stars={rec.stars} compact />}
               <p className="mt-auto pt-1 text-[11px] text-muted">

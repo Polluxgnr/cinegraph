@@ -2,9 +2,10 @@
 # never to your own watchlist or ratings. Edit freely.
 
 romance:
-  # a title is dropped when Romance is its *main* genre (first listed),
-  # or when it is a rom-com / romantic drama (Romance + only Comedy/Drama/Family besides)
-  soft_genres: [Comedy, Drama, Family, Music]
+  # dropped when Romance is the main genre, or when it's tagged romance without any of these
+  # "strong" genres (a love story inside a thriller or a war film stays)
+  strong_genres: [Thriller, Crime, War, Science Fiction, Horror, Mystery, Action, Western, Documentary,
+                  Animation, History, Action & Adventure, Sci-Fi & Fantasy, War & Politics]
   keywords: [romantic comedy, romcom, love triangle, chick flick]
 
 musicals:

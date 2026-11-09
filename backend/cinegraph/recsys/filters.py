@@ -24,9 +24,10 @@ def blocked_reason(title: dict) -> str | None:
     genres = list(title.get("genres") or [])
     kws = _kw(title)
 
-    if "Romance" in genres:
-        others = set(genres) - {"Romance"}
-        if genres[0] == "Romance" or others <= set(r["romance"]["soft_genres"]):
+    if "Romance" in genres or kws & {"romance", "romance film", "romantic drama", "romantic fantasy"}:
+        # a love story inside a thriller / sci-fi / war film is fine; a romance with extras isn't
+        strong = set(genres) & set(r["romance"]["strong_genres"])
+        if (genres and genres[0] == "Romance") or not strong:
             return "romance"
     if kws & {k.lower() for k in r["romance"]["keywords"]}:
         return "romance"

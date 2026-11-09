@@ -47,7 +47,7 @@ export default function Me() {
     <div className="space-y-8">
       <header>
         <h1 className="font-display text-4xl md:text-6xl">My taste</h1>
-        <p className="text-sm text-muted">{total} answers so far across {sums.length} areas. Everything here updates with each answer.</p>
+        <p className="text-sm text-muted">{total} answer{total === 1 ? "" : "s"} so far across {sums.length} area{sums.length === 1 ? "" : "s"}. Everything here updates with each answer.</p>
       </header>
 
       <section className="card space-y-3 p-5">
@@ -104,7 +104,7 @@ function DomainCard({ s }: { s: TasteSummary }) {
     <section className="card space-y-4 p-5">
       <div className="flex items-baseline justify-between">
         <h2 className="font-display text-2xl">{cfg?.emoji} {cfg?.label}</h2>
-        <span className="text-xs text-muted">{s.answers} answers{s.accuracy != null ? ` · model right ${Math.round(s.accuracy * 100)}% of the time` : ""}</span>
+        <span className="text-xs text-muted">{s.answers} answer{s.answers === 1 ? "" : "s"}{s.accuracy != null ? ` · model right ${Math.round(s.accuracy * 100)}% of the time` : ""}</span>
       </div>
       <p className="text-sm text-ink/85">{summaryText(s)}</p>
       {s.axes.some((a) => a.value !== 0) && s.domain === "films" && (

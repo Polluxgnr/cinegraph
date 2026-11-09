@@ -171,7 +171,8 @@ export function features(c: Ctx, row: number): Scored {
   let nearest: Anchor | null = null;
   if (d.emb) {
     const n = d.norms[row];
-    if (p.vector) x[F.emb_profile] = d.emb.dot(row, p.vector) / n;
+    const b = baseline(d);
+    if (p.vector) x[F.emb_profile] = centre(d.emb.dot(row, p.vector) / n, b);
     let bp = -1;
     for (const a of p.pos.slice(0, 150)) {
       if (a.row === row) continue;
@@ -181,10 +182,10 @@ export function features(c: Ctx, row: number): Scored {
         nearest = a;
       }
     }
-    x[F.emb_max_pos] = Math.max(bp, 0);
-    let bn = 0;
+    x[F.emb_max_pos] = Math.max(centre(bp, b), 0);
+    let bn = -1;
     for (const a of p.neg.slice(0, 80)) if (a.row !== row) bn = Math.max(bn, cos(d, row, a.row));
-    x[F.emb_max_neg] = bn;
+    x[F.emb_max_neg] = Math.max(centre(bn, b), 0);
   }
   let ta = 0;
   let tn = 0;
@@ -261,7 +262,7 @@ export function quickScore(c: Ctx, row: number): number {
   const e = d.entities[row];
   // small stable jitter so cold-start lists aren't alphabetical when a domain has no popularity data
   let s = e.pop / 30 + 0.08 * jitter(e.key);
-  if (d.emb && p.vector) s += (2 * d.emb.dot(row, p.vector)) / d.norms[row];
+  if (d.emb && p.vector) s += 2 * centre(d.emb.dot(row, p.vector) / d.norms[row], baseline(d));
   let ta = 0;
   for (const t of e.tags.slice(0, 6)) ta += p.tagAff.get(t.toLowerCase()) ?? 0;
   s += ta / 3;
@@ -269,6 +270,30 @@ export function quickScore(c: Ctx, row: number): number {
   if (c.listed.has(e.key) || c.sagaNext.has(e.key)) s += 1;
   return s;
 }
+
+/** Typical cosine between two unrelated items of a domain. Sentence embeddings are rarely near 0 for
+ * unrelated texts, so features are re-centred: (cos - base) / (1 - base) maps "unrelated" to ~0. */
+const baselines = new WeakMap<DomainData, number>();
+export function baseline(d: DomainData): number {
+  let b = baselines.get(d);
+  if (b != null) return b;
+  const n = d.entities.length;
+  let acc = 0;
+  let k = 0;
+  let seed = 12345;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (let t = 0; t < 400 && n > 1 && d.emb; t++) {
+    const i = Math.floor(rnd() * n);
+    const j = Math.floor(rnd() * n);
+    if (i === j) continue;
+    acc += cos(d, i, j);
+    k++;
+  }
+  b = k ? Math.min(0.9, acc / k) : 0;
+  baselines.set(d, b);
+  return b;
+}
+const centre = (x: number, b: number) => (x - b) / (1 - b);
 
 function cos(d: DomainData, i: number, j: number): number {
   const m = d.emb!;
@@ -287,6 +312,10 @@ export function predict(w: number[], x: Float32Array): number {
   for (let i = 0; i < x.length; i++) z += w[i] * x[i];
   return sigmoid(z);
 }
+
+/** How much to trust the model with n informative answers: predictions are pulled towards 50%
+ * early on (displayed match %, stars), without changing the ranking order. */
+export const confidence = (n: number) => Math.max(0.15, n / (n + 8));
 
 /** One SGD step of L2-regularised logistic regression towards label y in [0, 1]. */
 export function sgdStep(w: number[], x: Float32Array, y: number, n: number): number[] {

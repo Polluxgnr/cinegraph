@@ -192,7 +192,7 @@ function CardMeta({ d, card }: { d: DomainData; card: Card }) {
   if (f && isFilmData(d)) {
     const fd = d as FilmData;
     const names = (ids?: number[], n = 3) => (ids ?? []).slice(0, n).map((i) => fd.people[i]).join(", ");
-    const head = [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} seasons` : "") : fmtRuntime(f.rt), f.lang ? `VO ${LANG_NAMES[f.lang] ?? f.lang}` : ""];
+    const head = [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "") : fmtRuntime(f.rt), f.lang ? `VO ${LANG_NAMES[f.lang] ?? f.lang}` : ""];
     return (
       <>
         <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{head.filter(Boolean).join(" · ")}</p>

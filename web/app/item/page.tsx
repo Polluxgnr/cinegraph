@@ -122,7 +122,7 @@ function FilmFacts({ d, row }: { d: FilmData; row: number }) {
   const names = (ids?: number[]) => (ids ?? []).map((i) => d.people[i]).join(", ");
   const facts: [string, string][] = [
     ["Released", f.d ? new Date(f.d).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }) : String(f.y ?? "")],
-    ["Length", f.k === "tv" ? [f.ns ? `${f.ns} seasons` : "", f.ne ? `${f.ne} episodes` : "", f.rt ? `${f.rt} min/ep` : ""].filter(Boolean).join(" · ") : fmtRuntime(f.rt)],
+    ["Length", f.k === "tv" ? [f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "", f.ne ? `${f.ne} episode${f.ne === 1 ? "" : "s"}` : "", f.rt ? `${f.rt} min/ep` : ""].filter(Boolean).join(" · ") : fmtRuntime(f.rt)],
     ["Original language (VO)", f.lang ? LANG_NAMES[f.lang] ?? f.lang : ""],
     ["Countries", (f.c ?? []).join(", ")],
     ["Directed by", names(f.dir)],

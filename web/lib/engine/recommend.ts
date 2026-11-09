@@ -9,7 +9,7 @@ import type { State } from "../store";
 import type { Entity } from "../types";
 import { sampleBeta } from "./linalg";
 import { buildProfile, type Profile } from "./profile";
-import { type Ctx, explain, features, makeCtx, predict, quickScore, stars, weights, type Scored } from "./score";
+import { confidence, type Ctx, explain, features, makeCtx, predict, quickScore, stars, weights, type Scored } from "./score";
 
 export interface Rec {
   entity: Entity;
@@ -60,7 +60,9 @@ export function blocked(e: Entity, s: State): boolean {
 export function scoreOne(d: DomainData, s: State, row: number, ctx?: Ctx): Rec {
   const c = ctx ?? context(d, s);
   const sc = features(c, row);
-  const p = predict(weights(s.learned.ranker[d.name]), sc.x);
+  const raw = predict(weights(s.learned.ranker[d.name]), sc.x);
+  const z = Math.log(raw / (1 - raw)) * confidence(c.p.n);
+  const p = 1 / (1 + Math.exp(-z));
   return { entity: d.entities[row], p, stars: stars(p), why: explain(sc, c, p), explore: false, scored: sc };
 }
 
@@ -68,6 +70,7 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   const n = o.n ?? 20;
   const c = context(d, s);
   const w = weights(s.learned.ranker[d.name]);
+  const conf = confidence(c.p.n);
   // stage 1: cheap score over the whole catalogue
   const pre: { row: number; q: number }[] = [];
   for (let row = 0; row < d.entities.length; row++) {
@@ -88,7 +91,7 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
     let z = 0;
     for (let i = 0; i < sc.x.length; i++) z += w[i] * sc.x[i];
     z += o.boost?.get(e.key) ?? 0;
-    scored.push({ row, p: 1 / (1 + Math.exp(-z)), sc });
+    scored.push({ row, p: 1 / (1 + Math.exp(-z * conf)), sc });
   }
   scored.sort((a, b) => b.p - a.p);
 

@@ -22,7 +22,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   const platforms = useStore((s) => s.settings.platforms);
   const f = e.film;
   const meta = f
-    ? [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} seasons` : "") : fmtRuntime(f.rt), f.lang?.toUpperCase()]
+    ? [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "") : fmtRuntime(f.rt), f.lang?.toUpperCase()]
     : [e.subtitle];
   const streams = f ? streamsOn(f, platforms) : [];
 

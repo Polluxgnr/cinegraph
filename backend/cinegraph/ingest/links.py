@@ -62,15 +62,18 @@ def fetch_ids(batch: int = 200, sp: Sparql | None = None, only_missing: bool = T
     return done
 
 
-def fetch_wikipedia_images(batch: int = 50, size: int = 500) -> int:
-    """Poster-like image for titles without a TMDB poster, from their Wikipedia article."""
+def fetch_wikipedia_images(batch: int = 50, size: int = 500, refresh: bool = False) -> int:
+    """Poster-like image for titles without a TMDB poster, from their Wikipedia article.
+    English Wikipedia first (its infobox image is usually the theatrical poster), French as fallback.
+    `refresh` re-checks titles that already have an image (e.g. a logo picked from fr.wikipedia)."""
     client = httpx.Client(headers={"User-Agent": Sparql().client.headers["User-Agent"]}, timeout=60)
     found = 0
     for wiki in ("enwiki", "frwiki"):
         host = "en" if wiki == "enwiki" else "fr"
         rows = db.fetchall(
             f"""SELECT id, extra->'links'->>'{wiki}' AS page FROM titles
-                WHERE poster_path IS NULL AND NOT (extra ? 'image') AND extra->'links'->>'{wiki}' IS NOT NULL""")
+                WHERE poster_path IS NULL AND extra->'links'->>'{wiki}' IS NOT NULL
+                  AND ({"true" if refresh and wiki == "enwiki" else "false"} OR NOT (extra ? 'image'))""")
         for i in range(0, len(rows), batch):
             chunk = rows[i:i + batch]
             try:
