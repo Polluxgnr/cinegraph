@@ -1,0 +1,58 @@
+# Hard filters from your taste. Applied to recommendations, swipe cards and "Tonight";
+# never to your own watchlist or ratings. Edit freely.
+
+romance:
+  # a title is dropped when Romance is its *main* genre (first listed),
+  # or when it is a rom-com / romantic drama (Romance + only Comedy/Drama/Family besides)
+  soft_genres: [Comedy, Drama, Family, Music]
+  keywords: [romantic comedy, romcom, love triangle, chick flick]
+
+musicals:
+  keywords: [musical, jukebox musical, broadway musical, stage musical, singing]
+
+laugh_track_sitcoms:
+  keywords: [laugh track, multi-camera, multi camera, live studio audience, studio audience, canned laughter]
+  # Wikidata/TMDB rarely tag laugh tracks, so well-known multi-camera sitcoms are listed by name
+  titles:
+    - Friends
+    - The Big Bang Theory
+    - Two and a Half Men
+    - How I Met Your Mother
+    - Mike & Molly
+    - 2 Broke Girls
+    - Mom
+    - Young Sheldon
+    - Seinfeld
+    - Frasier
+    - Everybody Loves Raymond
+    - The King of Queens
+    - That '70s Show
+    - Full House
+    - Fuller House
+    - Will & Grace
+    - Cheers
+    - Married... with Children
+    - Hannah Montana
+    - iCarly
+    - Last Man Standing
+    - The Ranch
+    - One Day at a Time
+    - The Fresh Prince of Bel-Air
+    - Family Matters
+    - Home Improvement
+    - The Nanny
+    - According to Jim
+    - Mad About You
+    - 3rd Rock from the Sun
+    - Melissa & Joey
+    - The Conners
+    - Roseanne
+    - Kevin Can Wait
+    - Bob Hearts Abishola
+    - Ghosts (US)
+    - Hélène et les Garçons
+    - Un gars, une fille
+    - Caméra Café
+    - H
+    - Le Miel et les Abeilles
+    - Premiers baisers
