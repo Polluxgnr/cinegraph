@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# data & models (downloaded at runtime, never committed: TMDB/MovieLens terms)
+data/*
+!data/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+next-env.d.ts
+
+# misc
+.DS_Store
+Thumbs.db
+*.log
