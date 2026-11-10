@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "perf": "vitest run --mode perf"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

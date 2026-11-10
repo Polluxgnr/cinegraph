@@ -11,6 +11,10 @@ romance:
 musicals:
   keywords: [musical, jukebox musical, broadway musical, stage musical, singing]
 
+kids:
+  # children's / preschool series (switchable in the app's Settings)
+  keywords: ["children's", children's television series, preschool, educational television, kids]
+
 laugh_track_sitcoms:
   keywords: [laugh track, multi-camera, multi camera, live studio audience, studio audience, canned laughter]
   # Wikidata/TMDB rarely tag laugh tracks, so well-known multi-camera sitcoms are listed by name

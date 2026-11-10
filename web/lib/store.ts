@@ -114,7 +114,7 @@ export function emptyState(): State {
       platforms: DEFAULT_PLATFORMS,
       lang: "fr",
       hideBlocked: true,
-      blocked: ["romance", "musical", "laugh-track sitcom"],
+      blocked: ["romance", "musical", "laugh-track sitcom", "kids"],
     },
     updatedAt: 0,
   };

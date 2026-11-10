@@ -35,6 +35,9 @@ def blocked_reason(title: dict) -> str | None:
     if kws & {k.lower() for k in r["musicals"]["keywords"]}:
         return "musical"
 
+    if title.get("kind") == "tv" and (kws & {k.lower() for k in r["kids"]["keywords"]} or "Kids" in genres):
+        return "kids"
+
     if title.get("kind") == "tv":
         lt = r["laugh_track_sitcoms"]
         if kws & {k.lower() for k in lt["keywords"]}:

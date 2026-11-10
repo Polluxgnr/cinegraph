@@ -10,7 +10,7 @@ import { DEFAULT_PLATFORMS, emptyState, replaceState, setSettings, useLoaded, us
 import { pullGist, pushGist } from "@/lib/sync";
 
 const ALL_PLATFORMS = [...DEFAULT_PLATFORMS, "arte.tv", "france.tv"];
-const FILTERS: [string, string][] = [["romance", "No romance"], ["musical", "No musicals"], ["laugh-track sitcom", "No laugh-track sitcoms"]];
+const FILTERS: [string, string][] = [["romance", "No romance"], ["musical", "No musicals"], ["laugh-track sitcom", "No laugh-track sitcoms"], ["kids", "No kids' shows"]];
 
 export default function Settings() {
   const s = useStore((x) => x.settings);

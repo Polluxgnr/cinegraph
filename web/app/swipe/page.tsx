@@ -65,13 +65,22 @@ function Deck({ domain }: { domain: string }) {
     async (a: Action, extra: { chips?: string[] } = {}, fly: [number, number] = [0, 0]) => {
       if (!card || busy.current) return;
       busy.current = true;
-      await Promise.all([animate(x, fly[0] * 600, { duration: 0.25 }), animate(y, fly[1] * 700, { duration: 0.25 })]);
-      await answer(card.rec.entity.key, domain, a, { ...extra, source: "swipe" });
-      setCount((n) => n + 1);
-      setUnseenMode(false);
-      x.set(0);
-      y.set(0);
-      busy.current = false;
+      try {
+        // short tween on the moving axis only (animating a value to itself never settles),
+        // capped so a stalled animation can never block the deck
+        const fast = { type: "tween", duration: 0.18, ease: "easeIn" } as const;
+        const moves: Promise<unknown>[] = [];
+        if (fly[0]) moves.push(Promise.resolve(animate(x, fly[0] * 600, fast)));
+        if (fly[1]) moves.push(Promise.resolve(animate(y, fly[1] * 700, fast)));
+        await Promise.race([Promise.all(moves), new Promise((r) => setTimeout(r, 300))]);
+        await answer(card.rec.entity.key, domain, a, { ...extra, source: "swipe" });
+        setCount((n) => n + 1);
+        setUnseenMode(false);
+      } finally {
+        x.set(0);
+        y.set(0);
+        busy.current = false;
+      }
     },
     [card, domain, x, y],
   );
