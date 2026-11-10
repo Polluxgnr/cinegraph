@@ -46,9 +46,10 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
         <div className="mt-auto flex gap-2 pt-1">
           <button
             onClick={() => (listed ? setList(e.key, e.domain, null) : answer(e.key, e.domain, "want", { source: "card" }))}
-            className="btn-ghost flex-1 px-2 py-1.5 text-xs"
+            className="btn-ghost flex-1 whitespace-nowrap px-2 py-1.5 text-xs"
+            title={listed ? "Remove from my list" : "Add to my list"}
           >
-            {listed ? "✓ On my list" : "+ My list"}
+            {listed ? "✓ Listed" : "+ List"}
           </button>
           <button onClick={() => answer(e.key, e.domain, "never", { source: "card" })} className="btn-ghost px-2 py-1.5 text-xs text-muted" title="Not for me">
             ✕

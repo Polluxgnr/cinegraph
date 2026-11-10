@@ -29,7 +29,8 @@ def _genre_like(title: str) -> bool:
     """Keep stylistic radios ("Deep House", "Jazz vocal"); skip branded / editorial ones."""
     t = title.lower()
     return (0 < len(title) <= 24 and not re.search(r"[0-9#:./|-]", title)
-            and not any(w in t for w in ("festival", "le parisien", "radio", "institut", "deezer", "playlist")))
+            and not any(w in t for w in ("festival", "le parisien", "radio", "institut", "deezer", "playlist", "kids",
+                                         "enfant", "jeunesse", "comptine", "disney")))
 
 
 def collect(radios_per_genre: int = 8, max_artists: int = 2500, related: bool = True) -> list[Item]:
@@ -37,7 +38,7 @@ def collect(radios_per_genre: int = 8, max_artists: int = 2500, related: bool = 
     catalogue is built from genre *radios* instead (Jazz -> "Jazz vocal", Dance -> "Deep House"...):
     the artists playing on them, tagged with genre + sub-genre."""
     http = Http(min_interval=0.12)
-    genres = [g for g in _json(http, f"{API}/genre").get("data", []) if g["id"] != 0 and "audio" not in g["name"].lower()]
+    genres = [g for g in _json(http, f"{API}/genre").get("data", []) if g["id"] != 0 and not any(w in g["name"].lower() for w in ("audio", "jeunesse", "kids", "enfant"))]
     artists: dict[int, dict] = {}
     for g in genres:
         radios = [r for r in _json(http, f"{API}/genre/{g['id']}/radios").get("data", []) if _genre_like(r.get("title", ""))]

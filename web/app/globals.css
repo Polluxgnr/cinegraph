@@ -12,7 +12,28 @@
   --like: #3ddc97;
   --nope: #ff6b5a;
   --unseen: #7aa2ff;
+  --space-accent: var(--accent);
 }
+
+/* every space has its own accent so switching area feels like switching app */
+:root[data-space="films"] { --accent: #f2a93b; }
+:root[data-space="youtube"] { --accent: #ff5a4e; }
+:root[data-space="music"] { --accent: #34d27c; }
+:root[data-space="recipes"] { --accent: #ff9f43; }
+:root[data-space="places"] { --accent: #3cc6d8; }
+:root[data-space="cars"] { --accent: #e8e8ec; }
+:root[data-space="brands"] { --accent: #c49bff; }
+[data-space="films"] { --space-accent: #f2a93b; }
+[data-space="youtube"] { --space-accent: #ff5a4e; }
+[data-space="music"] { --space-accent: #34d27c; }
+[data-space="recipes"] { --space-accent: #ff9f43; }
+[data-space="places"] { --space-accent: #3cc6d8; }
+[data-space="cars"] { --space-accent: #e8e8ec; }
+[data-space="brands"] { --space-accent: #c49bff; }
+
+/* page transitions: content fades up when the route changes */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.25s ease-out both; }
 
 @theme inline {
   --color-bg: var(--bg);

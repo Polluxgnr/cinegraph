@@ -11,7 +11,7 @@ import { getState, recordFeedback, update } from "./store";
 const SCOPES = "user-top-read playlist-read-private user-library-read";
 
 export function redirectUri(): string {
-  return `${window.location.origin}${asset("/settings/")}`;
+  return `${window.location.origin}${asset("/import/")}`;
 }
 
 function b64url(buf: ArrayBuffer): string {

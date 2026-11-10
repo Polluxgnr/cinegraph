@@ -2,7 +2,7 @@
  * Answering = remembering + learning. The ranker sees the item's features as they were when you
  * answered, takes one SGD step towards your answer, and the tag bandit updates its arms.
  */
-import { loadDomain } from "../data";
+import { loadSpace as loadDomain } from "../custom";
 import { ACTION_VALUE, type Action, getState, recordFeedback, update } from "../store";
 import { FEATURES } from "./score";
 import { scoreOne } from "./recommend";

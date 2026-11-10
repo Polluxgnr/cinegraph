@@ -114,7 +114,8 @@ export function itemEntity(domain: string, it: Item): Entity {
     image: it.image,
     date: it.date,
     pop: Math.log1p(it.pop ?? 0),
-    tags: it.tags ?? [],
+    // a video's channel is a taste signal of its own ("you watch a lot of ARTE")
+    tags: domain === "youtube" && it.subtitle ? [...(it.tags ?? []), it.subtitle.toLowerCase()] : it.tags ?? [],
     item: it,
   };
 }

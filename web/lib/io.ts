@@ -7,7 +7,8 @@
  *   and [[wikilinks]] between people, sagas and titles, ready to drop into a second brain
  */
 import JSZip from "jszip";
-import { loadDomain, loadFilms, manifest } from "./data";
+import { loadSpace as loadDomain } from "./custom";
+import { loadFilms, manifest } from "./data";
 import { DOMAIN } from "./domains";
 import { actionLabel } from "./domains";
 import { getState, recordFeedback, update, type Action } from "./store";

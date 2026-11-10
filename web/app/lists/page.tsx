@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
 import Match from "@/components/Match";
 import { detailHref } from "@/components/RecCard";
-import { type DomainData, loadDomain } from "@/lib/data";
-import { actionLabel, DOMAIN, DOMAINS } from "@/lib/domains";
+import { loadSpace as loadDomain } from "@/lib/custom";
+import type { DomainData } from "@/lib/data";
+import { actionLabel, DOMAIN } from "@/lib/domains";
+import { useSpace } from "@/lib/hooks";
 import { scoreOne } from "@/lib/engine/recommend";
 import { type Feedback, getState, type ListEntry, setList, useLoaded, useStore } from "@/lib/store";
 import { fmtRuntime } from "@/lib/text";
@@ -16,7 +18,9 @@ type Sort = "added" | "release" | "match" | "title" | "length";
 
 export default function Lists() {
   const [tab, setTab] = useState<Tab>("want");
-  const [dom, setDom] = useState<string>("all");
+  const space = useSpace();
+  const [allSpaces, setAllSpaces] = useState(false);
+  const dom = allSpaces ? "all" : space;
   const [sort, setSort] = useState<Sort>("added");
   const lists = useStore((s) => s.lists);
   const feedback = useStore((s) => s.feedback);
@@ -60,7 +64,7 @@ export default function Lists() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-4xl md:text-5xl">My lists</h1>
+        <h1 className="font-display text-4xl md:text-5xl">My {allSpaces ? "lists" : `${DOMAIN[space]?.short.toLowerCase()} list`}</h1>
         <label className="flex items-center gap-2 text-sm text-muted">Sort
           <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="rounded-lg border border-line bg-panel px-2 py-1 text-ink">
             <option value="added">Date added</option>
@@ -76,14 +80,9 @@ export default function Lists() {
           <button key={t} className="chip" data-on={tab === t} onClick={() => setTab(t)}>{l}</button>
         ))}
       </div>
-      <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-        <button className="chip shrink-0" data-on={dom === "all"} onClick={() => setDom("all")}>All ({rows.length})</button>
-        {DOMAINS.filter((d) => domains.includes(d.name)).map((d) => (
-          <button key={d.name} className="chip shrink-0" data-on={dom === d.name} onClick={() => setDom(d.name)}>
-            {d.emoji} {d.short} ({rows.filter((r) => r.domain === d.name).length})
-          </button>
-        ))}
-      </div>
+      <label className="flex items-center gap-2 text-xs text-muted">
+        <input type="checkbox" checked={allSpaces} onChange={(e) => setAllSpaces(e.target.checked)} /> show every space ({rows.length})
+      </label>
       {loaded && !rows.length && <p className="card p-4 text-sm text-muted">Nothing here yet. Swipe, or tap “+ My list” on any card.</p>}
       <ul className="grid gap-2 md:grid-cols-2">
         {items.map(({ r, e, rec, at }) => (

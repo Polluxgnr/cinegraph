@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DOMAINS } from "@/lib/domains";
 import { relearn } from "@/lib/engine/learn";
 import { useManifest } from "@/lib/hooks";
-import { backupJSON, exportObsidian, importLetterboxd, restoreJSON } from "@/lib/io";
-import { finishLogin, redirectUri, startLogin } from "@/lib/spotify";
-import { DEFAULT_PLATFORMS, emptyState, replaceState, setSettings, useLoaded, useStore } from "@/lib/store";
+import { asset } from "@/lib/data";
+import { backupJSON, exportObsidian, restoreJSON } from "@/lib/io";
+import { DEFAULT_PLATFORMS, emptyState, replaceState, setSettings, useStore } from "@/lib/store";
 import { pullGist, pushGist } from "@/lib/sync";
 
 const ALL_PLATFORMS = [...DEFAULT_PLATFORMS, "arte.tv", "france.tv"];
@@ -15,19 +15,9 @@ const FILTERS: [string, string][] = [["romance", "No romance"], ["musical", "No 
 export default function Settings() {
   const s = useStore((x) => x.settings);
   const counts = useStore((x) => ({ answers: Object.keys(x.feedback).length, history: x.history.length, vault: x.vault.length, updated: x.updatedAt }));
-  const loaded = useLoaded();
   const m = useManifest().data;
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  // Spotify redirects back here with ?code=
-  useEffect(() => {
-    if (!loaded) return;
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) return;
-    window.history.replaceState(null, "", window.location.pathname);
-    finishLogin(code).then(setMsg).catch((e) => setMsg(`Spotify: ${e.message}`));
-  }, [loaded]);
 
   async function run(label: string, fn: () => Promise<string | void>) {
     setBusy(true);
@@ -81,25 +71,8 @@ export default function Settings() {
         </div>
       </Section>
 
-      <Section title="Import" hint="Letterboxd: Settings → Data → Export your data, then drop the ZIP here. Everything is matched in your browser.">
-        <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-line p-5 text-sm text-muted hover:border-accent">
-          <input type="file" accept=".zip" className="hidden" data-testid="lb-upload"
-                 onChange={(e) => e.target.files?.[0] && run("Letterboxd import", async () => {
-                   const r = await importLetterboxd(e.target.files![0]);
-                   return `Letterboxd: ${r.matched}/${r.total} matched${r.unmatched.length ? ` (not found: ${r.unmatched.slice(0, 8).join(", ")}${r.unmatched.length > 8 ? "…" : ""})` : ""}`;
-                 })} />
-          Choose letterboxd-….zip
-        </label>
-      </Section>
-
-      <Section title="Spotify" hint="Imports your top artists, tracks and playlists; top artists seed your music taste.">
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
-          <li>Create an app at <a className="text-accent" href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">developer.spotify.com/dashboard</a> (Web API).</li>
-          <li>Add this Redirect URI: <code className="break-all text-ink">{loaded ? redirectUri() : ""}</code></li>
-          <li>Paste the Client ID below and connect.</li>
-        </ol>
-        <Secret value={s.spotifyClientId} placeholder="Spotify Client ID" onSave={(v) => setSettings({ spotifyClientId: v || undefined })} reveal />
-        <button className="btn text-sm" disabled={!s.spotifyClientId} onClick={() => run("Spotify", async () => { await startLogin(); })}>Connect Spotify</button>
+      <Section title="Import & connect" hint="YouTube, Spotify, Netflix and Letterboxd history, and backups, now live on their own page.">
+        <a href={asset("/import/")} className="btn-ghost text-sm">Open Import & connect →</a>
       </Section>
 
       <Section title="AI (optional)" hint="Your Anthropic API key enables smarter search parsing and a written taste portrait. Stored only in this browser, never synced.">

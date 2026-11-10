@@ -62,7 +62,22 @@ export interface VaultItem {
   created: number;
 }
 
+/** Something you added yourself (a link, a track, a recipe blog...) or imported from your history. */
+export interface CustomItem {
+  id: string; // "<domain>:custom:<uuid>"
+  domain: string;
+  title: string;
+  subtitle?: string;
+  url?: string;
+  image?: string;
+  tags: string[];
+  note?: string;
+  created: number;
+  source: string; // manual | youtube-takeout | spotify-export | netflix ...
+}
+
 export interface Settings {
+  space: string; // the area the whole app is currently about (films, music, recipes...)
   platforms: string[];
   lang: "fr" | "en";
   anthropicKey?: string;
@@ -88,6 +103,9 @@ export interface State {
   lists: Record<string, ListEntry>;
   progress: Record<string, { season: number; episode: number; updated: number }>;
   vault: VaultItem[];
+  custom: CustomItem[];
+  /** what each import found, for the Import page (counts, followed channels, playlists...) */
+  imports: Record<string, { at: number; summary: string; channels?: { name: string; url?: string; count: number }[] }>;
   learned: Learned;
   settings: Settings;
   spotify?: {
@@ -110,7 +128,10 @@ export function emptyState(): State {
     progress: {},
     vault: [],
     learned: { ranker: {}, arms: {} },
+    custom: [],
+    imports: {},
     settings: {
+      space: "films",
       platforms: DEFAULT_PLATFORMS,
       lang: "fr",
       hideBlocked: true,
@@ -303,6 +324,37 @@ export function setProgress(key: string, season: number, episode: number) {
     s.progress[key] = { season, episode, updated: Date.now() };
     s.lists[key] = { ...(s.lists[key] ?? { key, domain: "films", added: Date.now() }), status: "watching" };
   });
+}
+
+export function addCustom(items: Omit<CustomItem, "id" | "created">[]): string[] {
+  const ids: string[] = [];
+  update((s) => {
+    const known = new Set(s.custom.map((c) => `${c.domain}|${(c.url ?? c.title).toLowerCase()}`));
+    for (const it of items) {
+      const k = `${it.domain}|${(it.url ?? it.title).toLowerCase()}`;
+      if (known.has(k)) {
+        ids.push(s.custom.find((c) => `${c.domain}|${(c.url ?? c.title).toLowerCase()}` === k)!.id);
+        continue;
+      }
+      known.add(k);
+      const id = `${it.domain}:custom:${crypto.randomUUID().slice(0, 8)}`;
+      s.custom.push({ ...it, id, created: Date.now() });
+      ids.push(id);
+    }
+  });
+  return ids;
+}
+
+export function removeCustom(id: string) {
+  update((s) => {
+    s.custom = s.custom.filter((c) => c.id !== id);
+    delete s.feedback[id];
+    delete s.lists[id];
+  });
+}
+
+export function setSpace(space: string) {
+  if (state.settings.space !== space) setSettings({ space });
 }
 
 export function exportJSON(): string {

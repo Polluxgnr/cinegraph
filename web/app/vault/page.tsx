@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DOMAINS } from "@/lib/domains";
-import { exportObsidian } from "@/lib/io";
+import { buildDossier } from "@/lib/dossier";
+import { downloadBlob, exportObsidian } from "@/lib/io";
 import { addVault, removeVault, useLoaded, useStore } from "@/lib/store";
 
 const GUESS: [RegExp, string][] = [
@@ -21,6 +22,19 @@ export default function Vault() {
   const [tags, setTags] = useState("");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function copyDossier() {
+    const md = await buildDossier();
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(`Copied (${Math.round(md.length / 1000)}k characters): paste it into Claude`);
+    } catch {
+      downloadBlob("my-taste-dossier.md", new Blob([md], { type: "text/markdown" }));
+      setCopied("Downloaded instead");
+    }
+    setTimeout(() => setCopied(null), 4000);
+  }
 
   // PWA share target: /vault/?url=…&title=…&text=…
   useEffect(() => {
@@ -55,10 +69,14 @@ export default function Vault() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl md:text-5xl">Vault</h1>
-          <p className="text-sm text-muted">Links, ideas and things to keep. On your phone: Share → CineGraph adds it here.</p>
+          <h1 className="font-display text-4xl md:text-5xl">Second brain</h1>
+          <p className="text-sm text-muted">Links, ideas and things to keep, plus your whole taste profile ready for any AI. On your phone: Share → CineGraph.</p>
         </div>
-        <button className="btn-ghost text-sm" onClick={() => exportObsidian()}>Export to Obsidian (.zip)</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn text-sm" onClick={copyDossier}>{copied ?? "Copy my taste dossier for AI"}</button>
+          <button className="btn-ghost text-sm" onClick={async () => downloadBlob("my-taste-dossier.md", new Blob([await buildDossier()], { type: "text/markdown" }))}>Download .md</button>
+          <button className="btn-ghost text-sm" onClick={() => exportObsidian()}>Export to Obsidian</button>
+        </div>
       </header>
       <form className="card grid gap-2 p-4 md:grid-cols-[2fr_1.5fr_1fr_auto]" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://… (Marmiton recipe, Pinterest pin, video, article…)" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />

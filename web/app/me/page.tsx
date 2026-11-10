@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { aiEnabled, tastePortrait } from "@/lib/ai";
-import { type DomainData, loadDomain } from "@/lib/data";
+import { loadSpace as loadDomain } from "@/lib/custom";
+import type { DomainData } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { summarise, summaryText, type TasteSummary } from "@/lib/engine/summary";
-import { useManifest } from "@/lib/hooks";
+import { useManifest, useSpace } from "@/lib/hooks";
 import { getState, useLoaded, useStore } from "@/lib/store";
 
 /** "Understand my tastes": per-domain portrait, taste axes, what the model learned, accuracy. */
@@ -29,6 +30,8 @@ export default function Me() {
     [data, loaded, version], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const total = sums.reduce((a, s) => a + s.answers, 0);
+  const space = useSpace();
+  const ordered = [...sums].sort((a, b) => (b.domain === space ? 1 : 0) - (a.domain === space ? 1 : 0));
 
   async function writePortrait() {
     setBusy(true);
@@ -65,7 +68,7 @@ export default function Me() {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {sums.map((s) => <DomainCard key={s.domain} s={s} />)}
+        {ordered.map((s) => <DomainCard key={s.domain} s={s} />)}
       </div>
 
       {spotify && (

@@ -9,32 +9,19 @@ import Match from "@/components/Match";
 import { detailHref, Progress } from "@/components/RecCard";
 import type { DomainData, FilmData } from "@/lib/data";
 import { isFilmData } from "@/lib/data";
-import { DOMAIN, DOMAINS } from "@/lib/domains";
+import { DOMAIN } from "@/lib/domains";
 import { calibration, type Card, nextCard } from "@/lib/engine/active";
 import { answer } from "@/lib/engine/learn";
-import { useDomain, useManifest, useQueryParam } from "@/lib/hooks";
+import { useDomain, useSpace } from "@/lib/hooks";
 import { type Action, getState, undoLast, useLoaded, useStore } from "@/lib/store";
 import { fmtRuntime, LANG_NAMES } from "@/lib/text";
 
 const THRESHOLD = 110;
 
 export default function SwipePage() {
-  const [dParam, setD] = useQueryParam("d");
-  const domain = dParam && DOMAIN[dParam] ? dParam : "films";
-  const m = useManifest().data;
-  const available = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
-  return (
-    <div className="mx-auto max-w-md">
-      <div className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4">
-        {available.map((d) => (
-          <button key={d.name} className="chip shrink-0" data-on={d.name === domain} onClick={() => setD(d.name)}>
-            {d.emoji} {d.short}
-          </button>
-        ))}
-      </div>
-      <Deck key={domain} domain={domain} />
-    </div>
-  );
+  const space = useSpace();
+  const loaded = useLoaded();
+  return <div className="mx-auto max-w-md">{loaded && <Deck key={space} domain={space} />}</div>;
 }
 
 function Deck({ domain }: { domain: string }) {

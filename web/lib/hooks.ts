@@ -1,5 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { withCustom } from "./custom";
+import { DOMAIN } from "./domains";
+import { setSpace, useLoaded, useStore } from "./store";
 import { type DomainData, type FilmData, loadDomain, loadFilms, manifest } from "./data";
 import type { Manifest } from "./types";
 
@@ -20,7 +23,13 @@ function useLoad<T>(fn: () => Promise<T>, dep: string): Loadable<T> {
   return state.dep === dep ? state : { data: null, error: null };
 }
 
-export const useDomain = (name: string) => useLoad<DomainData>(() => loadDomain(name), name);
+/** A domain's catalogue merged with your custom items (re-merged when you add one). */
+export function useDomain(name: string): Loadable<DomainData> {
+  const base = useLoad<DomainData>(() => loadDomain(name), name);
+  const custom = useStore((s) => s.custom);
+  const data = useMemo(() => (base.data ? withCustom(base.data, custom) : null), [base.data, custom]);
+  return { data, error: base.error };
+}
 export const useFilms = () => useLoad<FilmData>(() => loadFilms(), "films");
 export const useManifest = () => useLoad<Manifest>(() => manifest(), "manifest");
 
@@ -42,4 +51,16 @@ export function useQueryParam(name: string): [string | null, (v: string | null) 
     setValue(v);
   };
   return [value, set];
+}
+
+/** The space (domain) the whole app is about right now. `?d=music` in a link switches to it. */
+export function useSpace(): string {
+  const space = useStore((s) => s.settings.space);
+  const loaded = useLoaded();
+  useEffect(() => {
+    if (!loaded) return;
+    const d = new URLSearchParams(window.location.search).get("d");
+    if (d && DOMAIN[d]) setSpace(d);
+  }, [loaded]);
+  return DOMAIN[space] ? space : "films";
 }

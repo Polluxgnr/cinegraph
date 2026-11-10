@@ -10,11 +10,15 @@ everything across devices. No server: it runs entirely in your browser, on GitHu
 [![Deploy](https://github.com/Polluxgnr/cinegraph/actions/workflows/pages.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/pages.yml)
 [![Catalogue](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml)
 
+**One app, seven spaces.** Pick a space in the sidebar (Films & series, Videos & docs, Music, Recipes,
+Destinations, Cars, Brands & style) and the whole app becomes about it: its own home, swipe deck,
+discovery, list, taste profile and colour.
+
 | | |
 |---|---|
-| **Swipe** with two-step answers: *seen?* → loved / liked / ok / not my thing (+ reaction chips such as "Too long"), or *not seen* → add to my list / could be down / no idea / never. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". |
-| **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars and the next title to watch. | **My taste**: taste axes, liked/disliked themes, people, original languages, decades, what your ranker learned, how often it predicts you right; optional written portrait by Claude. |
-| **Tonight**: mood (tense, laugh, mind-bending, horror, epic) × length × *your* streaming services in France, with legal watch links (subscriptions, arte.tv, france.tv, JustWatch). | **Vault**: a second-brain inbox for links and ideas (share from your phone into the app), exportable as an **Obsidian** vault. |
+| **Swipe** with two-step answers: *seen?* → loved / liked / ok / not my thing (+ reaction chips such as "Too long"), or *not seen* → add to my list / could be down / no idea / never. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". Plus "Because you loved X" rows. |
+| **Bring your history**: YouTube (Google Takeout: watch history, subscriptions, Watch later), Spotify (data export or live login), Netflix viewing activity, Letterboxd. Parsed in the browser. | **Add your own**: paste any link (brand site, track, playlist, recipe blog, video); title and image are fetched, it gets a borrowed embedding and shapes your profile like everything else. |
+| **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars; **Tonight** by mood × your streaming services in France, with legal watch links. | **Second brain**: links and ideas (share from your phone into the app), an **AI-ready taste dossier** (one Markdown document of your whole taste to paste into any assistant), and an **Obsidian** export. |
 
 ## Why it's built this way
 
@@ -55,11 +59,12 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Use it
 
-1. Open the site, go to **Swipe** and answer ~40 cards per area. Every answer updates the next card and every list.
-2. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) to keep your memory across
+1. Open the site, pick a space in the sidebar, go to **Swipe** and answer ~40 cards. Every answer updates the next card and every list.
+2. **Import & connect**: drop your YouTube Takeout, Spotify data export, Netflix viewing history or Letterboxd ZIP.
+3. **+ Add** (in any space): paste links to things you like.
+4. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) to keep your memory across
    phone and computer in a private Gist. Or download a JSON backup.
-3. Optional: **Spotify** (create a free app, paste its Client ID; top artists seed your music taste),
-   **Anthropic API key** (smarter search and a written taste portrait), **Letterboxd ZIP** import.
+5. Optional: **Anthropic API key** (smarter search and a written taste portrait). **Second brain → Copy my taste dossier** gives any AI your full profile.
 
 ### Data sources (all legal, open or official)
 

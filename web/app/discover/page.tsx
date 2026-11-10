@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
-import { DOMAIN, DOMAINS } from "@/lib/domains";
+import { DOMAIN } from "@/lib/domains";
 import type { Rec } from "@/lib/engine/recommend";
-import { useDomain, useManifest, useQueryParam } from "@/lib/hooks";
+import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import { useRecs } from "@/lib/useRecs";
@@ -12,9 +12,7 @@ import { useRecs } from "@/lib/useRecs";
 type Sort = "match" | "date" | "popular" | "rating" | "length";
 
 export default function Discover() {
-  const [dParam, setD] = useQueryParam("d");
-  const domain = dParam && DOMAIN[dParam] ? dParam : "films";
-  const m = useManifest().data;
+  const domain = useSpace();
   const { data: d } = useDomain(domain);
   const [kind, setKind] = useState<"any" | "movie" | "tv">("any");
   const [tag, setTag] = useState<string | null>(null);
@@ -53,12 +51,7 @@ export default function Discover() {
   const isFilm = domain === "films";
 
   return (
-    <div className="space-y-5">
-      <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-        {DOMAINS.filter((x) => !m || x.name === "films" || m.domains[x.name]?.count).map((x) => (
-          <button key={x.name} className="chip shrink-0" data-on={x.name === domain} onClick={() => { setD(x.name); setTag(null); }}>{x.emoji} {x.short}</button>
-        ))}
-      </div>
+    <div key={domain} className="rise space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-4xl md:text-5xl">{DOMAIN[domain]?.label}</h1>
         <label className="flex items-center gap-2 text-sm text-muted">
