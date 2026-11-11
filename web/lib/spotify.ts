@@ -50,6 +50,13 @@ export async function finishLogin(code: string): Promise<string> {
   type Artist = { name: string; genres: string[]; images?: { url: string }[]; external_urls?: { spotify: string } };
   type Track = { name: string; artists: { name: string }[]; external_urls?: { spotify: string } };
   type Playlist = { name: string; external_urls?: { spotify: string }; images?: { url: string }[]; tracks?: { total: number } };
+  // "Liked songs": up to 250, to weigh the artists you save, not only the ones you stream
+  const saved: { track: Track }[] = [];
+  for (let off = 0; off < 250; off += 50) {
+    const page = await get(`/me/tracks?limit=50&offset=${off}`).catch(() => ({ items: [] }));
+    saved.push(...page.items);
+    if (page.items.length < 50) break;
+  }
   const [long, medium, tracks, playlists] = await Promise.all([
     get("/me/top/artists?limit=50&time_range=long_term"),
     get("/me/top/artists?limit=50&time_range=medium_term"),
@@ -59,6 +66,10 @@ export async function finishLogin(code: string): Promise<string> {
   const artists: Artist[] = [...long.items, ...medium.items].filter(
     (a: Artist, i: number, arr: Artist[]) => arr.findIndex((b) => b.name === a.name) === i,
   );
+  // artists that appear 3+ times in your liked songs also count as favourites
+  const savedCount = new Map<string, number>();
+  for (const it of saved) for (const a of it.track?.artists ?? []) savedCount.set(a.name, (savedCount.get(a.name) ?? 0) + 1);
+  for (const [name, n] of savedCount) if (n >= 3 && !artists.some((a) => a.name === name)) artists.push({ name, genres: [] });
   update((s) => {
     s.spotify = {
       connectedAt: Date.now(),
@@ -80,5 +91,5 @@ export async function finishLogin(code: string): Promise<string> {
       }
     });
   }
-  return `${artists.length} top artists, ${tracks.items.length} tracks, ${playlists.items.length} playlists imported; ${matched} artists matched to the catalogue.`;
+  return `${artists.length} favourite artists (top + liked songs), ${saved.length} liked songs, ${tracks.items.length} top tracks, ${playlists.items.length} playlists; ${matched} artists matched to the catalogue.`;
 }

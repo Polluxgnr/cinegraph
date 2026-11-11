@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BASE } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { useManifest } from "@/lib/hooks";
+import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { ACTION_VALUE, setSpace, useStore } from "@/lib/store";
 
 /** Tabs inside the current space; some spaces have extra tools. */
@@ -22,6 +23,7 @@ export function spaceTabs(space: string): { href: string; label: string }[] {
 }
 
 const GLOBAL = [
+  { href: "/together/", label: "Pick together", icon: "M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20a6 6 0 0112 0M10 20a6 6 0 0112 0" },
   { href: "/vault/", label: "Second brain", icon: "M9 3a3 3 0 00-3 3v.5A3.5 3.5 0 004 13a3 3 0 002 5.2V18a3 3 0 006 0V5a2 2 0 00-3-2zm6 0a3 3 0 013 3v.5a3.5 3.5 0 012 6.5 3 3 0 01-2 5.2V18a3 3 0 01-6 0" },
   { href: "/import/", label: "Import & connect", icon: "M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" },
   { href: "/settings/", label: "Settings", icon: "M12 15a3 3 0 100-6 3 3 0 000 6zm7.4-3a7.4 7.4 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 00-2-1.2L14.5 3h-5l-.4 2.6a7.5 7.5 0 00-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 000 2.4l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 002 1.2l.4 2.6h5l.4-2.6a7.5 7.5 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" },
@@ -55,9 +57,10 @@ export default function Nav() {
     <>
       {/* desktop: left sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line/60 bg-bg/95 px-3 py-5 backdrop-blur md:flex">
-        <Link href="/" className="mb-6 px-3 font-display text-3xl tracking-wide">
+        <Link href="/" className="mb-4 px-3 font-display text-3xl tracking-wide">
           Cine<span className="text-accent">Graph</span>
         </Link>
+        <ProfileSwitcher />
         <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
         <SpaceList spaces={spaces} space={space} counts={counts} path={path} />
         <div className="mt-auto space-y-0.5 border-t border-line/60 pt-3">
@@ -90,9 +93,10 @@ export default function Nav() {
       {sheet && (
         <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-bg p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3"><ProfileSwitcher compact /></div>
             <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
             <SpaceList spaces={spaces} space={space} counts={counts} path={path} onPick={() => setSheet(false)} />
-            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3">
               {GLOBAL.map((g) => <Link key={g.href} href={g.href} onClick={() => setSheet(false)} className="rounded-xl bg-panel p-3 text-center text-xs">{g.label}</Link>)}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">

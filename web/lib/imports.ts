@@ -247,3 +247,65 @@ export async function importNetflix(file: File): Promise<Report> {
   saveImport("netflix", summary);
   return { summary: missing.length ? `${summary} Not in the catalogue yet: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "…" : ""}` : summary, matched, added: 0 };
 }
+
+// ------------------------------------------------------------------ Pinterest (public profile / board RSS)
+/** https://pinterest.com/<user>/ or /<user>/<board>/  ->  its public RSS feed. */
+export function pinterestFeed(url: string): string | null {
+  const m = url.trim().match(/pinterest\.[a-z.]+\/([^/?#]+)(?:\/([^/?#]+))?/i);
+  if (!m || ["pin", "search", "ideas"].includes(m[1])) return null;
+  return m[2] ? `https://www.pinterest.com/${m[1]}/${m[2]}.rss` : `https://www.pinterest.com/${m[1]}/feed.rss`;
+}
+
+interface RssItem { title?: string; link?: string; description?: string; thumbnail?: string; enclosure?: { link?: string } }
+
+/** Pins of a public board or profile become items of a space ("want" = keep in mind). Re-running only adds new pins. */
+export async function importPinterest(url: string, space: string): Promise<Report> {
+  const feed = pinterestFeed(url);
+  if (!feed) throw new Error("Paste a Pinterest profile or board link, e.g. https://pinterest.com/you/streetwear/");
+  // Pinterest serves RSS without CORS headers; rss2json (free, public) relays it as JSON
+  const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed)}`);
+  const j = await r.json();
+  if (j.status !== "ok") throw new Error("Board not found or not public");
+  const items = (j.items as RssItem[]).map((it) => {
+    const img = it.thumbnail || it.enclosure?.link || it.description?.match(/<img[^>]+src="([^"]+)"/)?.[1];
+    const text = (it.description ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return { title: it.title?.trim() || text.slice(0, 80) || "Pin", url: it.link, image: img?.replace("/236x/", "/564x/"), note: text.slice(0, 280) };
+  });
+  const board = j.feed?.title ?? "Pinterest";
+  const ids = addCustom(items.map((it) => ({ domain: space, title: it.title, subtitle: `Pinterest · ${board}`, url: it.url, image: it.image,
+    tags: ["pinterest", board.toLowerCase()], note: it.note, source: "pinterest" })));
+  const fresh = ids.filter((id) => !getState().feedback[id]);
+  fresh.forEach((id) => recordFeedback({ key: id, domain: space, action: "want", source: "pinterest" }));
+  update((s) => {
+    const prev = s.imports.pinterest?.channels ?? [];
+    const boards = [...prev.filter((b) => b.url !== url), { name: `${board} → ${space}`, url, count: items.length }];
+    s.imports.pinterest = { at: Date.now(), summary: `${boards.length} board(s) synced`, channels: boards };
+  });
+  return { summary: `${items.length} pins from “${board}” (${fresh.length} new) added to ${space}.`, matched: 0, added: fresh.length };
+}
+
+// ------------------------------------------------------------------ CineGraph pack (any list of things, e.g. Instagram saves)
+export interface PackItem { space: string; title: string; subtitle?: string; url?: string; image?: string; tags?: string[]; note?: string; action?: Action }
+export interface Pack { name?: string; items?: PackItem[]; vault?: { title: string; url?: string; note?: string; tags?: string[] }[] }
+
+export async function importPack(file: File): Promise<Report> {
+  const pack = JSON.parse(await file.text()) as Pack;
+  const items = (pack.items ?? []).filter((i) => i.space && i.title);
+  const ids = addCustom(items.map((i) => ({ domain: i.space, title: i.title, subtitle: i.subtitle, url: i.url, image: i.image,
+    tags: i.tags ?? [], note: i.note, source: pack.name ?? "pack" })));
+  ids.forEach((id, k) => {
+    if (!getState().feedback[id]) recordFeedback({ key: id, domain: items[k].space, action: items[k].action ?? "want", source: pack.name ?? "pack" });
+  });
+  const vault = pack.vault ?? [];
+  update((s) => {
+    const known = new Set(s.vault.map((v) => v.url ?? v.title));
+    for (const v of vault) {
+      if (known.has(v.url ?? v.title)) continue;
+      s.vault.push({ id: crypto.randomUUID(), title: v.title, url: v.url, note: v.note, tags: v.tags ?? [], created: Date.now() });
+    }
+  });
+  const per = items.reduce<Record<string, number>>((a, i) => ({ ...a, [i.space]: (a[i.space] ?? 0) + 1 }), {});
+  const summary = `${pack.name ?? "Pack"}: ${Object.entries(per).map(([k, v]) => `${v} ${k}`).join(", ")}${vault.length ? `, ${vault.length} notes in your second brain` : ""}.`;
+  saveImport(`pack:${pack.name ?? "pack"}`, summary);
+  return { summary, matched: 0, added: ids.length };
+}

@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
+import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
+import { normTitle } from "@/lib/text";
 import type { Rec } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
@@ -21,6 +23,8 @@ export default function Discover() {
   const [maxRt, setMaxRt] = useState<number | null>(null);
   const [sort, setSort] = useState<Sort>("match");
   const [showAnswered, setShowAnswered] = useState(false);
+  const [q, setQ] = useState("");
+  const words = useMemo(() => normTitle(q).split(" ").filter((w) => w.length > 1), [q]);
 
   const facets = useMemo(() => {
     if (!d) return { tags: [] as string[], langs: [] as string[] };
@@ -34,7 +38,17 @@ export default function Discover() {
     return { tags: top(tc, 24), langs: top(lc, 12) };
   }, [d]);
 
+  // search fields, strongest first: a hit in the title beats one in the director, the cast, then the tags
+  const fields = (e: Entity): string[] => {
+    const f = e.film;
+    const names = (ids?: number[]) => (f && d && "people" in d ? (ids ?? []).map((i) => (d as FilmData).people[i]).join(" ") : "");
+    return [`${e.title} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, e.tags.join(" ")].map(normTitle);
+  };
   const filter = (e: Entity) => {
+    if (words.length) {
+      const h = fields(e).join(" ");
+      if (!words.every((w) => h.includes(w))) return false;
+    }
     const f = e.film;
     if (f) {
       if (kind !== "any" && f.k !== kind) return false;
@@ -45,9 +59,22 @@ export default function Discover() {
     } else if (tag && !e.tags.includes(tag)) return false;
     return true;
   };
-  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered].join("|");
-  const recs = useRecs(d, { n: 60, filter, explore: sort === "match" ? 0.1 : 0, includeAnswered: showAnswered, includeListed: true, diversity: 0.9 }, key);
-  const sorted = useMemo(() => sortRecs(recs ?? [], sort), [recs, sort]);
+  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, words.join(" ")].join("|");
+  const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9 }, key);
+  const sorted = useMemo(() => {
+    if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort);
+    // relevance first (where the words hit, whole words over prefixes), then how much you'd like it
+    const rel = (e: Entity) => {
+      const fs = fields(e);
+      return words.reduce((acc, w) => {
+        const i = fs.findIndex((x) => x.includes(w));
+        const whole = i >= 0 && new RegExp(`(^| )${w}( |$)`).test(fs[i]);
+        return acc + (i < 0 ? 0 : (4 - i) * (whole ? 2 : 1));
+      }, 0);
+    };
+    return [...(recs ?? [])].map((r) => ({ r, k: rel(r.entity) + r.p })).sort((a, b) => b.k - a.k).map((x) => x.r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recs, sort, words]);
   const isFilm = domain === "films";
 
   return (
@@ -65,6 +92,9 @@ export default function Discover() {
           </select>
         </label>
       </header>
+      <input value={q} onChange={(e) => setQ(e.target.value)} type="search" autoFocus
+             placeholder={domain === "films" ? "Search a title, a director, an actor, a theme…" : `Search ${DOMAIN[domain]?.label.toLowerCase()}…`}
+             className="w-full rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" />
       <div className="space-y-2">
         {isFilm && (
           <div className="flex flex-wrap gap-1.5">

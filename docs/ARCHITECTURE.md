@@ -71,6 +71,12 @@ series progress, vault, learned weights and bandit arms, settings. Optional sync
 (your token, kept locally): newest document wins, histories merged by timestamp. Secrets (Gist token,
 Anthropic key) are never uploaded.
 
+**Profiles.** Each profile is its own document (`state` for the first, `state:<id>` for the others) plus a
+small `profiles` index; switching flushes the current document and loads the other. Each profile syncs to
+its own Gist file. *Pick together* scores every item with both profiles' rankers and orders by
+`0.7·min(p₁, p₂) + 0.3·√(p₁p₂)`: the weaker match dominates, so a title one person would hate never tops
+the list. Loading is a single shared promise, so concurrent callers cannot overwrite early edits.
+
 ### AI (`ai.ts`, optional)
 With your Anthropic key (browser-only): Claude parses free-text requests into a JSON intent (structured
 outputs) and writes a taste portrait. Without it, a regex parser handles "like X but funnier, under 2h,

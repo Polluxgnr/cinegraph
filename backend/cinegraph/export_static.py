@@ -247,8 +247,8 @@ DOMAINS = {
     "music": ("Music", "cinegraph.domains.music", "collect"),
     "recipes": ("Recipes", "cinegraph.domains.recipes", "collect"),
     "places": ("Destinations", "cinegraph.domains.wikidata_domains", "places"),
-    "cars": ("Cars", "cinegraph.domains.wikidata_domains", "cars"),
-    "brands": ("Brands & style", "cinegraph.domains.wikidata_domains", "brands"),
+    "cars": ("Dream garage", "cinegraph.domains.wikidata_domains", "cars"),
+    "brands": ("Style", "cinegraph.domains.style", "collect"),
 }
 
 
@@ -281,6 +281,11 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
         label, mod, fn = DOMAINS[name]
         try:
             items = getattr(importlib.import_module(mod), fn)()
+            prev = (manifest["domains"].get(name) or {}).get("count", 0)
+            if prev and len(items) < 0.6 * prev:
+                # a source that timed out half-way shouldn't wipe last week's catalogue
+                log.warning("domain %s: %d items vs %d before, keeping the previous export", name, len(items), prev)
+                continue
             manifest["domains"][name] = export_domain(out, name, label, items, emb)
         except Exception as e:  # noqa: BLE001 - keep the previous export of that domain
             log.exception("domain %s failed: %s", name, e)

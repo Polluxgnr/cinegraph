@@ -21,8 +21,8 @@ const HERO: Record<string, { title: string; sub: string }> = {
   music: { title: "What do we listen to", sub: "Artists close to what you love, and a few to stretch your ears." },
   recipes: { title: "What do we cook", sub: "Dishes matched to your palate." },
   places: { title: "Where do we go next", sub: "Destinations shaped by where you loved being." },
-  cars: { title: "What do we drive", sub: "Your style, in four wheels." },
-  brands: { title: "What do we wear", sub: "Brands and styles that fit you." },
+  cars: { title: "What goes in the garage", sub: "Your dream garage: icons, supercars, classics. No Kangoo." },
+  brands: { title: "What's your style", sub: "Design-led and independent labels, the pieces you want, your Pinterest and Instagram finds." },
 };
 
 export default function Home() {
@@ -156,12 +156,20 @@ function BecauseYouLiked({ d }: { d: DomainData }) {
   return (
     <>
       {rows.filter((r) => r.recs.length).map(({ anchor, recs }) => (
-        <Row key={anchor.key} title={`Because you ${anchor.label.replace(/^which you /, "")} ${anchor.title}`}>
+        <Row key={anchor.key} title={`Because you ${verb(anchor.label)} ${anchor.title}`}>
           {recs.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}
         </Row>
       ))}
     </>
   );
+}
+
+/** "which you loved" -> "loved", "on your list" -> "saved", "which you rated 4.5" -> "rated 4.5 →" */
+function verb(label: string): string {
+  if (label.startsWith("which you rated")) return `rated ${label.split(" ").pop()} ·`;
+  if (label === "on your list") return "saved";
+  if (label.startsWith("which you might")) return "might like";
+  return label.replace(/^which you /, "").replace(/ on Letterboxd$/, "");
 }
 
 function Fresh({ d }: { d: DomainData }) {

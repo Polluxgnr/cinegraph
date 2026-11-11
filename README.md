@@ -11,13 +11,14 @@ everything across devices. No server: it runs entirely in your browser, on GitHu
 [![Catalogue](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml)
 
 **One app, seven spaces.** Pick a space in the sidebar (Films & series, Videos & docs, Music, Recipes,
-Destinations, Cars, Brands & style) and the whole app becomes about it: its own home, swipe deck,
+Destinations, Dream garage, Style) and the whole app becomes about it: its own home, swipe deck,
 discovery, list, taste profile and colour.
 
 | | |
 |---|---|
 | **Swipe** with two-step answers: *seen?* → loved / liked / ok / not my thing (+ reaction chips such as "Too long"), or *not seen* → add to my list / could be down / no idea / never. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". Plus "Because you loved X" rows. |
-| **Bring your history**: YouTube (Google Takeout: watch history, subscriptions, Watch later), Spotify (data export or live login), Netflix viewing activity, Letterboxd. Parsed in the browser. | **Add your own**: paste any link (brand site, track, playlist, recipe blog, video); title and image are fetched, it gets a borrowed embedding and shapes your profile like everything else. |
+| **Bring your history**: YouTube (Google Takeout: watch history, subscriptions, Watch later), Spotify (data export, or live login: top artists, liked songs, playlists), Netflix viewing activity, Letterboxd, public Pinterest boards, and JSON *packs* (e.g. sorted Instagram saves). Parsed in the browser. | **Add your own**: paste any link (brand site, track, playlist, recipe blog, video); title and image are fetched, it gets a borrowed embedding and shapes your profile like everything else. |
+| **Profiles & Pick together**: several people on one device, each with their own memory (no login). *Pick together* ranks what two profiles will both like (by the weaker of the two matches) and has a swipe-to-agree mode: two yeses put it on both lists. | **Search everywhere**: Discover has a search bar over titles, directors, cast and themes, ranked by where the words hit, then by your predicted match. |
 | **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars; **Tonight** by mood × your streaming services in France, with legal watch links. | **Second brain**: links and ideas (share from your phone into the app), an **AI-ready taste dossier** (one Markdown document of your whole taste to paste into any assistant), and an **Obsidian** export. |
 
 ## Why it's built this way
@@ -30,7 +31,7 @@ flowchart LR
     ML[MovieLens] --> ALS[implicit ALS]
     PG --> KG[Knowledge graph]
     PG --> EMB[fastembed bge-small]
-    YT[YouTube RSS] & MDB[TheMealDB] & DZ[Deezer] & WD2[Wikidata places/cars/brands] --> DOM[Domain collectors]
+    YT[YouTube RSS] & MDB[TheMealDB] & DZ[Deezer] & WD2[Wikidata places/cars] & STY[Curated style brands] --> DOM[Domain collectors]
     KG & EMB & ALS & DOM --> EXP[Static export<br/>JSON + int8 matrices]
   end
   EXP -->|release asset| PAGES[GitHub Pages]
@@ -61,10 +62,11 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 1. Open the site, pick a space in the sidebar, go to **Swipe** and answer ~40 cards. Every answer updates the next card and every list.
 2. **Import & connect**: drop your YouTube Takeout, Spotify data export, Netflix viewing history or Letterboxd ZIP.
-3. **+ Add** (in any space): paste links to things you like.
-4. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) to keep your memory across
+3. **+ Add** (in any space): paste links to things you like. Pinterest boards and packs go through **Import & connect**.
+4. **Profile menu** (top of the sidebar): add a profile per person, then **Pick together**.
+5. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) to keep your memory across
    phone and computer in a private Gist. Or download a JSON backup.
-5. Optional: **Anthropic API key** (smarter search and a written taste portrait). **Second brain → Copy my taste dossier** gives any AI your full profile.
+6. Optional: **Anthropic API key** (smarter search and a written taste portrait). **Second brain → Copy my taste dossier** gives any AI your full profile.
 
 ### Data sources (all legal, open or official)
 
@@ -75,7 +77,9 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Videos & docs | Official YouTube RSS of ARTE, France 5, franceinfo, Ushuaïa TV, Kurzgesagt, Veritasium, DW… | Curated in `backend/cinegraph/config/youtube_channels.yaml` |
 | Music | Deezer public API (artists, genres, related artists) + your Spotify (PKCE, in-browser) | |
 | Recipes | TheMealDB | Marmiton has no API: search links + save Marmiton pages to the vault |
-| Travel, cars, brands | Wikidata + Wikimedia Commons photos | Popularity = Wikipedia editions |
+| Travel, dream garage | Wikidata + Wikimedia Commons photos | Cars are a curated dream list (makes, models, classes), not every car on the road |
+| Style | Curated design / underground brands (`backend/cinegraph/config/style_brands.yaml`) with their site's own preview image | Links to Pinterest, Instagram and Vinted searches; add yours or import Pinterest boards |
+| Pinterest | Public board RSS (latest ~25 pins per board, re-sync for new ones) | Public boards only; no login, no scraping |
 
 ## Setup (owner)
 

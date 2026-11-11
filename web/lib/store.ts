@@ -173,6 +173,16 @@ async function idbSet(key: string, value: unknown): Promise<void> {
   });
 }
 
+async function idbDelete(key: string): Promise<void> {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
 // ------------------------------------------------------------------ store
 let state: State = emptyState();
 let loaded = false;
@@ -190,17 +200,97 @@ export function migrate(s: Partial<State>): State {
   } as State;
 }
 
-export async function loadState(): Promise<State> {
-  if (loaded) return state;
-  try {
-    const s = await idbGet<State>("state");
-    if (s) state = migrate(s);
-  } catch {
-    // private mode / blocked storage: run in memory
-  }
-  loaded = true;
+// ------------------------------------------------------------------ profiles
+export interface ProfileInfo {
+  id: string;
+  name: string;
+  emoji: string;
+}
+export interface Profiles {
+  active: string;
+  list: ProfileInfo[];
+}
+let profiles: Profiles = { active: "default", list: [{ id: "default", name: "Me", emoji: "🙂" }] };
+const stateKey = (id: string) => (id === "default" ? "state" : `state:${id}`);
+
+export function getProfiles(): Profiles {
+  return profiles;
+}
+
+/** Another profile's memory (read-only snapshot), e.g. for "pick together". */
+export async function readProfileState(id: string): Promise<State> {
+  if (id === profiles.active) return state;
+  const s = await idbGet<State>(stateKey(id)).catch(() => undefined);
+  return migrate(s ?? {});
+}
+
+/** Write to another (non-active) profile's memory. */
+export async function updateProfileState(id: string, fn: (s: State) => void) {
+  if (id === profiles.active) return update(fn);
+  const s = await readProfileState(id);
+  fn(s);
+  s.updatedAt = Date.now();
+  await idbSet(stateKey(id), s);
+}
+
+async function saveProfiles() {
+  await idbSet("profiles", profiles).catch(() => {});
+}
+
+export async function createProfile(name: string, emoji: string): Promise<string> {
+  const id = crypto.randomUUID().slice(0, 8);
+  profiles = { ...profiles, list: [...profiles.list, { id, name, emoji }] };
+  await idbSet(stateKey(id), { ...emptyState(), settings: { ...emptyState().settings, space: state.settings.space } });
+  await saveProfiles();
   emit();
-  return state;
+  return id;
+}
+
+export async function switchProfile(id: string) {
+  if (id === profiles.active || !profiles.list.some((p) => p.id === id)) return;
+  await idbSet(stateKey(profiles.active), state).catch(() => {});
+  const next = await idbGet<State>(stateKey(id)).catch(() => undefined);
+  profiles = { ...profiles, active: id };
+  await saveProfiles();
+  state = migrate(next ?? {});
+  emit();
+}
+
+export async function renameProfile(id: string, name: string, emoji: string) {
+  profiles = { ...profiles, list: profiles.list.map((p) => (p.id === id ? { ...p, name, emoji } : p)) };
+  await saveProfiles();
+  emit();
+}
+
+export async function deleteProfile(id: string) {
+  if (id === "default" || id === profiles.active) return;
+  profiles = { ...profiles, list: profiles.list.filter((p) => p.id !== id) };
+  await saveProfiles();
+  await idbDelete(stateKey(id)).catch(() => {});
+  emit();
+}
+
+export function useProfiles(): Profiles {
+  return useSyncExternalStore(subscribe, () => profiles, () => profiles);
+}
+
+let loading: Promise<State> | null = null;
+/** Restore memory once; concurrent callers share the same load (a second load would clobber early edits). */
+export function loadState(): Promise<State> {
+  loading ??= (async () => {
+    try {
+      const p = await idbGet<Profiles>("profiles");
+      if (p?.list?.length) profiles = p;
+      const s = await idbGet<State>(stateKey(profiles.active));
+      if (s) state = migrate(s);
+    } catch {
+      // private mode / blocked storage: run in memory
+    }
+    loaded = true;
+    emit();
+    return state;
+  })();
+  return loading;
 }
 
 function emit() {
@@ -210,7 +300,7 @@ function emit() {
 function persist() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    idbSet("state", state).catch(() => {});
+    idbSet(stateKey(profiles.active), state).catch(() => {});
     window.dispatchEvent(new CustomEvent("cinegraph:saved"));
   }, 300);
 }

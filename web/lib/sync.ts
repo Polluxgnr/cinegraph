@@ -3,9 +3,13 @@
  * create (classic token, scope `gist` only). The token stays in this browser.
  * Conflict rule: the newest `updatedAt` wins; histories are merged by timestamp.
  */
-import { getState, migrate, replaceState, setSettings, type State } from "./store";
+import { getProfiles, getState, migrate, replaceState, setSettings, type State } from "./store";
 
-const FILE = "cinegraph-memory.json";
+/** One Gist file per profile, so each profile syncs its own memory. */
+const fileName = () => {
+  const p = getProfiles();
+  return p.active === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${p.active}.json`;
+};
 const API = "https://api.github.com";
 
 function headers(token: string) {
@@ -36,7 +40,7 @@ export async function pushGist(): Promise<string> {
   if (!token) throw new Error("Add a GitHub token in Settings first");
   // never upload secrets
   const safe: State = { ...s, settings: { ...s.settings, gistToken: undefined, anthropicKey: undefined } };
-  const body = JSON.stringify({ files: { [FILE]: { content: JSON.stringify(safe) } } });
+  const body = JSON.stringify({ files: { [fileName()]: { content: JSON.stringify(safe) } } });
   if (s.settings.gistId) {
     const r = await fetch(`${API}/gists/${s.settings.gistId}`, { method: "PATCH", headers: headers(token), body });
     if (r.ok) return s.settings.gistId;
@@ -45,7 +49,7 @@ export async function pushGist(): Promise<string> {
   const r = await fetch(`${API}/gists`, {
     method: "POST",
     headers: headers(token),
-    body: JSON.stringify({ description: "CineGraph memory (private)", public: false, files: { [FILE]: { content: JSON.stringify(safe) } } }),
+    body: JSON.stringify({ description: "CineGraph memory (private)", public: false, files: { [fileName()]: { content: JSON.stringify(safe) } } }),
   });
   if (!r.ok) throw new Error(`GitHub: ${r.status}`);
   const g = await r.json();
@@ -61,14 +65,14 @@ export async function pullGist(): Promise<boolean> {
   if (!gistId) {
     const r = await fetch(`${API}/gists?per_page=100`, { headers: headers(token) });
     if (!r.ok) throw new Error(`GitHub: ${r.status}`);
-    const found = (await r.json()).find((g: { files: Record<string, unknown> }) => FILE in g.files);
+    const found = (await r.json()).find((g: { files: Record<string, unknown> }) => fileName() in g.files);
     if (!found) return false;
     gistId = found.id as string;
   }
   const r = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) });
   if (!r.ok) throw new Error(`GitHub: ${r.status}`);
   const g = await r.json();
-  const file = g.files[FILE];
+  const file = g.files[fileName()];
   const content = file.truncated ? await (await fetch(file.raw_url)).text() : file.content;
   const remote = migrate(JSON.parse(content));
   const merged = merge(getState(), remote);

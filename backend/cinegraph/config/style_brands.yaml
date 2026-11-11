@@ -1,0 +1,109 @@
+# Style space: design-led, independent and underground labels (no fast fashion).
+# Add your own: name, official site, a few tags. Images and descriptions are read from each site's
+# own link-preview metadata (og:image / og:description) at build time.
+- {name: Our Legacy, url: https://www.ourlegacy.com, tags: [minimal, scandinavian, avant-garde], country: Sweden}
+- {name: Lemaire, url: https://www.lemaire.fr, tags: [minimal, tailoring, french], country: France}
+- {name: Auralee, url: https://auralee.jp, tags: [minimal, japanese, fabrics], country: Japan}
+- {name: Kapital, url: https://www.kapital.jp, tags: [japanese, denim, boro, workwear], country: Japan}
+- {name: Needles, url: https://nepenthes.co.jp/needles, tags: [japanese, americana, track pants], country: Japan}
+- {name: Engineered Garments, url: https://www.engineeredgarments.com, tags: [workwear, americana, layering], country: USA}
+- {name: Visvim, url: https://www.visvim.tv, tags: [japanese, craft, heritage], country: Japan}
+- {name: Stone Island, url: https://www.stoneisland.com, tags: [technical, garment dye, italian], country: Italy}
+- {name: C.P. Company, url: https://www.cpcompany.com, tags: [technical, goggle jacket, italian], country: Italy}
+- {name: Arc'teryx Veilance, url: https://arcteryx.com/veilance, tags: [techwear, minimal, technical], country: Canada}
+- {name: Salomon, url: https://www.salomon.com, tags: [gorpcore, sneakers, trail], country: France}
+- {name: and wander, url: https://andwander.com, tags: [gorpcore, japanese, outdoor], country: Japan}
+- {name: Snow Peak, url: https://www.snowpeak.com, tags: [gorpcore, outdoor, japanese], country: Japan}
+- {name: Gramicci, url: https://gramicci.com, tags: [climbing, workwear, pants], country: USA}
+- {name: Story mfg., url: https://storymfg.com, tags: [slow fashion, hand-dyed, craft], country: UK}
+- {name: Bode, url: https://bode.com, tags: [vintage textiles, craft, americana], country: USA}
+- {name: Wales Bonner, url: https://walesbonner.com, tags: [tailoring, culture, avant-garde], country: UK}
+- {name: Martine Rose, url: https://martine-rose.com, tags: [subculture, tailoring, london], country: UK}
+- {name: Craig Green, url: https://www.craig-green.com, tags: [avant-garde, workwear, sculptural], country: UK}
+- {name: Kiko Kostadinov, url: https://kikokostadinov.com, tags: [avant-garde, technical, sneakers], country: UK}
+- {name: Rick Owens, url: https://www.rickowens.eu, tags: [avant-garde, dark, brutalist], country: France}
+- {name: Maison Margiela, url: https://www.maisonmargiela.com, tags: [avant-garde, deconstruction, tabi], country: France}
+- {name: Jil Sander, url: https://www.jilsander.com, tags: [minimal, luxury, german], country: Germany}
+- {name: Dries Van Noten, url: https://www.driesvannoten.com, tags: [prints, antwerp, colour], country: Belgium}
+- {name: Comme des Garçons, url: https://www.comme-des-garcons.com, tags: [avant-garde, japanese], country: Japan}
+- {name: Yohji Yamamoto, url: https://www.yohjiyamamoto.co.jp, tags: [avant-garde, japanese, black], country: Japan}
+- {name: Homme Plissé Issey Miyake, url: https://www.isseymiyake.com, tags: [pleats, japanese, minimal], country: Japan}
+- {name: Sacai, url: https://www.sacai.jp, tags: [hybrid, japanese, avant-garde], country: Japan}
+- {name: Undercover, url: https://undercoverism.com, tags: [japanese, punk, graphics], country: Japan}
+- {name: Neighborhood, url: https://www.neighborhood.jp, tags: [japanese, biker, streetwear], country: Japan}
+- {name: Human Made, url: https://humanmade.jp, tags: [japanese, streetwear, vintage], country: Japan}
+- {name: Carhartt WIP, url: https://www.carhartt-wip.com, tags: [workwear, streetwear], country: Germany}
+- {name: Stüssy, url: https://www.stussy.com, tags: [streetwear, surf, graphics], country: USA}
+- {name: Aimé Leon Dore, url: https://www.aimeleondore.com, tags: [preppy, new york, streetwear], country: USA}
+- {name: Noah, url: https://noahny.com, tags: [preppy, surf, new york], country: USA}
+- {name: Palace, url: https://www.palaceskateboards.com, tags: [skate, streetwear, london], country: UK}
+- {name: Corteiz, url: https://www.crtz.xyz, tags: [underground, streetwear, london], country: UK}
+- {name: Represent, url: https://representclo.com, tags: [streetwear, luxury, uk], country: UK}
+- {name: A-COLD-WALL*, url: https://a-cold-wall.com, tags: [architectural, streetwear, avant-garde], country: UK}
+- {name: Satisfy Running, url: https://satisfyrunning.com, tags: [running, punk, technical], country: France}
+- {name: District Vision, url: https://districtvision.com, tags: [running, eyewear, mindful], country: USA}
+- {name: Norse Projects, url: https://www.norseprojects.com, tags: [scandinavian, minimal, functional], country: Denmark}
+- {name: Arpenteur, url: https://arpenteur.fr, tags: [french, workwear, made in france], country: France}
+- {name: Drôle de Monsieur, url: https://droledemonsieur.com, tags: [french, streetwear, playful], country: France}
+- {name: Jacquemus, url: https://www.jacquemus.com, tags: [french, sunny, minimal], country: France}
+- {name: AMI Paris, url: https://www.amiparis.com, tags: [french, casual, parisian], country: France}
+- {name: Marine Serre, url: https://www.marineserre.com, tags: [upcycling, moon, avant-garde], country: France}
+- {name: Coperni, url: https://coperniparis.com, tags: [tech, futuristic, french], country: France}
+- {name: Casablanca, url: https://casablancaparis.com, tags: [tennis club, prints, french], country: France}
+- {name: Officine Générale, url: https://www.officinegenerale.com, tags: [french, tailoring, minimal], country: France}
+- {name: Pigalle, url: https://pigalle-paris.com, tags: [paris, basketball, streetwear], country: France}
+- {name: Bonsoir Paris, url: https://bonsoirparis.com, tags: [paris, streetwear, underground], country: France}
+- {name: Armor-Lux, url: https://www.armorlux.com, tags: [breton, made in france, heritage], country: France}
+- {name: Saint James, url: https://www.saint-james.com, tags: [breton, heritage, knitwear], country: France}
+- {name: Le Mont Saint Michel, url: https://www.lemontsaintmichel.fr, tags: [workwear, french, heritage], country: France}
+- {name: Paraboot, url: https://www.paraboot.com, tags: [shoes, made in france, heritage], country: France}
+- {name: Veja, url: https://www.veja-store.com, tags: [sneakers, eco, french], country: France}
+- {name: Novesta, url: https://www.novesta.com, tags: [sneakers, vintage, slovak], country: Slovakia}
+- {name: Axel Arigato, url: https://www.axelarigato.com, tags: [sneakers, scandinavian, minimal], country: Sweden}
+- {name: Filling Pieces, url: https://www.fillingpieces.com, tags: [sneakers, amsterdam], country: Netherlands}
+- {name: Daily Paper, url: https://www.dailypaperclothing.com, tags: [streetwear, african heritage, amsterdam], country: Netherlands}
+- {name: Patta, url: https://www.patta.nl, tags: [streetwear, amsterdam, culture], country: Netherlands}
+- {name: Arte Antwerp, url: https://arte-antwerp.com, tags: [streetwear, antwerp, graphics], country: Belgium}
+- {name: Acne Studios, url: https://www.acnestudios.com, tags: [scandinavian, denim, minimal], country: Sweden}
+- {name: Ganni, url: https://www.ganni.com, tags: [scandinavian, playful, copenhagen], country: Denmark}
+- {name: Studio Nicholson, url: https://www.studionicholson.com, tags: [minimal, tailoring, london], country: UK}
+- {name: Margaret Howell, url: https://www.margarethowell.co.uk, tags: [minimal, british, utility], country: UK}
+- {name: Toogood, url: https://t-o-o-g-o-o-d.com, tags: [sculptural, workwear, design], country: UK}
+- {name: Nicholas Daley, url: https://nicholasdaley.com, tags: [craft, culture, knitwear], country: UK}
+- {name: Awake NY, url: https://awakeny.com, tags: [streetwear, new york], country: USA}
+- {name: Brain Dead, url: https://wearebraindead.com, tags: [underground, graphics, punk], country: USA}
+- {name: Online Ceramics, url: https://onlineceramics.com, tags: [hand-dyed, psychedelic, graphics], country: USA}
+- {name: Pleasures, url: https://pleasuresnow.com, tags: [punk, underground, graphics], country: USA}
+- {name: Fear of God, url: https://fearofgod.com, tags: [minimal, luxury streetwear], country: USA}
+- {name: Rhude, url: https://www.rhude.com, tags: [streetwear, luxury, la], country: USA}
+- {name: Gentle Monster, url: https://www.gentlemonster.com, tags: [eyewear, futuristic, korean], country: South Korea}
+- {name: Jacques Marie Mage, url: https://www.jacquesmariemage.com, tags: [eyewear, craft], country: USA}
+- {name: Ader Error, url: https://adererror.com, tags: [korean, avant-garde, oversized], country: South Korea}
+- {name: Post Archive Faction, url: https://postarchivefaction.com, tags: [korean, techwear, avant-garde], country: South Korea}
+- {name: Andersson Bell, url: https://anderssonbell.com, tags: [korean, scandinavian, avant-garde], country: South Korea}
+- {name: Hender Scheme, url: https://henderscheme.com, tags: [japanese, leather, craft], country: Japan}
+- {name: Porter Yoshida, url: https://www.yoshidakaban.com, tags: [bags, japanese, nylon], country: Japan}
+- {name: ROA, url: https://roa-hiking.com, tags: [gorpcore, hiking shoes, italian], country: Italy}
+- {name: Hoka, url: https://www.hoka.com, tags: [running, sneakers, gorpcore], country: France}
+- {name: New Balance Made in USA, url: https://www.newbalance.com, tags: [sneakers, dad shoes, heritage], country: USA}
+- {name: Birkenstock, url: https://www.birkenstock.com, tags: [sandals, german, heritage], country: Germany}
+- {name: Diptyque, url: https://www.diptyqueparis.com, tags: [fragrance, candles, french], country: France}
+- {name: Byredo, url: https://www.byredo.com, tags: [fragrance, scandinavian, niche], country: Sweden}
+- {name: Le Labo, url: https://www.lelabofragrances.com, tags: [fragrance, rose, niche], country: USA}
+- {name: Frédéric Malle, url: https://www.fredericmalle.com, tags: [fragrance, rose, niche, french], country: France}
+- {name: Maison Francis Kurkdjian, url: https://www.franciskurkdjian.com, tags: [fragrance, french, luxury], country: France}
+- {name: Juliette Has a Gun, url: https://www.juliettehasagun.com, tags: [fragrance, rose, french], country: France}
+- {name: Etat Libre d'Orange, url: https://www.etatlibredorange.com, tags: [fragrance, niche, provocative], country: France}
+- {name: Aesop, url: https://www.aesop.com, tags: [skincare, design, apothecary], country: Australia}
+- {name: Maison Kitsuné, url: https://maisonkitsune.com, tags: [french, music, casual], country: France}
+- {name: Sporty & Rich, url: https://sportyandrich.com, tags: [wellness, retro, sportswear], country: USA}
+- {name: Ostrya, url: https://ostrya.com, tags: [outdoor, minimal, technical], country: Canada}
+- {name: Goldwin, url: https://www.goldwin.co.jp, tags: [technical, japanese, outdoor], country: Japan}
+- {name: Nanamica, url: https://www.nanamica.com, tags: [japanese, gore-tex, minimal], country: Japan}
+- {name: Beams Plus, url: https://www.beams.co.jp, tags: [japanese, ivy, americana], country: Japan}
+- {name: orSlow, url: https://orslow.co.jp, tags: [japanese, denim, workwear], country: Japan}
+- {name: Universal Works, url: https://universalworks.co.uk, tags: [workwear, british, utility], country: UK}
+- {name: YMC, url: https://www.youmustcreate.com, tags: [british, utility, indie], country: UK}
+- {name: Folk, url: https://www.folkclothing.com, tags: [british, textures, minimal], country: UK}
+- {name: Sunspel, url: https://www.sunspel.com, tags: [british, essentials, cotton], country: UK}
+- {name: Vinted (second hand), url: https://www.vinted.fr, tags: [second hand, vintage, marketplace], country: Lithuania}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { importNetflix, importSpotify, importYouTube } from "@/lib/imports";
+import { DOMAINS } from "@/lib/domains";
+import { importNetflix, importPack, importPinterest, importSpotify, importYouTube } from "@/lib/imports";
 import { backupJSON, importLetterboxd, restoreJSON } from "@/lib/io";
 import { finishLogin, redirectUri, startLogin } from "@/lib/spotify";
 import { setSettings, useLoaded, useStore } from "@/lib/store";
@@ -87,6 +88,26 @@ export default function ImportPage() {
         </div>
       </Card>
 
+      <Card title="📌 Pinterest: your public boards" done={imports.pinterest?.summary}>
+        <p className="text-sm text-muted">Paste your profile or a board link (public boards only). Pins land in the space you pick, as things to keep in mind; sync again any time to pull new pins.</p>
+        <PinterestForm onRun={(url, space) => run("pinterest", async () => (await importPinterest(url, space)).summary)} busy={busy === "pinterest"} />
+        {imports.pinterest?.channels?.length ? (
+          <ul className="space-y-1 text-sm">
+            {imports.pinterest.channels.map((b) => (
+              <li key={b.url} className="flex items-center gap-2">
+                <span className="flex-1 truncate">{b.name} <span className="text-xs text-muted">({b.count} pins)</span></span>
+                <button className="btn-ghost px-2 py-1 text-xs" onClick={() => run("pinterest", async () => (await importPinterest(b.url!, b.name.split(" → ")[1] ?? "brands")).summary)}>Sync</button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </Card>
+
+      <Card title="📦 Pack (.json): Instagram saves and other lists" done={Object.entries(imports).filter(([k]) => k.startsWith("pack:")).map(([, v]) => v.summary).join(" · ") || undefined}>
+        <p className="text-sm text-muted">A list of things sorted by space (places, recipes, style, music…) plus notes for your second brain. Your sorted Instagram saves come as one.</p>
+        {drop("pack", ".json", async (f) => (await importPack(f)).summary)}
+      </Card>
+
       <Card title="🎬 Netflix: everything you watched" done={imports.netflix?.summary}>
         <p className="text-sm text-muted">
           Open <a className="text-accent" href="https://www.netflix.com/viewingactivity" target="_blank" rel="noreferrer">netflix.com/viewingactivity</a> (pick your profile), scroll down, <b>Download all</b>, and drop the CSV here.
@@ -134,6 +155,21 @@ function ClientId({ value }: { value?: string }) {
       <input value={v} onChange={(e) => setV(e.target.value)} placeholder={value ?? "Spotify Client ID"} autoComplete="off"
              className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
       <button className="btn-ghost text-sm">Save</button>
+    </form>
+  );
+}
+
+function PinterestForm({ onRun, busy }: { onRun: (url: string, space: string) => void; busy: boolean }) {
+  const [url, setUrl] = useState("");
+  const [space, setSpace] = useState("brands");
+  return (
+    <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) onRun(url.trim(), space); }}>
+      <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://pinterest.com/you/your-board/"
+             className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+      <select value={space} onChange={(e) => setSpace(e.target.value)} className="rounded-lg border border-line bg-panel px-2 py-2 text-sm">
+        {DOMAINS.filter((d) => d.name !== "films").map((d) => <option key={d.name} value={d.name}>{d.emoji} {d.short}</option>)}
+      </select>
+      <button className="btn text-sm" disabled={busy}>{busy ? "Importing…" : "Import pins"}</button>
     </form>
   );
 }
