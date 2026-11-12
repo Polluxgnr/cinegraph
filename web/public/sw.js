@@ -1,8 +1,9 @@
 // CineGraph service worker. Works under any base path (GitHub Pages serves /<repo>/).
 // - app shell: network first, cached copy offline
-// - catalogue (/data/*): stale-while-revalidate, so the app opens instantly and offline
+// - catalogue: manifest network first; other files are requested as <file>?v=<built_at>, cached first under that
+//   exact URL (older versions of the same file are dropped), so a new export always arrives whole
 // - images (TMDB, Wikimedia, YouTube, TheMealDB, Deezer): cache first
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = `cg-shell-${VERSION}`;
 const DATA = `cg-data-${VERSION}`;
 const IMAGES = `cg-img-${VERSION}`;
@@ -21,14 +22,28 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function staleWhileRevalidate(cacheName, request) {
+async function networkFirst(cacheName, request) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(request);
-  const net = fetch(request).then((res) => {
-    if (res.ok) cache.put(request, res.clone());
+  try {
+    const res = await fetch(request);
+    if (res.ok) await cache.put(request, res.clone());
     return res;
-  }).catch(() => hit);
-  return hit || net;
+  } catch {
+    return (await cache.match(request)) || Response.error();
+  }
+}
+
+async function versionedData(request) {
+  const cache = await caches.open(DATA);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const res = await fetch(request);
+  if (res.ok) {
+    // one cached copy per file: forget the previous export's version, keep this one
+    for (const old of await cache.keys(request, { ignoreSearch: true })) await cache.delete(old);
+    await cache.put(request, res.clone());
+  }
+  return res;
 }
 
 self.addEventListener("fetch", (event) => {
@@ -50,7 +65,7 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith(`${BASE}/data/`)) {
-    event.respondWith(staleWhileRevalidate(DATA, req));
+    event.respondWith(url.searchParams.has("v") ? versionedData(req) : networkFirst(DATA, req));
     return;
   }
   event.respondWith(

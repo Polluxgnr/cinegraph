@@ -46,14 +46,24 @@ export class QMatrix {
   }
 }
 
+/**
+ * Catalogue files are fetched as `<file>?v=<built_at>`: the manifest is always read from the network first,
+ * so after a new weekly export every file comes from that export (never a cached mix of two versions).
+ */
+async function versioned(path: string): Promise<string> {
+  if (path.endsWith("/manifest.json")) return asset(path);
+  const v = await manifest().then((m) => m.built_at).catch(() => "");
+  return `${asset(path)}${v ? `?v=${encodeURIComponent(v)}` : ""}`;
+}
+
 async function json<T>(path: string): Promise<T> {
-  const r = await fetch(asset(path));
+  const r = await fetch(await versioned(path));
   if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
   return r.json();
 }
 
 async function bytes(path: string): Promise<ArrayBuffer | null> {
-  const r = await fetch(asset(path));
+  const r = await fetch(await versioned(path));
   return r.ok ? r.arrayBuffer() : null;
 }
 
@@ -124,7 +134,10 @@ const cache = new Map<string, Promise<DomainData | FilmData>>();
 let manifestP: Promise<Manifest> | null = null;
 
 export function manifest(): Promise<Manifest> {
-  manifestP ??= json<Manifest>("/data/manifest.json");
+  manifestP ??= json<Manifest>("/data/manifest.json").catch((e) => {
+    manifestP = null; // retry next time (offline, deploy in progress)
+    throw e;
+  });
   return manifestP;
 }
 
