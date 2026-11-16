@@ -8,6 +8,7 @@ import type { DomainData } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { summarise, summaryText, type TasteSummary } from "@/lib/engine/summary";
 import { useManifest, useSpace } from "@/lib/hooks";
+import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { getState, useLoaded, useStore } from "@/lib/store";
 
 /** "Understand my tastes": per-domain portrait, taste axes, what the model learned, accuracy. */
@@ -48,7 +49,8 @@ export default function Me() {
 
   return (
     <div className="space-y-8">
-      <header>
+      <header className="relative">
+        <div className="mb-3 w-56 md:absolute md:right-0 md:top-0 md:mb-0"><ProfileSwitcher compact /></div>
         <h1 className="font-display text-4xl md:text-6xl">My taste</h1>
         <p className="text-sm text-muted">{total} answer{total === 1 ? "" : "s"} so far across {sums.length} area{sums.length === 1 ? "" : "s"}. Everything here updates with each answer.</p>
       </header>

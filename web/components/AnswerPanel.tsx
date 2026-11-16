@@ -6,6 +6,10 @@ import type { Action } from "@/lib/store";
 import type { Entity } from "@/lib/types";
 
 const TONE: Partial<Record<Action, string>> = {
+  fav: "text-love border-love bg-love/10",
+  dropped: "text-nope/80 border-nope/30",
+  asap: "text-accent border-accent bg-accent/10",
+  later: "text-muted border-line",
   loved: "text-love border-love/40",
   liked: "text-like border-like/40",
   ok: "text-ink border-line",

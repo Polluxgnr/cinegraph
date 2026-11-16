@@ -12,14 +12,15 @@ import { actionLabel, DOMAIN } from "@/lib/domains";
 import { answer } from "@/lib/engine/learn";
 import { recommend, scoreOne } from "@/lib/engine/recommend";
 import { useDomain, useQueryParam } from "@/lib/hooks";
-import { addVault, getState, setList, setProgress, useLoaded, useStore } from "@/lib/store";
-import { fmtRuntime, LANG_NAMES } from "@/lib/text";
+import { addVault, getState, isDone, setList, setProgress, useLoaded, useStore } from "@/lib/store";
+import { fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
 import { watchOptions } from "@/lib/watch";
 
 const LINK_LABEL: Record<string, string> = {
   senscritique: "SensCritique", allocine: "AlloCiné", letterboxd: "Letterboxd", imdb: "IMDb", wikipedia: "Wikipedia",
   tmdb: "TMDB", wikidata: "Wikidata", justwatch: "JustWatch", marmiton: "Marmiton", video: "Video", wikivoyage: "Wikivoyage",
-  maps: "Map", pinterest: "Pinterest", spotify: "Spotify", youtube: "YouTube",
+  maps: "Map", pinterest: "Pinterest", spotify: "Spotify", youtube: "YouTube", shop: "Find it new", vinted: "Second hand (Vinted)",
+  instagram: "Instagram", deezer: "Deezer", configurator: "Configure it",
 };
 
 export default function ItemPage() {
@@ -69,6 +70,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
             <h1 className="font-display text-4xl leading-tight md:text-6xl">{e.title}</h1>
             {f?.ot && <p className="text-muted">{f.ot}</p>}
             {!f && e.subtitle && <p className="text-muted">{e.subtitle}</p>}
+            {!f && itemFacts(e).length > 0 && <p className="text-sm text-ink/80">{itemFacts(e).join(" · ")}</p>}
           </div>
           {rec && (
             <div className="space-y-1">
@@ -198,7 +200,7 @@ function Saga({ d, row }: { d: FilmData; row: number }) {
   if (!f.coll) return null;
   const c = d.collectionOf.get(f.coll);
   if (!c) return null;
-  const seenN = c.items.filter((id) => ["loved", "liked", "ok", "disliked"].includes(feedback[`films:${id}`]?.action ?? "")).length;
+  const seenN = c.items.filter((id) => isDone(feedback[`films:${id}`]?.action)).length;
   return (
     <section className="card p-4">
       <div className="mb-3 flex items-baseline justify-between">
@@ -211,7 +213,7 @@ function Saga({ d, row }: { d: FilmData; row: number }) {
           const r = d.index.get(`films:${id}`)!;
           const x = d.entities[r];
           const a = feedback[x.key]?.action;
-          const seen = ["loved", "liked", "ok", "disliked"].includes(a ?? "");
+          const seen = isDone(a);
           return (
             <li key={id} className="w-28 shrink-0">
               <Link href={detailHref(x.key)} className={`block overflow-hidden rounded-xl border ${r === row ? "border-accent" : "border-line"} ${seen ? "" : "opacity-70"}`}>

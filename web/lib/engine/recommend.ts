@@ -5,11 +5,11 @@
  *   -> MMR diversity on embeddings -> Thompson-sampling exploration slots -> explanations
  */
 import { isFilmData, type DomainData, type FilmData } from "../data";
-import type { State } from "../store";
+import { isDone, type State } from "../store";
 import type { Entity } from "../types";
 import { sampleBeta } from "./linalg";
 import { buildProfile, type Profile } from "./profile";
-import { confidence, type Ctx, explain, features, makeCtx, predict, quickScore, stars, weights, type Scored } from "./score";
+import { blend, type Ctx, explain, features, makeCtx, predict, prior, quickScore, stars, weights, type Scored } from "./score";
 
 export interface Rec {
   entity: Entity;
@@ -37,7 +37,7 @@ export function sagaNext(d: FilmData, s: State): Set<string> {
     const keys = c.items.map((id) => `films:${id}`);
     const seen = keys.map((k) => {
       const a = s.feedback[k]?.action;
-      return a === "loved" || a === "liked" || a === "ok" || a === "disliked";
+      return isDone(a);
     });
     if (!seen.some(Boolean) || seen.every(Boolean)) continue;
     const next = keys.find((k, i) => !seen[i] && s.feedback[k]?.action !== "never");
@@ -61,8 +61,7 @@ export function scoreOne(d: DomainData, s: State, row: number, ctx?: Ctx): Rec {
   const c = ctx ?? context(d, s);
   const sc = features(c, row);
   const raw = predict(weights(s.learned.ranker[d.name]), sc.x);
-  const z = Math.log(raw / (1 - raw)) * confidence(c.p.n);
-  const p = 1 / (1 + Math.exp(-z));
+  const p = blend(Math.log(raw / (1 - raw)), prior(d, row), c.p.n);
   return { entity: d.entities[row], p, stars: stars(p), why: explain(sc, c, p), explore: false, scored: sc };
 }
 
@@ -70,7 +69,6 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   const n = o.n ?? 20;
   const c = context(d, s);
   const w = weights(s.learned.ranker[d.name]);
-  const conf = confidence(c.p.n);
   // stage 1: cheap score over the whole catalogue
   const pre: { row: number; q: number }[] = [];
   for (let row = 0; row < d.entities.length; row++) {
@@ -91,7 +89,7 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
     let z = 0;
     for (let i = 0; i < sc.x.length; i++) z += w[i] * sc.x[i];
     z += o.boost?.get(e.key) ?? 0;
-    scored.push({ row, p: 1 / (1 + Math.exp(-z * conf)), sc });
+    scored.push({ row, p: blend(z, prior(d, row), c.p.n), sc });
   }
   scored.sort((a, b) => b.p - a.p);
 

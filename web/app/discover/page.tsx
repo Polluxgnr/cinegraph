@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
 import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
-import { normTitle } from "@/lib/text";
+import { minutesOf, normTitle } from "@/lib/text";
 import type { Rec } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import { useRecs } from "@/lib/useRecs";
 
-type Sort = "match" | "date" | "popular" | "rating" | "length";
+type Sort = "match" | "date" | "popular" | "rating" | "length" | "liked" | "price-up" | "price-down";
 
 export default function Discover() {
   const domain = useSpace();
@@ -88,7 +88,10 @@ export default function Discover() {
             <option value="date">Newest first</option>
             <option value="popular">Most popular</option>
             {isFilm && <option value="rating">Community rating</option>}
-            {isFilm && <option value="length">Shortest first</option>}
+            {(isFilm || domain === "youtube") && <option value="length">Shortest first</option>}
+            {domain === "youtube" && <option value="liked">Most liked</option>}
+            {(domain === "cars" || domain === "brands") && <option value="price-up">Price: low to high</option>}
+            {(domain === "cars" || domain === "brands") && <option value="price-down">Price: high to low</option>}
           </select>
         </label>
       </header>
@@ -128,13 +131,21 @@ export default function Discover() {
   );
 }
 
+const meta = (r: Rec, k: string) => {
+  const v = r.entity.item?.meta?.[k];
+  return typeof v === "number" ? v : 0;
+};
+
 function sortRecs(recs: Rec[], sort: Sort): Rec[] {
   const by = (fn: (r: Rec) => number) => [...recs].sort((a, b) => fn(b) - fn(a));
   switch (sort) {
     case "date": return by((r) => (r.entity.date ? Date.parse(r.entity.date) : 0));
     case "popular": return by((r) => r.entity.pop);
     case "rating": return by((r) => r.entity.film?.va ?? 0);
-    case "length": return by((r) => -(r.entity.film?.rt ?? 999));
+    case "length": return by((r) => -(minutesOf(r.entity) || 999));
+    case "liked": return by((r) => meta(r, "likes") / Math.max(1000, meta(r, "views")) + meta(r, "likes") / 1e7);
+    case "price-up": return by((r) => -(meta(r, "price") || 1e12));
+    case "price-down": return by((r) => meta(r, "price"));
     default: return recs;
   }
 }

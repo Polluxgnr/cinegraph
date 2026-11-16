@@ -90,3 +90,42 @@ def collect(radios_per_genre: int = 8, max_artists: int = 2500, related: bool = 
         ))
     log.info("music: %d artists", len(items))
     return items
+
+
+def extras(items: list[Item], per_artist: int = 3, top_artists: int = 400, days: int = 120) -> dict[str, list[dict]]:
+    """New releases: albums charting on Deezer now plus the latest albums/EPs of the most popular artists
+    of the catalogue (so whoever you love, their new record shows up), released in the last `days`."""
+    import datetime as dt
+
+    http = Http(min_interval=0.12)
+    since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+    known = {it.id for it in items}
+    out: dict[str, dict] = {}
+
+    def add(alb: dict, artist: dict | None) -> None:
+        artist = alb.get("artist") or artist or {}
+        date = alb.get("release_date") or ""
+        if not alb.get("id") or date < since or date > dt.date.today().isoformat():
+            return
+        aid = f"music:{artist.get('id')}"
+        out.setdefault(str(alb["id"]), {
+            "id": f"album:{alb['id']}", "title": alb.get("title", ""), "artist": artist.get("name", ""),
+            "artist_key": aid if aid in known else None, "image": alb.get("cover_xl") or alb.get("cover_big"),
+            "date": date, "type": alb.get("record_type", "album"),
+            "url": alb.get("link") or f"https://www.deezer.com/album/{alb['id']}",
+            "spotify": "https://open.spotify.com/search/" + urllib.parse.quote(f"{artist.get('name', '')} {alb.get('title', '')}"),
+        })
+
+    # what's charting now (the chart omits release dates: one lookup per album)
+    for alb in _json(http, f"{API}/chart/0/albums", limit=100).get("data", []):
+        full = _json(http, f"{API}/album/{alb['id']}")
+        if full:
+            add(full, alb.get("artist"))
+    ranked = sorted(items, key=lambda it: -it.pop)[:top_artists]
+    for it in ranked:
+        aid = it.id.split(":", 1)[1]
+        for alb in _json(http, f"{API}/artist/{aid}/albums", limit=per_artist).get("data", []):
+            add(alb, {"id": aid, "name": it.title})
+    rows = sorted(out.values(), key=lambda r: r["date"], reverse=True)
+    log.info("music releases: %d since %s", len(rows), since)
+    return {"releases": rows}

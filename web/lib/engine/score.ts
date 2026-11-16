@@ -313,9 +313,40 @@ export function predict(w: number[], x: Float32Array): number {
   return sigmoid(z);
 }
 
-/** How much to trust the model with n informative answers: predictions are pulled towards 50%
- * early on (displayed match %, stars), without changing the ranking order. */
-export const confidence = (n: number) => Math.max(0.15, n / (n + 8));
+/** How much to trust your personal model after n informative answers (the rest comes from the prior). */
+export const confidence = (n: number) => n / (n + 8);
+
+/**
+ * What the crowd thinks, as a logit: the starting point of every prediction before you have answered
+ * much. Films: TMDB rating shrunk towards the mean by vote count (a 8.4 with 40 votes is not a 8.4).
+ * Other spaces: popularity percentile within the space. Things you saved yourself start positive.
+ */
+const popRanks = new WeakMap<DomainData, Map<number, number>>();
+export function prior(d: DomainData, row: number): number {
+  const e = d.entities[row];
+  if (e.item?.meta?.custom) return 1.2;
+  const f = e.film;
+  if (f?.va && f.vc) {
+    const k = 300;
+    const shrunk = (f.va * f.vc + 6.5 * k) / (f.vc + k);
+    // calibrated so TMDB 8.4 -> ~4.3★, 7.0 -> ~3.4★, 6.0 -> ~2.6★ (TMDB averages run high)
+    return Math.max(-2.2, Math.min(2.2, (shrunk - 6.15) * 0.75));
+  }
+  let ranks = popRanks.get(d);
+  if (!ranks) {
+    const rows = d.entities.map((x, i) => [i, x.pop] as const).filter(([, p]) => p > 0).sort((a, b) => a[1] - b[1]);
+    ranks = new Map(rows.map(([i], k) => [i, rows.length > 1 ? k / (rows.length - 1) : 0.5]));
+    popRanks.set(d, ranks);
+  }
+  const pct = ranks.get(row);
+  return pct == null ? 0 : (pct - 0.5) * 1.2;
+}
+
+/** Final probability: your model's logit and the crowd prior, weighted by how much we know you. */
+export function blend(zModel: number, zPrior: number, n: number): number {
+  const c = confidence(n);
+  return sigmoid(c * zModel + (1 - c) * zPrior);
+}
 
 /** One SGD step of L2-regularised logistic regression towards label y in [0, 1]. */
 export function sgdStep(w: number[], x: Float32Array, y: number, n: number): number[] {
@@ -345,8 +376,17 @@ export function explain(s: Scored, c: Ctx, p: number): string {
     const t = e.tags.find((tg) => (c.p.tagAff.get(tg.toLowerCase()) ?? 0) > 0.2);
     if (t) return `You tend to like ${t.toLowerCase()}`;
   }
-  if (c.p.n < 5) return p > 0.6 ? "Popular and highly rated" : "Helps us learn your taste";
-  return "A good fit for your profile";
+  const e = c.d.entities[s.row];
+  if (c.p.n < 8) {
+    const f = e.film;
+    if (f?.va && (f.vc ?? 0) >= 200) {
+      const votes = f.vc! >= 1000 ? `${Math.round(f.vc! / 1000)}k` : String(f.vc);
+      return f.va >= 7.5 ? `Acclaimed: ${f.va.toFixed(1)}/10 from ${votes} ratings` : `Rated ${f.va.toFixed(1)}/10 by ${votes} people`;
+    }
+    if (e.item?.meta?.custom) return "You saved this";
+    return p > 0.6 ? "Popular in this space" : "Helps us learn your taste";
+  }
+  return p > 0.65 ? "A strong fit for your profile" : "A good fit for your profile";
 }
 
 const GENERIC = new Set(["drama", "film", "television series", "comedy", "thriller", "action", "fr", "en"]);

@@ -29,7 +29,7 @@ export default function Lists() {
 
   const rows: (ListEntry | Feedback)[] = useMemo(() => {
     if (tab === "want" || tab === "watching") return Object.values(lists).filter((l) => l.status === tab);
-    if (tab === "loved") return Object.values(feedback).filter((f) => f.action === "loved" || (f.rating ?? 0) >= 4.5);
+    if (tab === "loved") return Object.values(feedback).filter((f) => f.action === "fav" || f.action === "loved" || (f.rating ?? 0) >= 4.5);
     return Object.values(feedback);
   }, [tab, lists, feedback]);
   const domains = useMemo(() => [...new Set(rows.map((r) => r.domain))], [rows]);
@@ -51,6 +51,8 @@ export default function Lists() {
       })
       .filter((x): x is NonNullable<typeof x> => !!x)
       .sort((a, b) => {
+        const pr = Number("priority" in b.r && !!b.r.priority) - Number("priority" in a.r && !!a.r.priority);
+        if (pr) return pr; // "must watch soon" first
         switch (sort) {
           case "release": return Date.parse(b.e.date ?? "0") - Date.parse(a.e.date ?? "0");
           case "match": return (b.rec?.p ?? 0) - (a.rec?.p ?? 0);
@@ -91,7 +93,10 @@ export default function Lists() {
               <EntityImage e={e} aspect={DOMAIN[e.domain]?.aspect === "2/3" ? "2/3" : "1/1"} />
             </Link>
             <div className="flex min-w-0 flex-1 flex-col py-1">
-              <Link href={detailHref(e.key)} className="truncate font-semibold hover:text-accent">{e.title}</Link>
+              <Link href={detailHref(e.key)} className="truncate font-semibold hover:text-accent">
+                {"priority" in r && r.priority && <span className="mr-1.5 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">soon</span>}
+                {e.title}
+              </Link>
               <p className="truncate text-xs text-muted">
                 {e.film ? [e.film.k === "tv" ? "Series" : "Film", e.film.y, e.film.k === "tv" ? (e.film.ns ? `${e.film.ns} season${e.film.ns === 1 ? "" : "s"}` : "") : fmtRuntime(e.film.rt)].filter(Boolean).join(" · ") : e.subtitle}
               </p>

@@ -3,7 +3,7 @@
  * are few compared with the catalogue). Every answer therefore changes the next ranking.
  */
 import { isFilmData, type DomainData, type FilmData } from "../data";
-import { ACTION_VALUE, type State } from "../store";
+import { ACTION_VALUE, SNOOZE_MS, type State } from "../store";
 import type { Film } from "../types";
 import { solveSPD } from "./linalg";
 
@@ -34,6 +34,9 @@ export interface Profile {
 }
 
 const LABEL: Record<string, string> = {
+  fav: "one of your all-time favourites",
+  dropped: "which you dropped",
+  asap: "which you can't wait to watch",
   loved: "which you loved",
   liked: "which you liked",
   ok: "which you found ok",
@@ -55,8 +58,10 @@ export function buildProfile(d: DomainData, s: State): Profile {
   const answered = new Set<string>();
   for (const fb of Object.values(s.feedback)) {
     if (fb.domain !== d.name) continue;
+    if (fb.action === "later" && Date.now() - fb.at > SNOOZE_MS) continue; // "not now" has expired
     answered.add(fb.key);
     let w = ACTION_VALUE[fb.action];
+    if (fb.action === "fav") w = 1.4; // favourites pull the profile harder than "loved"
     if (fb.rating != null) w = Math.max(-1, Math.min(1, (fb.rating - 3) / 2));
     const row = d.index.get(fb.key);
     if (w == null || row == null) continue;

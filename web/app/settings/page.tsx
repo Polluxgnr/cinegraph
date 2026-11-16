@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { DOMAINS } from "@/lib/domains";
 import { relearn } from "@/lib/engine/learn";
 import { useManifest } from "@/lib/hooks";
 import { asset } from "@/lib/data";
 import { backupJSON, exportObsidian, restoreJSON } from "@/lib/io";
 import { DEFAULT_PLATFORMS, emptyState, replaceState, setSettings, useStore } from "@/lib/store";
-import { pullGist, pushGist } from "@/lib/sync";
+import { deviceLink, pullGist, pushGist } from "@/lib/sync";
 
 const ALL_PLATFORMS = [...DEFAULT_PLATFORMS, "arte.tv", "france.tv"];
 const FILTERS: [string, string][] = [["romance", "No romance"], ["musical", "No musicals"], ["laugh-track sitcom", "No laugh-track sitcoms"], ["kids", "No kids' shows"]];
@@ -33,7 +34,11 @@ export default function Settings() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="font-display text-4xl md:text-5xl">Settings</h1>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="font-display text-4xl md:text-5xl">Settings</h1>
+        <div className="w-56"><ProfileSwitcher compact /></div>
+      </header>
+      <p className="-mt-3 text-sm text-muted">Settings, answers and lists belong to the profile above; each profile syncs on its own.</p>
 
       <Section title="My streaming services" hint="Used by Tonight and the ▶ links (France). Free broadcasters are always included.">
         <div className="flex flex-wrap gap-1.5">
@@ -53,13 +58,34 @@ export default function Settings() {
         </div>
       </Section>
 
-      <Section title="Memory & sync" hint={`${counts.answers} answers, ${counts.history} events, ${counts.vault} vault items, stored in this browser.`}>
-        <p className="text-sm text-muted">
-          To keep your memory across devices, create a GitHub token (classic, scope <code>gist</code> only) at{" "}
-          <a className="text-accent" href="https://github.com/settings/tokens/new?scopes=gist&description=CineGraph%20memory" target="_blank" rel="noreferrer">github.com/settings/tokens</a>{" "}
-          and paste it here. Your memory goes to a <b>private</b> Gist; the token never leaves this browser.
-        </p>
-        <Secret value={s.gistToken} placeholder="ghp_…" onSave={(v) => setSettings({ gistToken: v || undefined })} />
+      <Section title="Memory & sync" hint={`${counts.answers} answers, ${counts.history} events, ${counts.vault} vault items.`}>
+        {s.gistToken ? (
+          <p className="rounded-lg border border-like/40 bg-like/10 p-3 text-sm">✓ Sync is on. Every answer is saved to your private Gist a few seconds later and pulled on your other devices when you open the app.</p>
+        ) : (
+          <p className="rounded-lg border border-nope/40 bg-nope/10 p-3 text-sm">Your answers are saved <b>in this browser only</b>. Swipes on your iPad or phone stay there until you turn on sync (2 minutes, once).</p>
+        )}
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+          <li>Open <a className="text-accent" href="https://github.com/settings/tokens/new?scopes=gist&description=CineGraph%20memory" target="_blank" rel="noreferrer">this GitHub page</a> (scope <code>gist</code> is already ticked), set “No expiration”, click <b>Generate token</b> and copy it.</li>
+          <li>Paste it below. All profiles on this device use it; each profile gets its own file in one <b>private</b> Gist.</li>
+          <li>On your iPad or phone, open the link from <b>Link another device</b>: no second token needed.</li>
+        </ol>
+        <Secret value={s.gistToken} placeholder="ghp_…" onSave={(v) => {
+          setSettings({ gistToken: v || undefined });
+          if (v) run("First sync", async () => { await pullGist().catch(() => false); return `Synced to Gist ${await pushGist()}`; });
+        }} />
+        {s.gistToken && (
+          <button className="btn text-sm" onClick={async () => {
+            const link = deviceLink();
+            if (!link) return;
+            try {
+              if (navigator.share) await navigator.share({ title: "CineGraph", text: "Open on my other device", url: link });
+              else {
+                await navigator.clipboard.writeText(link);
+                setMsg("Link copied: open it on your other device (send it to yourself only, it carries your sync token)");
+              }
+            } catch { /* share sheet closed */ }
+          }}>Link another device</button>
+        )}
         <div className="flex flex-wrap gap-2">
           <button className="btn-ghost text-sm" disabled={!s.gistToken || busy} onClick={() => run("Push", async () => `Saved to Gist ${await pushGist()}`)}>Push now</button>
           <button className="btn-ghost text-sm" disabled={!s.gistToken || busy} onClick={() => run("Pull", async () => ((await pullGist()) ? "Merged from your Gist" : "No Gist found yet"))}>Pull now</button>

@@ -1,0 +1,70 @@
+# Iconic pieces to keep in mind. brand must match a name in style_brands.yaml; price is an approximate
+# retail price in euros (a guide, not a quote: prices move and vary by country).
+- {name: Ghost Piece overshirt, brand: Stone Island, category: outerwear, price: 650, tags: [overshirt, monochrome]}
+- {name: Garment-dyed crewneck sweatshirt, brand: Stone Island, category: tops, price: 260, tags: [sweatshirt, badge]}
+- {name: Goggle jacket, brand: C.P. Company, category: outerwear, price: 650, tags: [jacket, goggle, technical]}
+- {name: Lens overshirt, brand: C.P. Company, category: outerwear, price: 330, tags: [overshirt]}
+- {name: Beta LT jacket, brand: "Arc'teryx", category: outerwear, price: 500, tags: [gore-tex, shell, gorpcore]}
+- {name: Monitor coat, brand: "Arc'teryx Veilance", category: outerwear, price: 1300, tags: [coat, technical, minimal]}
+- {name: XT-6, brand: Salomon, category: sneakers, price: 190, tags: [trail, gorpcore]}
+- {name: ACS Pro, brand: Salomon, category: sneakers, price: 170, tags: [trail]}
+- {name: Pertex wind jacket, brand: and wander, category: outerwear, price: 330, tags: [windbreaker, gorpcore]}
+- {name: Original G-Pant, brand: Gramicci, category: pants, price: 110, tags: [climbing]}
+- {name: Century denim, brand: Kapital, category: pants, price: 450, tags: [denim, boro, sashiko]}
+- {name: Poly smooth track pant, brand: Needles, category: pants, price: 250, tags: [track pants, butterfly]}
+- {name: Bedford jacket, brand: Engineered Garments, category: outerwear, price: 450, tags: [workwear]}
+- {name: FBT moccasin, brand: Visvim, category: shoes, price: 800, tags: [moccasin, craft]}
+- {name: Third Cut jeans, brand: Our Legacy, category: pants, price: 250, tags: [denim, straight]}
+- {name: Box shirt, brand: Our Legacy, category: tops, price: 260, tags: [shirt, boxy]}
+- {name: Croissant bag, brand: Lemaire, category: bags, price: 900, tags: [leather]}
+- {name: Twisted shirt, brand: Lemaire, category: tops, price: 450, tags: [shirt, minimal]}
+- {name: Super light wool shirt, brand: Auralee, category: tops, price: 350, tags: [shirt, wool]}
+- {name: Geobasket, brand: Rick Owens, category: sneakers, price: 1100, tags: [high-top, leather]}
+- {name: DRKSHDW Ramones, brand: Rick Owens, category: sneakers, price: 600, tags: [canvas, high-top]}
+- {name: Tabi boots, brand: Maison Margiela, category: shoes, price: 1100, tags: [tabi, boots, split-toe]}
+- {name: Replica sneakers (GAT), brand: Maison Margiela, category: sneakers, price: 550, tags: [german army trainer]}
+- {name: PLAY x Converse Chuck 70, brand: Comme des Garçons, category: sneakers, price: 150, tags: [heart logo, collab]}
+- {name: Pleated trousers, brand: Homme Plissé Issey Miyake, category: pants, price: 400, tags: [pleats]}
+- {name: Detroit jacket, brand: Carhartt WIP, category: outerwear, price: 280, tags: [workwear, canvas]}
+- {name: Double Knee pant, brand: Carhartt WIP, category: pants, price: 150, tags: [workwear]}
+- {name: 8 Ball sherpa fleece, brand: Stüssy, category: outerwear, price: 220, tags: [fleece, graphic]}
+- {name: Basic logo tee, brand: Stüssy, category: tops, price: 50, tags: [t-shirt, logo]}
+- {name: x New Balance 550, brand: Aimé Leon Dore, category: sneakers, price: 140, tags: [collab, basketball]}
+- {name: Tri-Ferg hoodie, brand: Palace, category: tops, price: 160, tags: [hoodie, logo, skate]}
+- {name: Alcatraz cargos, brand: Corteiz, category: pants, price: 140, tags: [cargo pants, logo]}
+- {name: Rules The World hoodie, brand: Corteiz, category: tops, price: 120, tags: [hoodie, logo]}
+- {name: Owners Club hoodie, brand: Represent, category: tops, price: 220, tags: [hoodie, heavyweight]}
+- {name: Box logo hoodie, brand: Supreme, category: tops, price: 170, tags: [hoodie, box logo, grail]}
+- {name: Williams III hoodie, brand: Kith, category: tops, price: 180, tags: [hoodie, embroidered]}
+- {name: Shark full-zip hoodie, brand: BAPE, category: tops, price: 420, tags: [hoodie, shark, camo]}
+- {name: Irongate puffer, brand: Trapstar, category: outerwear, price: 300, tags: [puffer, logo]}
+- {name: Cotton wreath jeans, brand: Denim Tears, category: pants, price: 400, tags: [denim, wreath print]}
+- {name: Painted flare jeans, brand: Gallery Dept., category: pants, price: 750, tags: [denim, flared, paint]}
+- {name: Horseshoe hoodie, brand: Chrome Hearts, category: tops, price: 1000, tags: [hoodie, horseshoe, grail]}
+- {name: Rollercoaster buckle belt, brand: 1017 ALYX 9SM, category: accessories, price: 250, tags: [belt, hardware]}
+- {name: Essentials hoodie, brand: Fear of God, category: tops, price: 110, tags: [hoodie, neutral]}
+- {name: MothTech muscle tee, brand: Satisfy Running, category: tops, price: 130, tags: [running, distressed]}
+- {name: Big Boy jeans, brand: Polar Skate Co., category: pants, price: 120, tags: [denim, baggy, skate]}
+- {name: Travail jacket, brand: Arpenteur, category: outerwear, price: 350, tags: [workwear, french]}
+- {name: Michael derby, brand: Paraboot, category: shoes, price: 380, tags: [derby, norwegian welt, french]}
+- {name: Campo, brand: Veja, category: sneakers, price: 130, tags: [eco]}
+- {name: 990v6, brand: New Balance Made in USA, category: sneakers, price: 220, tags: [grey, dad shoe]}
+- {name: Boston clog, brand: Birkenstock, category: shoes, price: 150, tags: [clog, suede]}
+- {name: Mafate Speed 2, brand: Hoka, category: sneakers, price: 170, tags: [trail, gorpcore]}
+- {name: Face logo scarf, brand: Acne Studios, category: accessories, price: 170, tags: [scarf, wool]}
+- {name: Le Chiquito, brand: Jacquemus, category: bags, price: 590, tags: [mini bag]}
+- {name: Ami de Coeur sweater, brand: AMI Paris, category: tops, price: 300, tags: [knit, heart logo]}
+- {name: Silk shirt, brand: Casablanca, category: tops, price: 600, tags: [silk, print]}
+- {name: x adidas Samba, brand: Wales Bonner, category: sneakers, price: 200, tags: [collab]}
+- {name: Tanker 2-way helmet bag, brand: Porter Yoshida, category: bags, price: 350, tags: [nylon, japanese]}
+- {name: Lang sunglasses, brand: Gentle Monster, category: eyewear, price: 280, tags: [sunglasses]}
+- {name: Dealan frames, brand: Jacques Marie Mage, category: eyewear, price: 900, tags: [glasses, acetate]}
+- {name: Riviera polo, brand: Sunspel, category: tops, price: 130, tags: [polo, classic]}
+- {name: 105 jeans, brand: orSlow, category: pants, price: 250, tags: [denim, selvedge, japanese]}
+- {name: GORE-TEX cruiser jacket, brand: Nanamica, category: outerwear, price: 600, tags: [gore-tex, minimal]}
+- {name: Minquiers marinière, brand: Saint James, category: tops, price: 110, tags: [breton, stripes, french]}
+- {name: Basic tracksuit, brand: Patta, category: tops, price: 220, tags: [tracksuit, amsterdam]}
+- {name: MIP-10 sneaker, brand: Hender Scheme, category: sneakers, price: 600, tags: [leather, craft, japanese]}
+- {name: Santal 33, brand: Le Labo, category: fragrance, price: 230, tags: [woody]}
+- {name: Philosykos, brand: Diptyque, category: fragrance, price: 150, tags: [fig]}
+- {name: Mojave Ghost, brand: Byredo, category: fragrance, price: 200, tags: [musky]}

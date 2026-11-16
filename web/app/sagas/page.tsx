@@ -7,7 +7,7 @@ import { detailHref, Progress } from "@/components/RecCard";
 import { useFilms } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 
-const SEEN = ["loved", "liked", "ok", "disliked"];
+const SEEN = ["fav", "loved", "liked", "ok", "disliked", "dropped"];
 
 /** Franchises grouped (Harry Potter, Star Wars, Marvel...) with a progress bar each. */
 export default function Sagas() {

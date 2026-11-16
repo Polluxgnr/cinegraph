@@ -7,7 +7,7 @@ import { DOMAIN } from "@/lib/domains";
 import { answer } from "@/lib/engine/learn";
 import type { Rec } from "@/lib/engine/recommend";
 import { setList, useStore } from "@/lib/store";
-import { fmtRuntime } from "@/lib/text";
+import { fmtRuntime, itemFacts } from "@/lib/text";
 import { streamsOn } from "@/lib/watch";
 
 export function detailHref(key: string) {
@@ -23,10 +23,10 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   const f = e.film;
   const meta = f
     ? [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "") : fmtRuntime(f.rt), f.lang?.toUpperCase()]
-    : [e.subtitle];
+    : [e.subtitle, ...itemFacts(e)];
   const streams = f ? streamsOn(f, platforms) : [];
 
-  if (answered === "never" || answered === "disliked") return null;
+  if (answered === "never" || answered === "disliked" || answered === "dropped") return null;
   return (
     <article className="group card flex flex-col overflow-hidden">
       <Link href={detailHref(e.key)} className="relative block overflow-hidden">
@@ -40,7 +40,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
         <Link href={detailHref(e.key)} className="line-clamp-2 font-semibold leading-snug hover:text-accent">
           {e.title}
         </Link>
-        <p className="line-clamp-1 text-xs text-muted">{meta.filter(Boolean).join(" · ")}</p>
+        <p className="line-clamp-2 text-xs text-muted">{meta.filter(Boolean).join(" · ")}</p>
         <Match p={r.p} stars={r.stars} compact />
         {showWhy && <p className="line-clamp-3 text-[13px] leading-snug text-ink/85">{r.why}</p>}
         <div className="mt-auto flex gap-2 pt-1">

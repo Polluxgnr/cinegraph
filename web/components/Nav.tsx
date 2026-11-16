@@ -7,7 +7,7 @@ import { BASE } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { useManifest } from "@/lib/hooks";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
-import { ACTION_VALUE, setSpace, useStore } from "@/lib/store";
+import { ACTION_VALUE, setSpace, useProfiles, useStore } from "@/lib/store";
 
 /** Tabs inside the current space; some spaces have extra tools. */
 export function spaceTabs(space: string): { href: string; label: string }[] {
@@ -47,6 +47,8 @@ export default function Nav() {
   const spaces = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
   const cfg = DOMAIN[space] ?? DOMAINS[0];
+  const profiles = useProfiles();
+  const me = profiles.list.find((p) => p.id === profiles.active) ?? profiles.list[0];
 
   // each space has its own accent colour
   useEffect(() => {
@@ -86,9 +88,12 @@ export default function Nav() {
       {/* mobile: space switcher on top */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line/60 bg-bg/90 px-4 py-2.5 backdrop-blur md:hidden">
         <Link href="/" className="font-display text-2xl">Cine<span className="text-accent">Graph</span></Link>
-        <button onClick={() => setSheet(true)} className="flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-sm">
-          {cfg.emoji} {cfg.short} <span className="text-muted">▾</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setSheet(true)} aria-label={`Profile: ${me.name}`} className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-lg">{me.emoji}</button>
+          <button onClick={() => setSheet(true)} className="flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-sm">
+            {cfg.emoji} {cfg.short} <span className="text-muted">▾</span>
+          </button>
+        </div>
       </header>
       {sheet && (
         <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setSheet(false)}>

@@ -49,10 +49,11 @@ export async function buildDossier(): Promise<string> {
       }).filter(Boolean);
       if (lines.length) out.push(`### ${title}`, ...(lines as string[]), "");
     };
+    group("All-time favourites", ["fav"]);
     group("Loved", ["loved"]);
     group("Liked", ["liked", "watching"]);
-    group("Not for me", ["disliked", "never"], 25);
-    group("Want to try", ["want", "maybe"], 30);
+    group("Not for me", ["disliked", "dropped", "never"], 25);
+    group("Want to try", ["asap", "want", "maybe"], 30);
     const mine = s.custom.filter((c) => c.domain === cfg.name && c.note);
     if (mine.length) out.push("### My own notes", ...mine.map((c) => `- ${c.title}: ${c.note}${c.url ? ` (${c.url})` : ""}`), "");
   }

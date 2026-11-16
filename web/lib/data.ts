@@ -199,6 +199,11 @@ export function loadDomain(name: string): Promise<DomainData> {
   return cache.get(name)!;
 }
 
+/** A side list published next to a space's catalogue (music/releases.json, brands/pieces.json...). */
+export function loadExtra<T>(domain: string, name: string): Promise<T[]> {
+  return json<T[]>(`/data/${domain}/${name}.json`).catch(() => [] as T[]);
+}
+
 export function isFilmData(d: DomainData): d is FilmData {
   return d.name === "films";
 }

@@ -3,7 +3,10 @@
  * create (classic token, scope `gist` only). The token stays in this browser.
  * Conflict rule: the newest `updatedAt` wins; histories are merged by timestamp.
  */
-import { getProfiles, getState, migrate, replaceState, setSettings, type State } from "./store";
+import { asset } from "./data";
+import { getProfiles, getState, mergeProfiles, migrate, replaceState, setSettings, type State } from "./store";
+
+const PROFILES_FILE = "cinegraph-profiles.json";
 
 /** One Gist file per profile, so each profile syncs its own memory. */
 const fileName = () => {
@@ -40,7 +43,8 @@ export async function pushGist(): Promise<string> {
   if (!token) throw new Error("Add a GitHub token in Settings first");
   // never upload secrets
   const safe: State = { ...s, settings: { ...s.settings, gistToken: undefined, anthropicKey: undefined } };
-  const body = JSON.stringify({ files: { [fileName()]: { content: JSON.stringify(safe) } } });
+  const files = { [fileName()]: { content: JSON.stringify(safe) }, [PROFILES_FILE]: { content: JSON.stringify(getProfiles()) } };
+  const body = JSON.stringify({ files });
   if (s.settings.gistId) {
     const r = await fetch(`${API}/gists/${s.settings.gistId}`, { method: "PATCH", headers: headers(token), body });
     if (r.ok) return s.settings.gistId;
@@ -49,7 +53,7 @@ export async function pushGist(): Promise<string> {
   const r = await fetch(`${API}/gists`, {
     method: "POST",
     headers: headers(token),
-    body: JSON.stringify({ description: "CineGraph memory (private)", public: false, files: { [fileName()]: { content: JSON.stringify(safe) } } }),
+    body: JSON.stringify({ description: "CineGraph memory (private)", public: false, files }),
   });
   if (!r.ok) throw new Error(`GitHub: ${r.status}`);
   const g = await r.json();
@@ -65,14 +69,22 @@ export async function pullGist(): Promise<boolean> {
   if (!gistId) {
     const r = await fetch(`${API}/gists?per_page=100`, { headers: headers(token) });
     if (!r.ok) throw new Error(`GitHub: ${r.status}`);
-    const found = (await r.json()).find((g: { files: Record<string, unknown> }) => fileName() in g.files);
+    const found = (await r.json()).find((g: { files: Record<string, unknown> }) => fileName() in g.files || PROFILES_FILE in g.files);
     if (!found) return false;
     gistId = found.id as string;
   }
   const r = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) });
   if (!r.ok) throw new Error(`GitHub: ${r.status}`);
   const g = await r.json();
+  const read = async (f: { truncated?: boolean; raw_url: string; content: string } | undefined) =>
+    !f ? null : f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+  const profilesText = await read(g.files[PROFILES_FILE]);
+  if (profilesText) await mergeProfiles(JSON.parse(profilesText));
   const file = g.files[fileName()];
+  if (!file) {
+    setSettings({ gistId }); // this profile has no copy yet: the next push creates it
+    return false;
+  }
   const content = file.truncated ? await (await fetch(file.raw_url)).text() : file.content;
   const remote = migrate(JSON.parse(content));
   const merged = merge(getState(), remote);
@@ -86,5 +98,41 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 export function scheduleSync() {
   if (!getState().settings.gistToken) return;
   if (timer) clearTimeout(timer);
-  timer = setTimeout(() => pushGist().catch(() => {}), 8000);
+  timer = setTimeout(() => {
+    timer = null;
+    pushGist().catch(() => {});
+  }, 5000);
+}
+
+/**
+ * A link that sets up sync on your other device in one tap (phone, iPad). The token travels in the URL
+ * *fragment*, which browsers never send to a server; the app reads it once and removes it from the address bar.
+ */
+export function deviceLink(): string | null {
+  const { gistToken, gistId } = getState().settings;
+  if (!gistToken) return null;
+  return `${window.location.origin}${asset("/settings/")}#sync=${btoa(JSON.stringify({ t: gistToken, g: gistId }))}`;
+}
+
+/** Called at start-up: if the address carries a device link, store its token and clean the address. */
+export function acceptDeviceLink(): boolean {
+  const m = window.location.hash.match(/sync=([^&]+)/);
+  if (!m) return false;
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  try {
+    const { t, g } = JSON.parse(atob(decodeURIComponent(m[1])));
+    if (typeof t !== "string") return false;
+    setSettings({ gistToken: t, gistId: typeof g === "string" ? g : undefined });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Push right away (e.g. when the tab is hidden), if a change is waiting. */
+export function flushSync() {
+  if (!timer || !getState().settings.gistToken) return;
+  clearTimeout(timer);
+  timer = null;
+  pushGist().catch(() => {});
 }

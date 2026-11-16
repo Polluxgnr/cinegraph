@@ -3,7 +3,7 @@ import numpy as np
 
 from cinegraph.domains.base import commons_image
 from cinegraph.domains.recipes import to_item
-from cinegraph.domains.youtube import parse_feed
+from cinegraph.domains.youtube import iso_minutes, parse_feed
 from cinegraph.export_static import quantize, reaction_chips
 
 FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
@@ -11,7 +11,7 @@ FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
  <entry><yt:videoId>abc123</yt:videoId><title>Les abeilles | ARTE Reportage</title>
   <published>2026-11-01T10:00:00+00:00</published>
   <media:group><media:description>Un documentaire.</media:description>
-   <media:community><media:statistics views="12345"/></media:community></media:group></entry>
+   <media:community><media:starRating count="678" average="5.00" min="1" max="5"/><media:statistics views="12345"/></media:community></media:group></entry>
  <entry><yt:videoId>short1</yt:videoId><title>Quick one #shorts</title><published>2026-11-02T10:00:00+00:00</published></entry>
  <entry><yt:videoId>short2</yt:videoId><title>Untagged short</title><link rel="alternate" href="https://www.youtube.com/shorts/short2"/></entry>
 </feed>"""
@@ -24,6 +24,12 @@ def test_youtube_feed_parsing_skips_shorts():
     assert v.image == "https://i.ytimg.com/vi/abc123/hqdefault.jpg"
     assert v.date == "2026-11-01" and v.pop == 12345 and v.meta["embed"] == "abc123"
     assert "documentary" in v.tags
+    assert v.meta["views"] == 12345 and v.meta["likes"] == 678
+
+
+def test_iso_duration_to_minutes():
+    assert iso_minutes("PT1H2M3S") == 62 and iso_minutes("PT12M") == 12 and iso_minutes("PT45S") == 1
+    assert iso_minutes("nonsense") is None
 
 
 def test_recipe_item_has_marmiton_search_link_and_ingredients():

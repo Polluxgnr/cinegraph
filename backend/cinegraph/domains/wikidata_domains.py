@@ -154,8 +154,47 @@ def cars() -> list[Item]:
                    "pinterest": f"https://www.pinterest.com/search/pins/?q={label.replace(' ', '%20')}"},
             meta={"maker": maker, "description": d.get("itemDescription")},
         ))
-    log.info("cars (dream garage): %d", len(items))
+    priced = apply_car_prices(items)
+    log.info("cars (dream garage): %d (%d with a price)", len(items), priced)
     return items
+
+
+def _fold(s: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)).strip()
+
+
+def car_price(title: str, maker: str, year: str | None) -> tuple[int, str] | None:
+    """(euros, "new" | "market" | "from") from config/car_prices.yaml, or None."""
+    from importlib import resources
+
+    import yaml
+
+    global _PRICES
+    if "_PRICES" not in globals():
+        cfg = yaml.safe_load(resources.files("cinegraph").joinpath("config/car_prices.yaml").read_text("utf-8"))
+        _PRICES = ({_fold(k): (int(v[0]), v[1]) for k, v in cfg["models"].items()},
+                   {_fold(k): int(v) for k, v in cfg["makes_from"].items()})
+    models, makes = _PRICES
+    t = _fold(title)
+    if t in models:
+        return models[t]
+    if year and year.isdigit() and int(year) >= 2015:
+        for mk, eur in makes.items():
+            if _fold(maker).startswith(mk) or t.startswith(mk):
+                return eur, "from"
+    return None
+
+
+def apply_car_prices(items: list[Item]) -> int:
+    n = 0
+    for it in items:
+        year = (it.date or "")[:4] or None
+        p = car_price(it.title, it.meta.get("maker", ""), year)
+        if p:
+            it.meta.update(price=p[0], price_approx=True, price_kind=p[1])
+            n += 1
+    return n
 
 
 # ------------------------------------------------------------------ brands

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
+import ExtraRow from "@/components/ExtraRow";
 import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
 import type { DomainData, FilmData } from "@/lib/data";
 import { isFilmData } from "@/lib/data";
@@ -12,7 +13,7 @@ import { buildProfile } from "@/lib/engine/profile";
 import { runQuery, type QueryResult } from "@/lib/engine/query";
 import { recommend } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
-import { getState, useLoaded, useStore } from "@/lib/store";
+import { getState, isDone, useLoaded, useStore } from "@/lib/store";
 import { useRecs } from "@/lib/useRecs";
 
 const HERO: Record<string, { title: string; sub: string }> = {
@@ -32,13 +33,50 @@ export default function Home() {
   if (!loaded || !d) return <Skeleton />;
   return (
     <div key={space} className="rise space-y-10">
+      <SyncNudge />
       <Hero space={space} d={d} />
+      <ConnectStrip space={space} />
       {isFilmData(d) && <ContinueRow films={d} />}
       <ForYou d={d} />
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
+      {space === "music" && <ExtraRow d={d} name="releases" title="New releases" hint="out in the last weeks, artists you like first" />}
+      {space === "brands" && <Pieces d={d} />}
       <Mine d={d} />
     </div>
+  );
+}
+
+/** Until sync is on, answers live in one browser only: say so once there is something to lose. */
+function SyncNudge() {
+  const synced = useStore((s) => !!s.settings.gistToken);
+  const answers = useStore((s) => Object.keys(s.feedback).length);
+  if (synced || answers < 5) return null;
+  return (
+    <Link href="/settings/" className="card flex items-center gap-3 border-nope/40 p-3 text-sm hover:border-accent">
+      <span className="text-lg">☁️</span>
+      <span className="flex-1"><b>{answers} answers saved in this browser only.</b> <span className="text-muted">Turn on sync to see them on your iPad and phone too.</span></span>
+      <span className="text-accent">Set up →</span>
+    </Link>
+  );
+}
+
+/** Videos and Music learn much faster from your accounts than from swipes: offer the connection in the space itself. */
+function ConnectStrip({ space }: { space: string }) {
+  const yt = useStore((s) => !!(s.imports["youtube-live"] || s.imports.youtube));
+  const sp = useStore((s) => !!(s.spotify || s.imports.spotify));
+  const c = space === "youtube" && !yt
+    ? { icon: "▶", text: "Connect YouTube: your liked videos and subscriptions shape this space.", href: "/import/#connect-youtube", cta: "Connect" }
+    : space === "music" && !sp
+      ? { icon: "🎧", text: "Connect Spotify: your top artists, liked songs and playlists shape this space.", href: "/import/#connect-spotify", cta: "Connect" }
+      : null;
+  if (!c) return null;
+  return (
+    <Link href={c.href} className="card -mt-4 flex items-center gap-3 p-3 text-sm hover:border-accent">
+      <span className="text-lg">{c.icon}</span>
+      <span className="flex-1 text-muted">{c.text}</span>
+      <span className="text-accent">{c.cta} →</span>
+    </Link>
   );
 }
 
@@ -178,6 +216,13 @@ function Fresh({ d }: { d: DomainData }) {
   return <Row title="New this week" hint="latest from the channels, ranked for you">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
 }
 
+/** Style: individual pieces (with an approximate price), ranked by your taste in brands and pieces. */
+function Pieces({ d }: { d: DomainData }) {
+  const recs = useRecs(d, { n: 16, explore: 0.1, filter: (e) => e.tags.includes("piece") }, "pieces");
+  if (!recs?.length) return null;
+  return <Row title="Pieces for you" hint="iconic pieces from brands close to your style · ≈ retail price">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
+}
+
 function Mine({ d }: { d: DomainData }) {
   const custom = useStore((s) => s.custom.filter((c) => c.domain === d.name));
   if (d.name === "films") return null;
@@ -216,7 +261,7 @@ function ContinueRow({ films }: { films: FilmData }) {
   const sagas = films.collections
     .map((c) => {
       const keys = c.items.map((id) => `films:${id}`);
-      const seen = keys.filter((k) => ["loved", "liked", "ok", "disliked"].includes(feedback[k]?.action ?? ""));
+      const seen = keys.filter((k) => isDone(feedback[k]?.action));
       const next = keys.find((k) => !seen.includes(k) && feedback[k]?.action !== "never");
       return { c, seen: seen.length, total: keys.length, next };
     })

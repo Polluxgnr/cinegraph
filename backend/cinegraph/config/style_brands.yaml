@@ -107,3 +107,32 @@
 - {name: Folk, url: https://www.folkclothing.com, tags: [british, textures, minimal], country: UK}
 - {name: Sunspel, url: https://www.sunspel.com, tags: [british, essentials, cotton], country: UK}
 - {name: Vinted (second hand), url: https://www.vinted.fr, tags: [second hand, vintage, marketplace], country: Lithuania}
+# streetwear & skate
+- {name: Supreme, url: https://supreme.com, tags: [streetwear, skate, drops], country: USA}
+- {name: Kith, url: https://kith.com, tags: [streetwear, collabs, new york], country: USA}
+- {name: BAPE, url: https://bape.com, tags: [streetwear, camo, japanese], country: Japan}
+- {name: Trapstar, url: https://www.trapstarlondon.com, tags: [streetwear, london, grime], country: UK}
+- {name: Broken Planet, url: https://brokenplanetmarket.com, tags: [streetwear, london, hoodies], country: UK}
+- {name: Cole Buxton, url: https://colebuxton.com, tags: [streetwear, minimal, heavyweight], country: UK}
+- {name: Denim Tears, url: https://denimtears.com, tags: [streetwear, denim, culture], country: USA}
+- {name: Union Los Angeles, url: https://store.unionlosangeles.com, tags: [streetwear, boutique, los angeles], country: USA}
+- {name: Gallery Dept., url: https://gallerydept.com, tags: [streetwear, painted denim, los angeles], country: USA}
+- {name: Chrome Hearts, url: https://www.chromehearts.com, tags: [luxury streetwear, silver, gothic], country: USA}
+- {name: Palm Angels, url: https://www.palmangels.com, tags: [luxury streetwear, skate, italian], country: Italy}
+- {name: 1017 ALYX 9SM, url: https://www.alyxstudio.com, tags: [luxury streetwear, hardware, technical], country: Italy}
+- {name: Cav Empt, url: https://www.cavempt.com, tags: [streetwear, graphic, japanese], country: Japan}
+- {name: Wacko Maria, url: https://wackomaria.co.jp, tags: [streetwear, hawaiian shirts, japanese], country: Japan}
+- {name: Places+Faces, url: https://placesplusfaces.com, tags: [streetwear, london, nightlife], country: UK}
+- {name: Nahmias, url: https://nahmias.com, tags: [streetwear, los angeles, knitwear], country: USA}
+- {name: Who Decides War, url: https://www.whodecideswar.com, tags: [streetwear, denim, embroidery], country: USA}
+- {name: Fucking Awesome, url: https://fuckingawesome.com, tags: [skate, streetwear, graphic], country: USA}
+- {name: Polar Skate Co., url: https://polarskateco.com, tags: [skate, baggy denim, swedish], country: Sweden}
+- {name: Dime, url: https://dimemtl.com, tags: [skate, streetwear, montreal], country: Canada}
+- {name: Vetements, url: https://vetementswebsite.com, tags: [luxury streetwear, oversized, deconstruction], country: Switzerland}
+- {name: Enfants Riches Déprimés, url: https://enfantsrichesdeprimes.com, tags: [luxury streetwear, punk, distressed], country: USA}
+- {name: Hellstar, url: https://hellstar.com, tags: [streetwear, graphic, flared], country: USA}
+- {name: JJJJound, url: https://jjjjound.com, tags: [minimal, collabs, montreal], country: Canada}
+- {name: Museum of Peace & Quiet, url: https://museumofpeaceandquiet.com, tags: [streetwear, calm, graphic], country: USA}
+- {name: Carne Bollente, url: https://carnebollente.com, tags: [streetwear, french, graphic], country: France}
+- {name: Pas Normal Studios, url: https://pasnormalstudios.com, tags: [cycling, technical, copenhagen], country: Denmark}
+- {name: "Arc'teryx", url: https://arcteryx.com, tags: [gorpcore, technical, outdoor], country: Canada}

@@ -61,7 +61,7 @@ export function customEntity(c: CustomItem): Entity {
     image: c.image,
     pop: 0,
     tags: c.tags,
-    item: { id: c.id, title: c.title, subtitle: c.subtitle, image: c.image, url: c.url, tags: c.tags, text: c.note, meta: { custom: true, note: c.note, source: c.source } },
+    item: { id: c.id, title: c.title, subtitle: c.subtitle, image: c.image, url: c.url, tags: c.tags, text: c.note, meta: { ...c.meta, custom: true, note: c.note, source: c.source } },
   };
 }
 

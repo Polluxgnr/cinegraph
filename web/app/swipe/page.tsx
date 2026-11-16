@@ -160,7 +160,7 @@ function Deck({ domain }: { domain: string }) {
               <button className="col-span-2 text-xs text-muted" onClick={() => setUnseenMode(false)}>← back</button>
             </div>
           ) : (
-            <AnswerPanel key={e.key} e={e} onAnswer={(a, extra) => decide(a, extra, a === "loved" ? [0, -1] : ["disliked", "never"].includes(a) ? [-1, 0] : [1, 0])} />
+            <AnswerPanel key={e.key} e={e} onAnswer={(a, extra) => decide(a, extra, a === "loved" || a === "fav" ? [0, -1] : ["disliked", "dropped", "never"].includes(a) ? [-1, 0] : [1, 0])} />
           )}
         </div>
       )}

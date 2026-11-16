@@ -67,7 +67,7 @@ export interface Manifest {
   version: number;
   built_at: string;
   embed_model: string;
-  domains: Record<string, { label: string; count: number; images?: number; collections?: number }>;
+  domains: Record<string, { label: string; count: number; images?: number; collections?: number; extras?: Record<string, number> }>;
 }
 
 /** A common view of any recommendable thing, so one engine and one card serve every domain. */

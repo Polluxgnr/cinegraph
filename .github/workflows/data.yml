@@ -39,6 +39,7 @@ jobs:
       DATABASE_URL: postgresql://cinegraph:cinegraph@127.0.0.1:5433/cinegraph
       DATA_DIR: ${{ github.workspace }}/data
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}  # optional: video length, likes, comments
       WIKIDATA_CONTACT: https://github.com/${{ github.repository }}
       MOVIELENS_VARIANT: ml-latest-small
       GH_TOKEN: ${{ github.token }}

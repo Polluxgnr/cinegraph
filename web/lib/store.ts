@@ -7,28 +7,41 @@
 import { useRef, useSyncExternalStore } from "react";
 
 export type Action =
+  | "fav"
   | "loved"
   | "liked"
   | "ok"
   | "disliked"
+  | "dropped"
   | "watching"
+  | "asap"
   | "want"
   | "maybe"
   | "unknown"
+  | "later"
   | "never";
 
-export const SEEN_ACTIONS: Action[] = ["loved", "liked", "ok", "disliked", "watching"];
+export const SEEN_ACTIONS: Action[] = ["fav", "loved", "liked", "ok", "disliked", "dropped", "watching"];
+/** Answers that mean "I've seen / tried it all" (sagas, progress, lists marked done). */
+export const DONE_ACTIONS: Action[] = ["fav", "loved", "liked", "ok", "disliked", "dropped"];
+export const isDone = (a?: string) => !!a && (DONE_ACTIONS as string[]).includes(a);
+/** "Not now" hides an item for this long, without saying anything about your taste. */
+export const SNOOZE_MS = 30 * 24 * 3600 * 1000;
 
 /** Taste label in [-1, 1] used by the models; null = no taste information ("no idea"). */
 export const ACTION_VALUE: Record<Action, number | null> = {
+  fav: 1,
   loved: 1,
   liked: 0.6,
   ok: 0,
   disliked: -1,
+  dropped: -0.45,
   watching: 0.5,
+  asap: 0.6,
   want: 0.45,
   maybe: 0.15,
   unknown: null,
+  later: null,
   never: -0.6,
 };
 
@@ -49,6 +62,7 @@ export interface ListEntry {
   added: number;
   status: "want" | "watching" | "done";
   note?: string;
+  priority?: boolean; // "must watch soon": top of the list
 }
 
 export interface VaultItem {
@@ -72,6 +86,7 @@ export interface CustomItem {
   image?: string;
   tags: string[];
   note?: string;
+  meta?: Record<string, unknown>; // facts shown on the card (video length, likes, price...)
   created: number;
   source: string; // manual | youtube-takeout | spotify-export | netflix ...
 }
@@ -83,6 +98,7 @@ export interface Settings {
   anthropicKey?: string;
   anthropicModel?: string;
   spotifyClientId?: string;
+  googleClientId?: string; // your Google OAuth client, for "Connect YouTube"
   gistToken?: string;
   gistId?: string;
   hideBlocked: boolean; // honour hard filters (romance / musicals / laugh-track sitcoms)
@@ -212,6 +228,11 @@ export interface Profiles {
 }
 let profiles: Profiles = { active: "default", list: [{ id: "default", name: "Me", emoji: "🙂" }] };
 const stateKey = (id: string) => (id === "default" ? "state" : `state:${id}`);
+/** Settings that belong to the device, not the person: every profile on this device shares them. */
+const DEVICE_KEYS = ["gistToken", "gistId", "anthropicKey", "anthropicModel", "spotifyClientId", "googleClientId"] as const;
+function deviceSettings(from: Settings): Partial<Settings> {
+  return Object.fromEntries(DEVICE_KEYS.filter((k) => from[k] != null).map((k) => [k, from[k]]));
+}
 
 export function getProfiles(): Profiles {
   return profiles;
@@ -240,7 +261,7 @@ async function saveProfiles() {
 export async function createProfile(name: string, emoji: string): Promise<string> {
   const id = crypto.randomUUID().slice(0, 8);
   profiles = { ...profiles, list: [...profiles.list, { id, name, emoji }] };
-  await idbSet(stateKey(id), { ...emptyState(), settings: { ...emptyState().settings, space: state.settings.space } });
+  await idbSet(stateKey(id), { ...emptyState(), settings: { ...emptyState().settings, space: state.settings.space, ...deviceSettings(state.settings) } });
   await saveProfiles();
   emit();
   return id;
@@ -252,7 +273,9 @@ export async function switchProfile(id: string) {
   const next = await idbGet<State>(stateKey(id)).catch(() => undefined);
   profiles = { ...profiles, active: id };
   await saveProfiles();
+  const device = deviceSettings(state.settings);
   state = migrate(next ?? {});
+  state.settings = { ...state.settings, ...device };
   emit();
 }
 
@@ -267,6 +290,17 @@ export async function deleteProfile(id: string) {
   profiles = { ...profiles, list: profiles.list.filter((p) => p.id !== id) };
   await saveProfiles();
   await idbDelete(stateKey(id)).catch(() => {});
+  emit();
+}
+
+/** Profiles created on another device (from sync) appear here too; nothing is ever removed this way. */
+export async function mergeProfiles(remote: Profiles | undefined) {
+  if (!remote?.list?.length) return;
+  const known = new Set(profiles.list.map((p) => p.id));
+  const extra = remote.list.filter((p) => !known.has(p.id));
+  if (!extra.length) return;
+  profiles = { ...profiles, list: [...profiles.list, ...extra] };
+  await saveProfiles();
   emit();
 }
 
@@ -288,6 +322,8 @@ export function loadState(): Promise<State> {
     }
     loaded = true;
     emit();
+    // ask the browser not to evict our storage (Safari otherwise may after a week without visits)
+    navigator.storage?.persist?.().catch(() => {});
     return state;
   })();
   return loading;
@@ -360,11 +396,13 @@ export function recordFeedback(f: Omit<Feedback, "at"> & { at?: number }) {
     s.history.push(fb);
     if (s.history.length > MAX_HISTORY) s.history.splice(0, s.history.length - MAX_HISTORY);
     // lists follow the answer
-    if (fb.action === "want" || fb.action === "maybe") {
+    if (fb.action === "asap") {
+      s.lists[fb.key] = { ...(s.lists[fb.key] ?? { key: fb.key, domain: fb.domain, added: fb.at }), status: "want", priority: true };
+    } else if (fb.action === "want" || fb.action === "maybe") {
       s.lists[fb.key] ??= { key: fb.key, domain: fb.domain, added: fb.at, status: "want" };
     } else if (fb.action === "watching") {
       s.lists[fb.key] = { ...(s.lists[fb.key] ?? { key: fb.key, domain: fb.domain, added: fb.at }), status: "watching" };
-    } else if (["loved", "liked", "ok", "disliked"].includes(fb.action)) {
+    } else if (isDone(fb.action)) {
       if (s.lists[fb.key]) s.lists[fb.key].status = "done";
     } else if (fb.action === "never") {
       delete s.lists[fb.key];

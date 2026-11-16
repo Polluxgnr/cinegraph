@@ -5,6 +5,7 @@ import { DOMAINS } from "@/lib/domains";
 import { importNetflix, importPack, importPinterest, importSpotify, importYouTube } from "@/lib/imports";
 import { backupJSON, importLetterboxd, restoreJSON } from "@/lib/io";
 import { finishLogin, redirectUri, startLogin } from "@/lib/spotify";
+import { connectYouTube } from "@/lib/youtube";
 import { setSettings, useLoaded, useStore } from "@/lib/store";
 
 /** Bring your history in from the services you use, through their official exports. */
@@ -12,6 +13,7 @@ export default function ImportPage() {
   const imports = useStore((s) => s.imports);
   const spotify = useStore((s) => s.spotify);
   const clientId = useStore((s) => s.settings.spotifyClientId);
+  const googleId = useStore((s) => s.settings.googleClientId);
   const loaded = useLoaded();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -63,6 +65,19 @@ export default function ImportPage() {
         </ol>
         <p className="text-xs text-muted/80">YouTube&apos;s API no longer gives access to watch history or Watch later, so Takeout is the complete route.</p>
         {drop("youtube", ".zip,.json,.html", async (f) => (await importYouTube(f)).summary)}
+        <div id="connect-youtube" className="border-t border-line pt-3">
+          <p className="mb-2 text-sm text-muted">Or connect your account (liked videos with their length and likes, subscriptions, playlists):</p>
+          <ol className="mb-2 list-decimal space-y-1 pl-5 text-xs text-muted">
+            <li>In <a className="text-accent" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noreferrer">Google Cloud</a>, create a project and enable <b>YouTube Data API v3</b>.</li>
+            <li><a className="text-accent" href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noreferrer">Create an OAuth client</a> of type <b>Web application</b>, with Authorized JavaScript origin <code className="break-all text-ink">{loaded ? window.location.origin : ""}</code>.</li>
+            <li>In <b>Audience</b>, add your own Google address as a test user. Paste the Client ID here.</li>
+          </ol>
+          <GoogleClientId value={googleId} />
+          <button className="btn mt-2 text-sm" disabled={!googleId || busy === "youtube-live"} onClick={() => run("youtube-live", connectYouTube)}>
+            {busy === "youtube-live" ? "Connecting…" : "Connect YouTube"}
+          </button>
+          {imports["youtube-live"]?.summary && <p className="mt-2 text-xs text-like">✓ {imports["youtube-live"].summary}</p>}
+        </div>
         {imports.youtube?.channels?.length ? (
           <div className="flex flex-wrap gap-1.5">
             {imports.youtube.channels.slice(0, 24).map((c) => (
@@ -72,14 +87,14 @@ export default function ImportPage() {
         ) : null}
       </Card>
 
-      <Card title="🎧 Spotify: full listening history" done={imports.spotify?.summary}>
+      <Card id="connect-spotify" title="🎧 Spotify: full listening history" done={imports.spotify?.summary}>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
           <li>Go to <a className="text-accent" href="https://www.spotify.com/account/privacy/" target="_blank" rel="noreferrer">spotify.com/account/privacy</a> → <b>Download your data</b> → “Account data” (arrives in a few days by e-mail).</li>
           <li>Drop the zip here: artists you really play, saved tracks and playlists shape your music taste.</li>
         </ol>
         {drop("spotify", ".zip,.json", async (f) => (await importSpotify(f)).summary)}
         <div className="border-t border-line pt-3">
-          <p className="mb-2 text-sm text-muted">Or connect live (top artists, top tracks, playlists): create a free app at{" "}
+          <p className="mb-2 text-sm text-muted">Or connect live (top artists, top tracks, liked songs, playlists): create a free app at{" "}
             <a className="text-accent" href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">developer.spotify.com</a>, add this Redirect URI{" "}
             <code className="break-all text-ink">{loaded ? redirectUri() : ""}</code>, then paste its Client ID.</p>
           <ClientId value={clientId} />
@@ -135,9 +150,9 @@ export default function ImportPage() {
   );
 }
 
-function Card({ title, done, children }: { title: string; done?: string; children: React.ReactNode }) {
+function Card({ id, title, done, children }: { id?: string; title: string; done?: string; children: React.ReactNode }) {
   return (
-    <section className="card space-y-3 p-5">
+    <section id={id} className="card scroll-mt-20 space-y-3 p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-2xl">{title}</h2>
         {done && <span className="text-xs text-like">✓ imported</span>}
@@ -153,6 +168,17 @@ function ClientId({ value }: { value?: string }) {
   return (
     <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); setSettings({ spotifyClientId: v.trim() || undefined }); setV(""); }}>
       <input value={v} onChange={(e) => setV(e.target.value)} placeholder={value ?? "Spotify Client ID"} autoComplete="off"
+             className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+      <button className="btn-ghost text-sm">Save</button>
+    </form>
+  );
+}
+
+function GoogleClientId({ value }: { value?: string }) {
+  const [v, setV] = useState("");
+  return (
+    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); setSettings({ googleClientId: v.trim() || undefined }); setV(""); }}>
+      <input value={v} onChange={(e) => setV(e.target.value)} placeholder={value ?? "…apps.googleusercontent.com"} autoComplete="off"
              className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
       <button className="btn-ghost text-sm">Save</button>
     </form>

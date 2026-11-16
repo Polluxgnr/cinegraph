@@ -56,7 +56,7 @@ export function summarise(d: DomainData, s: State): TasteSummary {
   const out: TasteSummary = {
     domain: d.name,
     answers: fbs.length,
-    loved: fbs.filter((f) => f.action === "loved").length,
+    loved: fbs.filter((f) => f.action === "loved" || f.action === "fav").length,
     likedTags,
     dislikedTags,
     people: [],

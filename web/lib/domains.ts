@@ -32,10 +32,17 @@ export const DOMAINS: DomainConfig[] = [
     aspect: "2/3",
     seen: "Seen it",
     unseen: "Not seen",
-    seenActions: [...SEEN_DEFAULT, ["watching", "Watching now"]],
+    seenActions: [
+      ["fav", "★ All-time favourite"],
+      ...SEEN_DEFAULT,
+      ["dropped", "Dropped it"],
+      ["watching", "Watching now"],
+    ],
     unseenActions: [
+      ["asap", "Must watch soon"],
       ["want", "Add to my list"],
       ["maybe", "Could be down"],
+      ["later", "Not now"],
       ["unknown", "No idea"],
       ["never", "Never"],
     ],
@@ -48,10 +55,17 @@ export const DOMAINS: DomainConfig[] = [
     aspect: "16/9",
     seen: "Watched",
     unseen: "Not yet",
-    seenActions: SEEN_DEFAULT,
+    // videos are judged like on YouTube: thumbs, not stars
+    seenActions: [
+      ["loved", "👍👍 Loved it"],
+      ["liked", "👍 Like"],
+      ["disliked", "👎 Dislike"],
+      ["dropped", "Stopped watching"],
+    ],
     unseenActions: [
+      ["asap", "Watch tonight"],
       ["want", "Watch later"],
-      ["maybe", "Maybe"],
+      ["later", "Not now"],
       ["never", "Not interested"],
     ],
   },
@@ -64,14 +78,17 @@ export const DOMAINS: DomainConfig[] = [
     seen: "I know them",
     unseen: "Don't know",
     seenActions: [
+      ["fav", "★ All-time favourite"],
       ["loved", "Love them"],
       ["liked", "Like them"],
       ["ok", "Meh"],
       ["disliked", "Not for me"],
     ],
     unseenActions: [
+      ["asap", "Listen now"],
       ["want", "Discover"],
       ["maybe", "Maybe"],
+      ["later", "Not now"],
       ["never", "Not my style"],
     ],
   },
@@ -90,6 +107,7 @@ export const DOMAINS: DomainConfig[] = [
       ["disliked", "Not for me"],
     ],
     unseenActions: [
+      ["asap", "Cook it this week"],
       ["want", "Want to cook it"],
       ["maybe", "Maybe"],
       ["never", "Never"],
@@ -104,12 +122,14 @@ export const DOMAINS: DomainConfig[] = [
     seen: "Been there",
     unseen: "Not yet",
     seenActions: [
+      ["fav", "★ Favourite place"],
       ["loved", "Loved it"],
       ["liked", "Liked it"],
       ["ok", "It was ok"],
       ["disliked", "Not for me"],
     ],
     unseenActions: [
+      ["asap", "Next trip"],
       ["want", "Dream trip"],
       ["maybe", "Why not"],
       ["never", "Not interested"],
@@ -125,6 +145,7 @@ export const DOMAINS: DomainConfig[] = [
     unseen: "",
     singleStep: true,
     seenActions: [
+      ["fav", "★ The dream"],
       ["loved", "In my garage"],
       ["liked", "Love it"],
       ["ok", "Meh"],
@@ -142,7 +163,9 @@ export const DOMAINS: DomainConfig[] = [
     unseen: "",
     singleStep: true,
     seenActions: [
+      ["fav", "★ Grail"],
       ["loved", "My style"],
+      ["asap", "Buy soon"],
       ["want", "Want it"],
       ["liked", "I like it"],
       ["disliked", "Not my style"],

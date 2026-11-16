@@ -242,6 +242,28 @@ def export_domain(out: Path, name: str, label: str, items, embedder) -> dict:
     return {"count": len(items), "label": label, "images": sum(1 for i in items if i.image)}
 
 
+def export_extras(out: Path, name: str, module, items, manifest: dict) -> None:
+    """A domain module may define `extras(items) -> {"releases": [...], ...}`: side lists published
+    next to its catalogue as <domain>/<key>.json (new music releases, clothing pieces...)."""
+    fn = getattr(module, "extras", None)
+    if fn is None or not items:
+        return
+    try:
+        extras = fn(items)
+    except Exception as e:  # noqa: BLE001 - extras are a bonus, never fatal
+        log.warning("extras for %s failed: %s", name, e)
+        return
+    entry = manifest["domains"].setdefault(name, {})
+    entry["extras"] = {**entry.get("extras", {})}
+    for key, rows in extras.items():
+        if not rows:
+            continue
+        (out / name).mkdir(parents=True, exist_ok=True)
+        write_json(out / name / f"{key}.json", rows)
+        entry["extras"][key] = len(rows)
+        log.info("%s/%s.json: %d rows", name, key, len(rows))
+
+
 DOMAINS = {
     "youtube": ("Videos & docs", "cinegraph.domains.youtube", "collect"),
     "music": ("Music", "cinegraph.domains.music", "collect"),
@@ -289,6 +311,8 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
             manifest["domains"][name] = export_domain(out, name, label, items, emb)
         except Exception as e:  # noqa: BLE001 - keep the previous export of that domain
             log.exception("domain %s failed: %s", name, e)
+            items = None
+        export_extras(out, name, importlib.import_module(mod), items, manifest)
         save()
     save()
     return manifest

@@ -16,8 +16,9 @@ discovery, list, taste profile and colour.
 
 | | |
 |---|---|
-| **Swipe** with two-step answers: *seen?* → loved / liked / ok / not my thing (+ reaction chips such as "Too long"), or *not seen* → add to my list / could be down / no idea / never. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". Plus "Because you loved X" rows. |
+| **Swipe** with two-step answers: *seen?* → all-time favourite / loved / liked / ok / not my thing / dropped it (+ reaction chips such as "Too long"), or *not seen* → must watch soon / add to my list / could be down / not now (comes back in 30 days) / no idea / never. Videos use 👍 / 👎 like YouTube. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". Plus "Because you loved X" rows. |
 | **Bring your history**: YouTube (Google Takeout: watch history, subscriptions, Watch later), Spotify (data export, or live login: top artists, liked songs, playlists), Netflix viewing activity, Letterboxd, public Pinterest boards, and JSON *packs* (e.g. sorted Instagram saves). Parsed in the browser. | **Add your own**: paste any link (brand site, track, playlist, recipe blog, video); title and image are fetched, it gets a borrowed embedding and shapes your profile like everything else. |
+| **Useful from the first visit**: before you've answered much, predictions start from the crowd (TMDB rating shrunk by vote count, popularity elsewhere) and your own model takes over answer by answer. | **New releases & prices**: a weekly *New releases* row in Music (Deezer charts + the latest records of the catalogue's artists, ranked by how much you like each artist); approximate prices on dream cars (new, market value or "from") and on iconic clothing pieces; video length, views, likes and comments. |
 | **Profiles & Pick together**: several people on one device, each with their own memory (no login). *Pick together* ranks what two profiles will both like (by the weaker of the two matches) and has a swipe-to-agree mode: two yeses put it on both lists. | **Search everywhere**: Discover has a search bar over titles, directors, cast and themes, ranked by where the words hit, then by your predicted match. |
 | **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars; **Tonight** by mood × your streaming services in France, with legal watch links. | **Second brain**: links and ideas (share from your phone into the app), an **AI-ready taste dossier** (one Markdown document of your whole taste to paste into any assistant), and an **Obsidian** export. |
 
@@ -64,8 +65,9 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 2. **Import & connect**: drop your YouTube Takeout, Spotify data export, Netflix viewing history or Letterboxd ZIP.
 3. **+ Add** (in any space): paste links to things you like. Pinterest boards and packs go through **Import & connect**.
 4. **Profile menu** (top of the sidebar): add a profile per person, then **Pick together**.
-5. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) to keep your memory across
-   phone and computer in a private Gist. Or download a JSON backup.
+5. **Settings → Memory & sync**: paste a GitHub token (classic, `gist` scope only) once; every profile on that
+   device syncs to one private Gist, pulled when the app opens and pushed seconds after each answer. **Link another
+   device** sends your iPad or phone a one-tap link, so it needs no token of its own. Or download a JSON backup.
 6. Optional: **Anthropic API key** (smarter search and a written taste portrait). **Second brain → Copy my taste dossier** gives any AI your full profile.
 
 ### Data sources (all legal, open or official)
@@ -74,11 +76,11 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 |---|---|---|
 | Films & series | TMDB API (needs a free key, see below), Wikidata, Wikipedia images, MovieLens (CF signal) | Links to SensCritique, AlloCiné, Letterboxd, IMDb via Wikidata ids; no scraping |
 | Where to watch | TMDB watch providers (JustWatch data), France | Subscriptions + free (arte.tv, france.tv); never piracy sites |
-| Videos & docs | Official YouTube RSS of ARTE, France 5, franceinfo, Ushuaïa TV, Kurzgesagt, Veritasium, DW… | Curated in `backend/cinegraph/config/youtube_channels.yaml` |
+| Videos & docs | Official YouTube RSS of ARTE, France 5, franceinfo, Ushuaïa TV, Kurzgesagt, Veritasium, DW… (views, likes) + optional YouTube Data API key (`YOUTUBE_API_KEY` secret: length, comments) + **Connect YouTube** in the browser (your Google OAuth client: liked videos, subscriptions, playlists) | Curated in `backend/cinegraph/config/youtube_channels.yaml` |
 | Music | Deezer public API (artists, genres, related artists) + your Spotify (PKCE, in-browser) | |
 | Recipes | TheMealDB | Marmiton has no API: search links + save Marmiton pages to the vault |
-| Travel, dream garage | Wikidata + Wikimedia Commons photos | Cars are a curated dream list (makes, models, classes), not every car on the road |
-| Style | Curated design / underground brands (`backend/cinegraph/config/style_brands.yaml`) with their site's own preview image | Links to Pinterest, Instagram and Vinted searches; add yours or import Pinterest boards |
+| Travel, dream garage | Wikidata + Wikimedia Commons photos | Cars are a curated dream list (makes, models, classes), not every car on the road; approximate prices in `config/car_prices.yaml` |
+| Style | Curated design, underground and streetwear brands (`config/style_brands.yaml`) with their site's own preview image, and iconic pieces with approximate retail prices (`config/style_pieces.yaml`) linked to their brand | Links to shopping search, Pinterest, Instagram and Vinted; add yours or import Pinterest boards. Shop product feeds are not used: most stores block automated clients |
 | Pinterest | Public board RSS (latest ~25 pins per board, re-sync for new ones) | Public boards only; no login, no scraping |
 
 ## Setup (owner)
