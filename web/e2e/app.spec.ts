@@ -1,0 +1,83 @@
+import { expect, type Page, test } from "@playwright/test";
+
+/** Every test starts from an empty memory (fresh browser context) and records CSP violations. */
+async function open(page: Page, path: string) {
+  await page.addInitScript(() => {
+    (window as unknown as { __csp: string[] }).__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => (window as unknown as { __csp: string[] }).__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  await page.goto(path);
+}
+const cspViolations = (page: Page) => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
+
+test("home recommends films with a reason, without CSP violations", async ({ page }) => {
+  await open(page, "/");
+  await expect(page.locator("h1")).toBeVisible();
+  await expect(page.locator("main article").first()).toBeVisible();
+  await expect(page.getByText(/% match/).first()).toBeVisible();
+  expect(await cspViolations(page)).toEqual([]);
+});
+
+test("swipe: card and answers fit the screen, answering moves on", async ({ page }) => {
+  await open(page, "/swipe/?d=films");
+  const card = page.getByTestId("swipe-card");
+  await expect(card).toBeVisible();
+  const first = await card.locator("h2").textContent();
+  await page.getByRole("button", { name: /^Seen it$/ }).click();
+  const answers = page.locator("main button").filter({ hasText: /Liked|Loved/ });
+  await expect(answers.first()).toBeVisible();
+  // nothing the user needs is hidden below the bottom tabs or the fold
+  const viewport = page.viewportSize()!;
+  const lowest = await answers.last().boundingBox();
+  expect(lowest!.y + lowest!.height).toBeLessThanOrEqual(viewport.height);
+  await answers.first().click();
+  await expect(card.locator("h2")).not.toHaveText(first ?? "");
+});
+
+test("discover search finds a director's films", async ({ page }) => {
+  await open(page, "/discover/?d=films");
+  await page.getByRole("searchbox").fill("villeneuve");
+  await expect(page.locator("main img[alt='Arrival'], main img[alt='Dune'], main img[alt='Prisoners']").first()).toBeVisible();
+});
+
+test("film page: synopsis, scores per source, why this match", async ({ page }) => {
+  await page.route("https://query.wikidata.org/**", (r) => r.fulfill({ json: { results: { bindings: [
+    { score: { value: "73%" }, byLabel: { value: "Rotten Tomatoes" }, methodLabel: { value: "Tomatometer score" }, rt: { value: "m/interstellar_2014" } },
+  ] } } }));
+  await page.route("https://*.wikipedia.org/**", (r) => r.fulfill({ json: { extract: "A test summary." } }));
+  await open(page, "/item/?k=films%3A3472");
+  await expect(page.locator("h1")).toHaveText("Interstellar");
+  await expect(page.getByText(/wormhole/i).first()).toBeVisible(); // synopsis from the detail shard
+  await expect(page.getByText("Rotten Tomatoes").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Why \d+%/ })).toBeVisible();
+});
+
+test("profiles keep separate memories", async ({ page, isMobile }) => {
+  test.skip(isMobile, "the profile menu lives in the sidebar on desktop");
+  await open(page, "/lists/");
+  await page.getByRole("button", { name: /profile/ }).first().click();
+  await page.getByPlaceholder("New profile (e.g. Léa)").fill("Test");
+  await page.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByText("2 profiles")).toBeVisible();
+});
+
+test("trip planner splits spots into days", async ({ page }) => {
+  // Kyoto spots, mocked: two clusters
+  const spot = (q: string, name: string, lon: number, lat: number) => ({ a: { value: `http://www.wikidata.org/entity/${q}` }, aLabel: { value: name }, sl: { value: "40" }, dist: { value: "2" }, loc: { value: `Point(${lon} ${lat})` } });
+  await page.route("https://query.wikidata.org/**", (r) => {
+    const q = decodeURIComponent(r.request().url());
+    if (q.includes("VALUES ?a")) return r.fulfill({ json: { results: { bindings: [] } } });
+    return r.fulfill({ json: { results: { bindings: [
+      spot("Q1", "Temple A", 135.78, 34.99), spot("Q2", "Temple B", 135.781, 34.991), spot("Q3", "Shrine C", 135.70, 35.04), spot("Q4", "Shrine D", 135.701, 35.041),
+    ] } } });
+  });
+  await open(page, "/item/?k=places%3AQ34600");
+  const add = page.getByRole("button", { name: "+ Trip" });
+  await expect(add.first()).toBeVisible();
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "+ Trip" }).first().click();
+  await page.getByRole("link", { name: /Plan the trip/ }).click();
+  await page.getByRole("button", { name: /−/ }).click(); // 3 days -> 2
+  await page.getByRole("button", { name: /Plan my days/ }).click();
+  await expect(page.getByRole("heading", { name: /^Day 1/ })).toBeVisible();
+  await expect(page.getByText("2 stops").first()).toBeVisible();
+});

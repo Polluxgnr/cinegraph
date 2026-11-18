@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "perf": "vitest run --mode perf"
+    "perf": "vitest run --mode perf",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -23,6 +24,7 @@
     "react-force-graph-2d": "^1.29.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/turbopack": "^4",
     "@types/leaflet": "^1.9.12",
     "@types/node": "^22.20.5",

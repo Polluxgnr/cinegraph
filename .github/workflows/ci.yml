@@ -39,7 +39,7 @@ jobs:
       - run: uv run pytest -q
 
   web:
-    name: Web (lint, types, build)
+    name: Web (lint, types, unit, build, end-to-end)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,3 +56,17 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
+      - name: Catalogue for the end-to-end tests (published release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download data-latest --pattern data.tar.gz --dir /tmp --repo ${{ github.repository }}
+          mkdir -p out/data && tar -xzf /tmp/data.tar.gz -C out/data
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: web/test-results
+          retention-days: 7
