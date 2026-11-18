@@ -8,7 +8,10 @@ async function open(page: Page, path: string) {
   });
   await page.goto(path);
 }
-const cspViolations = (page: Page) => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
+/** Violations the app caused. "script-src eval" with no URL is Playwright evaluating its own helpers in the page
+ * (blocked by the CSP as it should be); the build itself contains no eval (checked in CI). */
+const cspViolations = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __csp: string[] }).__csp).then((v) => v.filter((x) => x.trim() !== "script-src eval"));
 
 test("home recommends films with a reason, without CSP violations", async ({ page }) => {
   await open(page, "/");
