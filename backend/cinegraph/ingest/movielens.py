@@ -58,8 +58,9 @@ def _open_csv(zf: zipfile.ZipFile, name: str):
     return csv.DictReader(io.TextIOWrapper(zf.open(member), encoding="utf-8"))
 
 
-def import_movielens(variant: str | None = None, min_ratings: int = 5) -> dict:
+def import_movielens(variant: str | None = None, min_ratings: int | None = None) -> dict:
     variant = variant or get_settings().movielens_variant
+    min_ratings = min_ratings if min_ratings is not None else get_settings().movielens_min_ratings
     zpath = download(variant)
     with zipfile.ZipFile(zpath) as zf:
         links = {int(r["movieId"]): (r["imdbId"], int(r["tmdbId"]) if r["tmdbId"] else None)
@@ -90,8 +91,18 @@ def import_movielens(variant: str | None = None, min_ratings: int = 5) -> dict:
 
     with db.connect() as conn:
         created = 0
+        existing = {r["tmdb_id"]: r["id"] for r in conn.execute("SELECT id, tmdb_id FROM titles WHERE kind = 'movie'")}
         for mid, (imdb, tmdb) in links.items():
-            if not tmdb or counts[mid] < min_ratings:
+            if not tmdb or not counts[mid]:
+                continue
+            if counts[mid] < min_ratings:
+                # too rarely rated to deserve a new catalogue entry, but its ratings still help CF if we have it
+                if tmdb in existing:
+                    conn.execute(
+                        """INSERT INTO ml_links (movielens_id, imdb_id, tmdb_id, title_id, n_ratings)
+                           VALUES (%s, %s, %s, %s, %s) ON CONFLICT (movielens_id) DO UPDATE
+                           SET title_id = EXCLUDED.title_id, n_ratings = EXCLUDED.n_ratings""",
+                        (mid, imdb, tmdb, existing[tmdb], counts[mid]))
                 continue
             mv = movies.get(mid)
             raw_title, year = split_title_year(mv["title"]) if mv else ("?", None)

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
+import WebLookup from "@/components/WebLookup";
 import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
 import { minutesOf, normTitle } from "@/lib/text";
@@ -123,6 +124,7 @@ export default function Discover() {
           <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> include things I already answered
         </label>
       </div>
+      {domain === "brands" && words.length > 0 && recs && recs.length < 6 && <WebLookup key={q.trim()} query={q.trim()} />}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {recs ? sorted.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>

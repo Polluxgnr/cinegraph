@@ -47,7 +47,10 @@ export async function pushGist(): Promise<string> {
   const body = JSON.stringify({ files });
   if (s.settings.gistId) {
     const r = await fetch(`${API}/gists/${s.settings.gistId}`, { method: "PATCH", headers: headers(token), body });
-    if (r.ok) return s.settings.gistId;
+    if (r.ok) {
+      markSynced();
+      return s.settings.gistId;
+    }
     if (r.status !== 404) throw new Error(`GitHub: ${r.status}`);
   }
   const r = await fetch(`${API}/gists`, {
@@ -58,6 +61,7 @@ export async function pushGist(): Promise<string> {
   if (!r.ok) throw new Error(`GitHub: ${r.status}`);
   const g = await r.json();
   setSettings({ gistId: g.id });
+  markSynced();
   return g.id;
 }
 
@@ -90,6 +94,7 @@ export async function pullGist(): Promise<boolean> {
   const merged = merge(getState(), remote);
   merged.settings = { ...getState().settings, gistId };
   replaceState(merged);
+  markSynced();
   return true;
 }
 
@@ -135,4 +140,21 @@ export function flushSync() {
   clearTimeout(timer);
   timer = null;
   pushGist().catch(() => {});
+}
+
+/** When this device last exchanged memory with the Gist (per device, for the status badge). */
+export function markSynced() {
+  try {
+    localStorage.setItem("cinegraph:lastSync", String(Date.now()));
+  } catch {
+    /* private mode */
+  }
+  window.dispatchEvent(new CustomEvent("cinegraph:synced"));
+}
+export function lastSynced(): number {
+  try {
+    return Number(localStorage.getItem("cinegraph:lastSync") ?? 0);
+  } catch {
+    return 0;
+  }
 }

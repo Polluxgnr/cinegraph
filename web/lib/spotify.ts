@@ -8,7 +8,37 @@ import { asset, loadDomain } from "./data";
 import { normTitle } from "./text";
 import { getState, recordFeedback, update } from "./store";
 
-const SCOPES = "user-top-read playlist-read-private user-library-read";
+const SCOPES = "user-top-read playlist-read-private playlist-read-collaborative user-library-read";
+
+/** The access token lives for an hour, in this tab only (never stored in your memory or synced). */
+export function spotifyToken(): string | null {
+  try {
+    const t = JSON.parse(sessionStorage.getItem("spotify_token") ?? "null");
+    return t && t.exp > Date.now() ? t.t : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tracks of a Spotify playlist (needs a connected session). */
+export async function spotifyPlaylist(id: string): Promise<{ name: string; image?: string; tracks: { title: string; artist: string; url?: string }[] }> {
+  const token = spotifyToken();
+  if (!token) throw new Error("Connect Spotify first (Import & connect), then come back");
+  const get = async (url: string) => {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error(`Spotify: ${r.status}`);
+    return r.json();
+  };
+  const meta = await get(`https://api.spotify.com/v1/playlists/${id}?fields=name,images`);
+  const tracks: { title: string; artist: string; url?: string }[] = [];
+  let next: string | null = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=100&fields=next,items(track(name,artists(name),external_urls))`;
+  while (next && tracks.length < 500) {
+    const page: { next: string | null; items: { track?: { name: string; artists: { name: string }[]; external_urls?: { spotify: string } } }[] } = await get(next);
+    for (const it of page.items) if (it.track) tracks.push({ title: it.track.name, artist: it.track.artists[0]?.name ?? "", url: it.track.external_urls?.spotify });
+    next = page.next;
+  }
+  return { name: meta.name, image: meta.images?.[0]?.url, tracks };
+}
 
 export function redirectUri(): string {
   return `${window.location.origin}${asset("/import/")}`;
@@ -41,7 +71,8 @@ export async function finishLogin(code: string): Promise<string> {
     body: new URLSearchParams({ client_id: clientId, grant_type: "authorization_code", code, redirect_uri: redirectUri(), code_verifier: verifier }),
   });
   if (!r.ok) throw new Error(`Spotify token: ${r.status}`);
-  const { access_token: token } = await r.json();
+  const { access_token: token, expires_in: ttl } = await r.json();
+  sessionStorage.setItem("spotify_token", JSON.stringify({ t: token, exp: Date.now() + (ttl ?? 3600) * 1000 - 60_000 }));
   const get = async (path: string) => {
     const res = await fetch(`https://api.spotify.com/v1${path}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error(`Spotify ${path}: ${res.status}`);

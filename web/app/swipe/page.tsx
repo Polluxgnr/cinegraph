@@ -4,6 +4,7 @@ import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnswerPanel from "@/components/AnswerPanel";
+import MediaPreview from "@/components/MediaPreview";
 import EntityImage from "@/components/EntityImage";
 import Match from "@/components/Match";
 import { detailHref, Progress } from "@/components/RecCard";
@@ -140,6 +141,7 @@ function Deck({ domain }: { domain: string }) {
             <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-24">
               <CardMeta d={d!} card={card!} />
             </div>
+            <div className="absolute right-3 top-3 z-10 flex justify-end"><MediaPreview e={e} /></div>
             <Stamp o={likeO} text="LIKED" color="var(--like)" className="left-5 top-6 -rotate-12" />
             <Stamp o={nopeO} text="NOPE" color="var(--nope)" className="right-5 top-6 rotate-12" />
             <Stamp o={loveO} text="LOVED" color="var(--love)" className="left-1/2 top-1/3 -translate-x-1/2" />

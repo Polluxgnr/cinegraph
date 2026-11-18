@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { asset } from "@/lib/data";
 import { DOMAINS } from "@/lib/domains";
 import { importNetflix, importPack, importPinterest, importSpotify, importYouTube } from "@/lib/imports";
 import { backupJSON, importLetterboxd, restoreJSON } from "@/lib/io";
@@ -24,7 +25,14 @@ export default function ImportPage() {
     const code = new URLSearchParams(window.location.search).get("code");
     if (!code) return;
     window.history.replaceState(null, "", window.location.pathname);
-    finishLogin(code).then(setMsg).catch((e) => setMsg(`Spotify: ${e.message}`));
+    finishLogin(code)
+      .then((m) => {
+        const back = sessionStorage.getItem("spotify_return");
+        sessionStorage.removeItem("spotify_return");
+        if (back) window.location.href = asset(back);
+        else setMsg(m);
+      })
+      .catch((e) => setMsg(`Spotify: ${e.message}`));
   }, [loaded]);
 
   async function run(key: string, fn: () => Promise<string>) {

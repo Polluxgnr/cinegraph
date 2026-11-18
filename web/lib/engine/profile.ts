@@ -56,12 +56,15 @@ function shrunkMean(acc: Map<string | number, number[]>, prior = 2): Map<string 
 export function buildProfile(d: DomainData, s: State): Profile {
   const anchors: Anchor[] = [];
   const answered = new Set<string>();
+  const now = Date.now();
   for (const fb of Object.values(s.feedback)) {
     if (fb.domain !== d.name) continue;
     if (fb.action === "later" && Date.now() - fb.at > SNOOZE_MS) continue; // "not now" has expired
     answered.add(fb.key);
     let w = ACTION_VALUE[fb.action];
     if (fb.action === "fav") w = 1.4; // favourites pull the profile harder than "loved"
+    // tastes drift: an answer loses up to half its weight over ~3 years (favourites never fade)
+    if (w != null && fb.action !== "fav") w *= 0.5 + 0.5 * Math.exp(-Math.max(0, now - fb.at) / (3 * 3.15e10));
     if (fb.rating != null) w = Math.max(-1, Math.min(1, (fb.rating - 3) / 2));
     const row = d.index.get(fb.key);
     if (w == null || row == null) continue;

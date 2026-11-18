@@ -68,7 +68,60 @@ export function itemFacts(e: { domain: string; item?: { meta?: Record<string, un
   if (num(m.comments)) out.push(`${compact(num(m.comments))} 💬`);
   if (num(m.price)) {
     const p = fmtPrice(num(m.price), m.price_approx === true);
-    out.push(m.price_kind === "from" ? `from ${p}` : m.price_kind === "market" ? `${p} (market)` : m.price_kind === "new" ? `${p} new` : p);
+    out.push(m.kind === "brand" ? `pieces around ${p}` : m.price_kind === "from" ? `from ${p}` : m.price_kind === "market" ? `${p} (market)` : m.price_kind === "new" ? `${p} new` : p);
   }
   return out;
+}
+
+/** Useful places to go next for anything, by space (searches only: no tracking, no affiliate). */
+export function exploreLinks(e: { domain: string; title: string; subtitle: string; film?: { y?: number; k?: string } }): Record<string, string> {
+  const q = (s: string) => encodeURIComponent(s);
+  const t = e.title;
+  switch (e.domain) {
+    case "films":
+      return {
+        "Reviews (SensCritique)": `https://www.senscritique.com/search?query=${q(t)}`,
+        "Where to watch (JustWatch)": `https://www.justwatch.com/fr/recherche?q=${q(t)}`,
+        "Behind the scenes": `https://www.youtube.com/results?search_query=${q(`${t} ${e.film?.y ?? ""} behind the scenes`)}`,
+        "Soundtrack": `https://open.spotify.com/search/${q(`${t} soundtrack`)}`,
+      };
+    case "music":
+      return {
+        Spotify: `https://open.spotify.com/search/${q(t)}`,
+        "YouTube (live)": `https://www.youtube.com/results?search_query=${q(`${t} live`)}`,
+        "Concerts near me": `https://www.songkick.com/search?query=${q(t)}`,
+        Wikipedia: `https://en.wikipedia.org/wiki/Special:Search?search=${q(`${t} musician`)}`,
+        Genius: `https://genius.com/search?q=${q(t)}`,
+      };
+    case "places":
+      return {
+        "Flights from Paris": `https://www.google.com/travel/flights?q=${q(`flights from Paris to ${t}`)}`,
+        Stays: `https://www.airbnb.fr/s/${q(t)}/homes`,
+        "Best time to go": `https://www.google.com/search?q=${q(`best time to visit ${t}`)}`,
+        "Videos": `https://www.youtube.com/results?search_query=${q(`${t} travel guide 4k`)}`,
+      };
+    case "cars":
+      return {
+        "Video reviews": `https://www.youtube.com/results?search_query=${q(`${t} review`)}`,
+        "For sale (La Centrale)": `https://www.lacentrale.fr/listing?makesModelsCommercialNames=&searchText=${q(t)}`,
+        "For sale (AutoScout24)": `https://www.autoscout24.fr/lst?search=${q(t)}`,
+        "Sound": `https://www.youtube.com/results?search_query=${q(`${t} exhaust sound`)}`,
+      };
+    case "brands":
+      return {
+        Instagram: `https://www.instagram.com/explore/search/keyword/?q=${q(t)}`,
+        "Lookbook": `https://www.google.com/search?tbm=isch&q=${q(`${t} lookbook`)}`,
+        Grailed: `https://www.grailed.com/shop?query=${q(t)}`,
+        "Fit pics": `https://www.pinterest.com/search/pins/?q=${q(`${t} outfit`)}`,
+      };
+    case "recipes":
+      return {
+        Marmiton: `https://www.marmiton.org/recettes/recherche.aspx?aqt=${q(t)}`,
+        "Video": `https://www.youtube.com/results?search_query=${q(`${t} recipe`)}`,
+      };
+    case "youtube":
+      return { [`More from ${e.subtitle}`]: `https://www.youtube.com/results?search_query=${q(e.subtitle)}` };
+    default:
+      return {};
+  }
 }

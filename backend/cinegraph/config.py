@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     rss_poll_minutes: int = 30
 
     movielens_variant: str = "ml-latest-small"
+    # a MovieLens film becomes a new catalogue entry only with this many ratings (its ratings count either way)
+    movielens_min_ratings: int = 5
     wikidata_contact: str = ""
 
     embedder: str = "fastembed"

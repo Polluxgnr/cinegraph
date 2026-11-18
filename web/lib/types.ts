@@ -22,6 +22,7 @@ export interface Film {
   vc?: number;
   img?: string;
   bd?: string;
+  tr?: string; // YouTube trailer key
   cast?: number[];
   dir?: number[];
   wri?: number[];

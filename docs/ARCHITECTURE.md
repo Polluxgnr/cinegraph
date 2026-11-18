@@ -77,6 +77,22 @@ its own Gist file. *Pick together* scores every item with both profiles' rankers
 `0.7·min(p₁, p₂) + 0.3·√(p₁p₂)`: the weaker match dominates, so a title one person would hate never tops
 the list. Loading is a single shared promise, so concurrent callers cannot overwrite early edits.
 
+### Who likes what, and how it's used
+- **Films**: MovieLens 32M (32 million ratings by 200,000 people) trains implicit ALS weekly in CI. Your answers are
+  folded into that space in the browser (one Cholesky solve), so "people who loved what you loved" is a ranking
+  feature from your third or fourth answer. Before that, predictions start from the crowd prior (TMDB rating shrunk
+  by vote count) and hand over to your own model as answers accumulate (`blend`, weight n/(n+8)).
+- **Music**: Deezer's "related artists" (built from listening co-occurrence) are graph edges in the catalogue and,
+  live, the backbone of playlist suggestions: candidates are voted by every playlist artist they relate to, then
+  weighted by your own model.
+- **Everything**: answers lose up to half their weight over ~3 years (tastes drift; favourites never fade), and a list
+  never shows more than two titles of one saga.
+
+### Live sources in the browser
+Deezer (JSONP: top songs, previews, albums, related, playlists), Wikidata SPARQL (CORS: best spots around a place,
+filming locations of your films), YouTube embeds (trailers, videos), Spotify and Google OAuth (your own clients,
+tokens kept per tab). Nothing is proxied: the static site talks to them directly.
+
 ### AI (`ai.ts`, optional)
 With your Anthropic key (browser-only): Claude parses free-text requests into a JSON intent (structured
 outputs) and writes a taste portrait. Without it, a regex parser handles "like X but funnier, under 2h,

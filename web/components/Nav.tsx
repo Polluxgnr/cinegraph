@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BASE } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { useManifest } from "@/lib/hooks";
+import SyncBadge from "@/components/SyncBadge";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { ACTION_VALUE, setSpace, useProfiles, useStore } from "@/lib/store";
 
@@ -19,6 +20,7 @@ export function spaceTabs(space: string): { href: string; label: string }[] {
     { href: "/me/", label: "Taste" },
   ];
   if (space === "films") return [...base, { href: "/tonight/", label: "Tonight" }, { href: "/sagas/", label: "Sagas" }, { href: "/graph/", label: "Graph" }];
+  if (space === "music") return [...base, { href: "/playlists/", label: "Playlists" }, { href: "/add/", label: "+ Add" }];
   return [...base, { href: "/add/", label: "+ Add" }];
 }
 
@@ -66,6 +68,7 @@ export default function Nav() {
         <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
         <SpaceList spaces={spaces} space={space} counts={counts} path={path} />
         <div className="mt-auto space-y-0.5 border-t border-line/60 pt-3">
+          <SyncBadge />
           {GLOBAL.map((g) => (
             <Link key={g.href} href={g.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active(g.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={g.icon} /></svg>
@@ -99,6 +102,7 @@ export default function Nav() {
         <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-bg p-4" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3"><ProfileSwitcher compact /></div>
+            <div className="mb-2"><SyncBadge /></div>
             <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
             <SpaceList spaces={spaces} space={space} counts={counts} path={path} onPick={() => setSheet(false)} />
             <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3">

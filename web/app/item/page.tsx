@@ -13,7 +13,13 @@ import { answer } from "@/lib/engine/learn";
 import { recommend, scoreOne } from "@/lib/engine/recommend";
 import { useDomain, useQueryParam } from "@/lib/hooks";
 import { addVault, getState, isDone, setList, setProgress, useLoaded, useStore } from "@/lib/store";
-import { fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
+import { exploreLinks, fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
+import type { Entity } from "@/lib/types";
+import ArtistPanel from "@/components/ArtistPanel";
+import BrandPieces from "@/components/BrandPieces";
+import { trailerSearch } from "@/components/MediaPreview";
+import PlaceSpots from "@/components/PlaceSpots";
+import { deezerArtistId } from "@/lib/deezer";
 import { watchOptions } from "@/lib/watch";
 
 const LINK_LABEL: Record<string, string> = {
@@ -99,9 +105,30 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
           {f?.k === "tv" && <SeriesTracker k={e.key} seasons={f.ns ?? 0} />}
         </div>
       </div>
+      {f && <Trailer e={e} />}
+      {deezerArtistId(e.key) && <ArtistPanel id={deezerArtistId(e.key)!} d={d} />}
+      {e.domain === "places" && <PlaceSpots e={e} />}
+      {e.domain === "brands" && <BrandPieces d={d} e={e} />}
       {f && <Saga d={d as FilmData} row={row} />}
       {similar.length > 0 && <Row title="Similar">{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
     </div>
+  );
+}
+
+function Trailer({ e }: { e: Entity }) {
+  const key = e.film?.tr;
+  return (
+    <section>
+      <h2 className="mb-3 font-display text-2xl">Trailer</h2>
+      {key ? (
+        <div className="aspect-video max-w-3xl overflow-hidden rounded-2xl border border-line bg-black">
+          <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${key}?rel=0`} title={`${e.title} trailer`}
+                  allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />
+        </div>
+      ) : (
+        <a href={trailerSearch(e)} target="_blank" rel="noreferrer" className="btn-ghost text-sm">▶ Watch the trailer on YouTube ↗</a>
+      )}
+    </section>
   );
 }
 
@@ -162,6 +189,7 @@ function FilmFacts({ d, row }: { d: FilmData; row: number }) {
       </dl>
       {f.kw?.length ? <p className="text-xs leading-relaxed text-muted">{f.kw.slice(0, 20).join(" · ")}</p> : null}
       <Links links={f.links} />
+      <Explore e={d.entities[row]} />
     </div>
   );
 }
@@ -189,6 +217,20 @@ function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
       <div className="flex flex-wrap gap-1.5">
         {it.url && <a href={it.url} target="_blank" rel="noreferrer" className="btn px-3 py-1.5 text-sm">Open ↗</a>}
         <Links links={it.links} />
+      </div>
+      <Explore e={e} />
+    </div>
+  );
+}
+
+function Explore({ e }: { e: Entity }) {
+  const links = exploreLinks(e);
+  if (!Object.keys(links).length) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted">Go further</p>
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(links).map(([k, v]) => <a key={k} href={v} target="_blank" rel="noreferrer" className="chip text-xs hover:text-ink">{k} ↗</a>)}
       </div>
     </div>
   );

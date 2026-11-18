@@ -67,6 +67,14 @@ def ingest_tmdb(
         raise typer.Exit(f"TMDB error: {e}")
 
 
+@ingest_app.command("trailers")
+def ingest_trailers(limit: Optional[int] = typer.Option(None, help="stop after N titles")) -> None:
+    """Official YouTube trailer of every catalogue title (TMDB videos; new titles only on later runs)."""
+    from .ingest.tmdb_ingest import trailers
+
+    _echo(trailers(limit))
+
+
 @ingest_app.command("movielens")
 def ingest_movielens(variant: Optional[str] = typer.Option(None, help="ml-latest-small | ml-32m")) -> None:
     """Import MovieLens links, stub titles, tags and ratings."""

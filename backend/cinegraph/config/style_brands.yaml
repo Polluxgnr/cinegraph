@@ -136,3 +136,6 @@
 - {name: Carne Bollente, url: https://carnebollente.com, tags: [streetwear, french, graphic], country: France}
 - {name: Pas Normal Studios, url: https://pasnormalstudios.com, tags: [cycling, technical, copenhagen], country: Denmark}
 - {name: "Arc'teryx", url: https://arcteryx.com, tags: [gorpcore, technical, outdoor], country: Canada}
+# underground French labels
+- {name: Mertra, url: https://mertra.com, tags: [underground, streetwear, drops, french], country: France}
+- {name: Jacker, url: https://www.jacker.fr, tags: [underground, streetwear, graphic, french], country: France}

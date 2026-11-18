@@ -122,3 +122,16 @@ def test_rate_limit_spacing():
     # 20 burst + 20 more at 20/s -> about one second
     assert asyncio.run(go()) >= 0.9
     json.dumps({})
+
+
+def test_pick_trailer_prefers_official_youtube_trailer():
+    from cinegraph.ingest.tmdb_ingest import pick_trailer
+
+    vids = [
+        {"site": "Vimeo", "type": "Trailer", "key": "v1", "official": True},
+        {"site": "YouTube", "type": "Teaser", "key": "t1", "official": True},
+        {"site": "YouTube", "type": "Trailer", "key": "fan", "official": False},
+        {"site": "YouTube", "type": "Trailer", "key": "off", "official": True},
+    ]
+    assert pick_trailer(vids) == "off"
+    assert pick_trailer([{"site": "YouTube", "type": "Featurette", "key": "x"}]) is None

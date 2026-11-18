@@ -94,7 +94,15 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   scored.sort((a, b) => b.p - a.p);
 
   const nExplore = Math.round(n * (o.explore ?? 0.12));
-  const pool = scored.slice(0, Math.max(5 * n, 80));
+  // at most two titles of the same saga in one list, so a franchise can't fill a row
+  const perSaga = new Map<string, number>();
+  const pool = scored.slice(0, Math.max(6 * n, 100)).filter(({ row }) => {
+    const coll = d.entities[row].film?.coll;
+    if (!coll) return true;
+    const k = perSaga.get(coll) ?? 0;
+    perSaga.set(coll, k + 1);
+    return k < 2;
+  });
   const picked = mmr(d, pool, n - nExplore, o.diversity ?? 0.8);
   const pickedRows = new Set(picked.map((x) => x.row));
   const explorePicks = exploreSlots(d, s, scored.slice(n), nExplore, pickedRows);

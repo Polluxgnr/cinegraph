@@ -19,6 +19,8 @@ discovery, list, taste profile and colour.
 | **Swipe** with two-step answers: *seen?* → all-time favourite / loved / liked / ok / not my thing / dropped it (+ reaction chips such as "Too long"), or *not seen* → must watch soon / add to my list / could be down / not now (comes back in 30 days) / no idea / never. Videos use 👍 / 👎 like YouTube. The next card is chosen by **active learning**. | **For you**: every card shows a predicted rating, a match %, and *why*: "Same writer (Jonathan Nolan) as Interstellar, which you loved". Plus "Because you loved X" rows. |
 | **Bring your history**: YouTube (Google Takeout: watch history, subscriptions, Watch later), Spotify (data export, or live login: top artists, liked songs, playlists), Netflix viewing activity, Letterboxd, public Pinterest boards, and JSON *packs* (e.g. sorted Instagram saves). Parsed in the browser. | **Add your own**: paste any link (brand site, track, playlist, recipe blog, video); title and image are fetched, it gets a borrowed embedding and shapes your profile like everything else. |
 | **Useful from the first visit**: before you've answered much, predictions start from the crowd (TMDB rating shrunk by vote count, popularity elsewhere) and your own model takes over answer by answer. | **New releases & prices**: a weekly *New releases* row in Music (Deezer charts + the latest records of the catalogue's artists, ranked by how much you like each artist); approximate prices on dream cars (new, market value or "from") and on iconic clothing pieces; video length, views, likes and comments. |
+| **Hear it, watch it**: swipe cards play a 30 s preview of the artist's most played song (Deezer) or open the film's trailer; artist pages list the most played songs with previews, fans, albums, singles and who their fans also play. | **Playlists, improved**: paste a Deezer or Spotify playlist; it maps the artists, suggests songs that fit (from who the playlist's artists' fans also play, weighted by your taste, with previews) and flags tracks by artists you rejected. |
+| **Places worth the trip**: each destination lists its best spots live from Wikidata (museums, landmarks, nature, food...) with photos, distance and a map link; filming locations of films you loved come first, and the kinds of spots you star rank higher everywhere. | **Style, piece by piece**: every brand page groups its pieces by category, links each category on the brand's own site, Vinted and Grailed, and lets you add pieces with a price. Searching a label that isn't in the catalogue (Mertra, Jacker...) finds its site and adds it. |
 | **Profiles & Pick together**: several people on one device, each with their own memory (no login). *Pick together* ranks what two profiles will both like (by the weaker of the two matches) and has a swipe-to-agree mode: two yeses put it on both lists. | **Search everywhere**: Discover has a search bar over titles, directors, cast and themes, ranked by where the words hit, then by your predicted match. |
 | **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars; **Tonight** by mood × your streaming services in France, with legal watch links. | **Second brain**: links and ideas (share from your phone into the app), an **AI-ready taste dossier** (one Markdown document of your whole taste to paste into any assistant), and an **Obsidian** export. |
 
@@ -70,16 +72,30 @@ Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
    device** sends your iPad or phone a one-tap link, so it needs no token of its own. Or download a JSON backup.
 6. Optional: **Anthropic API key** (smarter search and a written taste portrait). **Second brain → Copy my taste dossier** gives any AI your full profile.
 
+### Where things live
+
+| What | Where |
+|---|---|
+| The app | GitHub Pages (static files, no server), installable as a PWA |
+| The catalogue (films, music, places…) | `data.tar.gz` on the `data-latest` GitHub release, rebuilt weekly by GitHub Actions |
+| The pipeline's database | Postgres inside the Actions run, carried between runs in the Actions cache (never public) |
+| Your memory (answers, lists, notes) | Your browser (IndexedDB), and if you turn sync on, a **private Gist** on your own GitHub account |
+| Live extras | Deezer (previews, artists, playlists), Wikidata (spots), YouTube (trailers), Spotify / Google (only with your own login) |
+
+Swipe on your phone, open your laptop: with sync on, the laptop pulls the phone's answers when the app opens or
+comes back to the foreground, and both sides are merged (the most recent answer wins for the same title). Without
+sync, each browser keeps its own memory; the sidebar always says which.
+
 ### Data sources (all legal, open or official)
 
 | Area | Source | Notes |
 |---|---|---|
-| Films & series | TMDB API (needs a free key, see below), Wikidata, Wikipedia images, MovieLens (CF signal) | Links to SensCritique, AlloCiné, Letterboxd, IMDb via Wikidata ids; no scraping |
+| Films & series | TMDB API (needs a free key, see below; also official trailers), Wikidata, Wikipedia images, MovieLens 32M (32 million ratings from 200,000 people: the collaborative-filtering signal) | Links to SensCritique, AlloCiné, Letterboxd, IMDb via Wikidata ids; no scraping |
 | Where to watch | TMDB watch providers (JustWatch data), France | Subscriptions + free (arte.tv, france.tv); never piracy sites |
 | Videos & docs | Official YouTube RSS of ARTE, France 5, franceinfo, Ushuaïa TV, Kurzgesagt, Veritasium, DW… (views, likes) + optional YouTube Data API key (`YOUTUBE_API_KEY` secret: length, comments) + **Connect YouTube** in the browser (your Google OAuth client: liked videos, subscriptions, playlists) | Curated in `backend/cinegraph/config/youtube_channels.yaml` |
-| Music | Deezer public API (artists, genres, related artists) + your Spotify (PKCE, in-browser) | |
+| Music | Deezer public API (artists, genres, related artists; in the browser: top songs, 30 s previews, fans, albums, playlists via JSONP) + your Spotify (PKCE, in-browser: top artists, liked songs, playlists) | Exact stream counts aren't published by any open API; Deezer's popularity rank and fan counts are shown instead |
 | Recipes | TheMealDB | Marmiton has no API: search links + save Marmiton pages to the vault |
-| Travel, dream garage | Wikidata + Wikimedia Commons photos | Cars are a curated dream list (makes, models, classes), not every car on the road; approximate prices in `config/car_prices.yaml` |
+| Travel, dream garage | Wikidata + Wikimedia Commons photos; best spots per place queried live from the Wikidata SPARQL endpoint | Cars are a curated dream list (makes, models, classes), not every car on the road; approximate prices in `config/car_prices.yaml` |
 | Style | Curated design, underground and streetwear brands (`config/style_brands.yaml`) with their site's own preview image, and iconic pieces with approximate retail prices (`config/style_pieces.yaml`) linked to their brand | Links to shopping search, Pinterest, Instagram and Vinted; add yours or import Pinterest boards. Shop product feeds are not used: most stores block automated clients |
 | Pinterest | Public board RSS (latest ~25 pins per board, re-sync for new ones) | Public boards only; no login, no scraping |
 

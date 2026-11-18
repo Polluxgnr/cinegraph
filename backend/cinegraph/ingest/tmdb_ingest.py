@@ -358,3 +358,56 @@ async def search_and_add(kind: str, name: str, year: int | None) -> int | None:
         upsert_details(conn, row["id"], parse_details(kind, payload, s.tmdb_region), s.tmdb_region)
         conn.commit()
     return row["id"]
+
+
+def pick_trailer(videos: list[dict]) -> str | None:
+    """Best YouTube video: official trailer > trailer > teaser, then the most recent."""
+    yt = [v for v in videos if v.get("site") == "YouTube" and v.get("key")]
+    rank = {"Trailer": 0, "Teaser": 1, "Clip": 2}
+    yt = [v for v in yt if v.get("type") in rank]
+    if not yt:
+        return None
+    best = min(yt, key=lambda v: (rank[v["type"]], not v.get("official")))
+    return best["key"]
+
+
+async def _trailers_async(limit: int | None, batch: int = 100) -> dict:
+    """Trailer YouTube key per title (French first, then any language), stored in titles.extra.trailer.
+    Titles already tried are skipped, so weekly runs only fetch new titles."""
+    s = get_settings()
+    found = tried = 0
+    async with TMDBClient(s.tmdb_api_key, rate=s.tmdb_rate_limit) as client:
+        while limit is None or tried < limit:
+            rows = db.fetchall(
+                """SELECT t.id, t.kind, t.tmdb_id FROM titles t JOIN title_embeddings e ON e.title_id = t.id
+                   WHERE t.tmdb_id IS NOT NULL AND NOT (t.extra ? 'trailer_tried')
+                   ORDER BY t.popularity DESC NULLS LAST LIMIT %s""", (batch,))
+            if not rows:
+                break
+
+            async def one(r):
+                path = f"/{'tv' if r['kind'] == 'tv' else 'movie'}/{r['tmdb_id']}/videos"
+                try:
+                    fr = await client.get(path, language="fr-FR") or {}
+                    key = pick_trailer(fr.get("results", []))
+                    if not key:
+                        en = await client.get(path) or {}
+                        key = pick_trailer(en.get("results", []))
+                    return r, key
+                except Exception:  # noqa: BLE001
+                    return r, None
+
+            results = await asyncio.gather(*(one(r) for r in rows))
+            with db.connect() as conn:
+                for r, key in results:
+                    patch = {"trailer_tried": True, **({"trailer": key} if key else {})}
+                    conn.execute("UPDATE titles SET extra = extra || %s::jsonb WHERE id = %s", (json.dumps(patch), r["id"]))
+                    found += bool(key)
+                conn.commit()
+            tried += len(rows)
+            log.info("trailers: %d tried, %d found", tried, found)
+    return {"tried": tried, "found": found}
+
+
+def trailers(limit: int | None = None) -> dict:
+    return asyncio.run(_trailers_async(limit))
