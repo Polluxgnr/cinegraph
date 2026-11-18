@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
 import ExtraRow from "@/components/ExtraRow";
+import Welcome from "@/components/Welcome";
 import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
 import type { DomainData, FilmData } from "@/lib/data";
 import { isFilmData } from "@/lib/data";
@@ -34,6 +35,7 @@ export default function Home() {
   if (!loaded || !d) return <Skeleton />;
   return (
     <div key={space} className="rise space-y-10">
+      <Welcome />
       <SyncNudge />
       <Hero space={space} d={d} />
       <ConnectStrip space={space} />

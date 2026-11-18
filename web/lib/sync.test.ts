@@ -92,3 +92,22 @@ describe("deletions sync", () => {
     expect(merge(a, b).custom.map((c) => c.id).sort()).toEqual(["brands:custom:a", "brands:custom:b"]);
   });
 });
+
+describe("trip calendar export", () => {
+  it("writes one all-day event per planned day with stops in order", async () => {
+    const { tripToIcs } = await import("./ics");
+    const ics = tripToIcs({
+      id: "t1", place: "places:Q1", title: "Kyoto", days: 2, start: "2027-04-01", created: 0, updated: 0, notes: { 1: "Book the ryokan" },
+      spots: [
+        { q: "Q2", name: "Kinkaku-ji", lat: 35.03, lon: 135.72, group: "Sacred places", day: 0 },
+        { q: "Q3", name: "Ryoan-ji", lat: 35.034, lon: 135.718, group: "Sacred places", day: 0 },
+        { q: "Q4", name: "Gion", lat: 35.0, lon: 135.77, group: "Food", day: 1 },
+      ],
+    }, Date.UTC(2027, 0, 1)).replace(/\r\n /g, ""); // unfold long lines (RFC 5545)
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expect(ics).toContain("DTSTART;VALUE=DATE:20270401");
+    expect(ics).toContain("SUMMARY:Kyoto · Day 1");
+    expect(ics).toContain("1. Kinkaku-ji\\n2. Ryoan-ji"); // newlines are escaped inside the field
+    expect(ics).toContain("Book the ryokan");
+  });
+});

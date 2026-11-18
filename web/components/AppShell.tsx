@@ -11,6 +11,18 @@ import { acceptDeviceLink, flushSync, pullGist, pushGist, scheduleSync } from "@
  */
 export default function AppShell() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const on = () => setOffline(!navigator.onLine);
+    const t = setTimeout(on, 0);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", on);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", on);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +68,13 @@ export default function AppShell() {
     };
   }, []);
 
+  if (offline) {
+    return (
+      <div role="status" className="fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded-full border border-line bg-panel-2 px-4 py-1.5 text-xs text-ink shadow-xl md:top-4">
+        Offline · everything you do is saved and will sync when you&apos;re back
+      </div>
+    );
+  }
   return syncMsg ? (
     <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-panel-2 px-4 py-1.5 text-xs text-muted shadow-xl md:bottom-6">
       {syncMsg}

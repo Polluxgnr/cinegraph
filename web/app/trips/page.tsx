@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { detailHref } from "@/components/RecCard";
 import { useDomain, useQueryParam } from "@/lib/hooks";
+import { downloadIcs } from "@/lib/ics";
 import { fetchSpots, GROUP_COLOR, planDays, rankSpots, type Spot } from "@/lib/spots";
 import { deleteTrip, toggleTripSpot, type Trip, type TripSpot, updateTrip, useStore } from "@/lib/store";
 
@@ -119,6 +120,7 @@ function Planner({ trip }: { trip: Trip }) {
             <span className="text-muted">{trip.spots.length} spots · ≈ {total.toFixed(1)} km on foot</span>
             <button className="btn px-3 py-1.5 text-sm" onClick={autoPlan} disabled={!trip.spots.length}>✨ Plan my days</button>
             <Link href={detailHref(trip.place)} className="btn-ghost px-3 py-1.5 text-sm">+ Add spots</Link>
+            <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => downloadIcs(trip)} disabled={!trip.spots.some((s) => s.day != null)} title="One event per day, with stops and route">📅 Add to calendar</button>
           </div>
         </div>
       </header>
