@@ -17,6 +17,7 @@
     "leaflet": "^1.9.4",
     "motion": "^14.10.1",
     "next": "16.4.5",
+    "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-force-graph-2d": "^1.29.2"
@@ -25,6 +26,7 @@
     "@tailwindcss/turbopack": "^4",
     "@types/leaflet": "^1.9.12",
     "@types/node": "^22.20.5",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

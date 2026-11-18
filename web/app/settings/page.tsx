@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Connectors from "@/components/Connectors";
+import PairDevice from "@/components/PairDevice";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { DOMAINS } from "@/lib/domains";
 import { relearn } from "@/lib/engine/learn";
@@ -9,7 +10,7 @@ import { useManifest } from "@/lib/hooks";
 import { asset } from "@/lib/data";
 import { backupJSON, exportObsidian, restoreJSON } from "@/lib/io";
 import { DEFAULT_PLATFORMS, emptyState, replaceState, setSettings, useStore } from "@/lib/store";
-import { deviceLink, pullGist, pushGist } from "@/lib/sync";
+import { pullGist, pushGist } from "@/lib/sync";
 
 const ALL_PLATFORMS = [...DEFAULT_PLATFORMS, "arte.tv", "france.tv"];
 const FILTERS: [string, string][] = [["romance", "No romance"], ["musical", "No musicals"], ["laugh-track sitcom", "No laugh-track sitcoms"], ["kids", "No kids' shows"]];
@@ -75,19 +76,7 @@ export default function Settings() {
           setSettings({ gistToken: v || undefined });
           if (v) run("First sync", async () => { await pullGist().catch(() => false); return `Synced to Gist ${await pushGist()}`; });
         }} />
-        {s.gistToken && (
-          <button className="btn text-sm" onClick={async () => {
-            const link = deviceLink();
-            if (!link) return;
-            try {
-              if (navigator.share) await navigator.share({ title: "CineGraph", text: "Open on my other device", url: link });
-              else {
-                await navigator.clipboard.writeText(link);
-                setMsg("Link copied: open it on your other device (send it to yourself only, it carries your sync token)");
-              }
-            } catch { /* share sheet closed */ }
-          }}>Link another device</button>
-        )}
+        {s.gistToken && <PairDevice />}
         <div className="flex flex-wrap gap-2">
           <button className="btn-ghost text-sm" disabled={!s.gistToken || busy} onClick={() => run("Push", async () => `Saved to Gist ${await pushGist()}`)}>Push now</button>
           <button className="btn-ghost text-sm" disabled={!s.gistToken || busy} onClick={() => run("Pull", async () => ((await pullGist()) ? "Merged from your Gist" : "No Gist found yet"))}>Pull now</button>

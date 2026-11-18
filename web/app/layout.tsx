@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Manrope } from "next/font/google";
 import AppShell from "@/components/AppShell";
 import Nav from "@/components/Nav";
+import { CSP } from "@/lib/csp";
 import "./globals.css";
 
 const display = Instrument_Serif({ subsets: ["latin"], weight: "400", variable: "--font-display" });
@@ -27,6 +28,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
+      {process.env.NODE_ENV === "production" && (
+        <head>
+          <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        </head>
+      )}
       <body className="min-h-dvh antialiased">
         <div className="aurora" aria-hidden />
         <Nav />
