@@ -45,3 +45,15 @@ describe("memory sync between devices", () => {
     expect(m.settings.space).toBe("music");
   });
 });
+
+describe("trip planning", () => {
+  it("puts nearby spots on the same day and walks them in order", async () => {
+    const { planDays } = await import("./spots");
+    const west = [{ lat: 48.86, lon: 2.29 }, { lat: 48.861, lon: 2.295 }, { lat: 48.859, lon: 2.3 }];
+    const east = [{ lat: 48.853, lon: 2.36 }, { lat: 48.855, lon: 2.365 }];
+    const days = planDays([...west, ...east], 2);
+    expect(days.map((d) => d.length)).toEqual([3, 2]);
+    expect(new Set(days[0])).toEqual(new Set(west));
+    expect(planDays([], 3)).toHaveLength(3);
+  });
+});

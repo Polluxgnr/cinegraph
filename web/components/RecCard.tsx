@@ -8,6 +8,7 @@ import { answer } from "@/lib/engine/learn";
 import type { Rec } from "@/lib/engine/recommend";
 import { setList, useStore } from "@/lib/store";
 import { fmtRuntime, itemFacts } from "@/lib/text";
+import { tilt } from "@/lib/tilt";
 import { streamsOn } from "@/lib/watch";
 
 export function detailHref(key: string) {
@@ -29,7 +30,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   if (answered === "never" || answered === "disliked" || answered === "dropped") return null;
   return (
     <article className="group card flex flex-col overflow-hidden">
-      <Link href={detailHref(e.key)} className="relative block overflow-hidden">
+      <Link href={detailHref(e.key)} className="tilt relative block overflow-hidden" {...tilt}>
         <EntityImage e={e} aspect={cfg?.aspect ?? "2/3"} className="transition duration-500 group-hover:scale-[1.03]" />
         {r.explore && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-unseen">exploring</span>}
         {streams.length > 0 && (
@@ -81,7 +82,7 @@ export function Row({ title, href, children, hint }: { title: string; href?: str
         </div>
         {href && <Link href={href} className="shrink-0 text-sm text-accent">See all →</Link>}
       </div>
-      <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [&>*]:w-40 [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:w-48">{children}</div>
+      <div className="stagger no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [&>*]:w-40 [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:w-48">{children}</div>
     </section>
   );
 }

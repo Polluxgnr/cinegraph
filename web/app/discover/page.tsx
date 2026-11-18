@@ -125,7 +125,7 @@ export default function Discover() {
         </label>
       </div>
       {domain === "brands" && words.length > 0 && recs && recs.length < 6 && <WebLookup key={q.trim()} query={q.trim()} />}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+      <div key={key + sort} className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {recs ? sorted.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>
       {recs && !recs.length && <p className="text-muted">Nothing matches these filters.</p>}

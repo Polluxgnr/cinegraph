@@ -96,27 +96,30 @@ function Deck({ domain }: { domain: string }) {
   if (error) return <p className="card p-4 text-sm text-nope">Couldn&apos;t load {cfg?.label}: {error}</p>;
   const e = card?.rec.entity;
   return (
-    <div className="flex flex-col items-center">
-      <div className="mb-4 w-full">
+    <div className="flex flex-col items-center max-md:h-[calc(100dvh-9.5rem-env(safe-area-inset-bottom))]">
+      <div className="mb-2 w-full md:mb-4">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-3xl">{cfg?.emoji} {cfg?.label}</h1>
+          <h1 className="font-display text-xl md:text-3xl">{cfg?.emoji} {cfg?.label}</h1>
           <span className="text-xs text-muted">{card ? `${card.info.labels} answer${card.info.labels === 1 ? "" : "s"}` : ""}</span>
         </div>
-        <Progress className="mt-2" value={cal} />
-        <p className="mt-1 text-[11px] text-muted">
+        <Progress className="mt-1.5 md:mt-2" value={cal} />
+        <p className="mt-1 hidden text-[11px] text-muted md:block">
           {cal < 0.5 ? "Learning the basics: cards cover very different things on purpose." : cal < 1 ? "Getting sharper: more cards it expects you to like." : "Calibrated. Keep going to refine, or check your recommendations."}
         </p>
       </div>
 
+      {/* the card takes whatever height is left (phones) or 58% of the screen (desktop), keeping its shape */}
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center md:flex-none">
       <div
-        className="relative mx-auto w-full"
-        style={{
-          aspectRatio: cfg?.aspect === "2/3" ? "2/3.05" : "4/4.6",
-          // keep the whole card + answers on screen
-          maxWidth: cfg?.aspect === "2/3" ? "calc(58dvh * 0.656)" : "calc(58dvh * 0.87)",
-          touchAction: "none",
-        }}
+        className="relative mx-auto h-full max-h-full max-w-full md:h-[58dvh]"
+        style={{ aspectRatio: cfg?.aspect === "2/3" ? "2/3.05" : "4/4.6", touchAction: "none" }}
       >
+        {e && (
+          <>
+            <div className="deck-ghost" style={{ transform: "translateY(14px) scale(0.92)", opacity: 0.35 }} />
+            <div className="deck-ghost" style={{ transform: "translateY(7px) scale(0.96)", opacity: 0.6 }} />
+          </>
+        )}
         {e ? (
           <motion.div
             key={e.key}
@@ -134,11 +137,12 @@ function Deck({ domain }: { domain: string }) {
               } else if (oy < -THRESHOLD) decide("loved", {}, [0, -1]);
               else if (oy > THRESHOLD) setUnseenMode(true);
             }}
-            initial={{ scale: 0.96, opacity: 0.5 }}
-            animate={{ scale: 1, opacity: 1 }}
+            initial={{ scale: 0.94, y: 10, opacity: 0.6 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
             <EntityImage e={e} aspect={cfg?.aspect === "2/3" ? "2/3" : "4/3"} className="h-full" big bare />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-24">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-4 pt-20 md:p-5 md:pt-24">
               <CardMeta d={d!} card={card!} />
             </div>
             <div className="absolute right-3 top-3 z-10 flex justify-end"><MediaPreview e={e} /></div>
@@ -151,24 +155,26 @@ function Deck({ domain }: { domain: string }) {
           <div className="absolute inset-0 animate-pulse rounded-3xl bg-panel-2" />
         )}
       </div>
+      </div>
 
       {e && (
-        <div className="mt-4 w-full">
+        <div className="mt-2 w-full shrink-0 md:mt-4">
           {unseenMode && cfg && !cfg.singleStep ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-2">
               {cfg.unseenActions.map(([a, l]) => (
-                <button key={a} className="rounded-xl border border-unseen/40 bg-panel py-2.5 text-sm text-unseen hover:bg-panel-2" onClick={() => decide(a, {}, [0, 1])}>{l}</button>
+                <button key={a} className="rounded-xl border border-unseen/40 bg-panel py-2 text-[13px] text-unseen hover:bg-panel-2 md:py-2.5 md:text-sm" onClick={() => decide(a, {}, [0, 1])}>{l}</button>
               ))}
               <button className="col-span-2 text-xs text-muted" onClick={() => setUnseenMode(false)}>← back</button>
             </div>
           ) : (
-            <AnswerPanel key={e.key} e={e} onAnswer={(a, extra) => decide(a, extra, a === "loved" || a === "fav" ? [0, -1] : ["disliked", "dropped", "never"].includes(a) ? [-1, 0] : [1, 0])} />
+            <AnswerPanel key={e.key} e={e} dense onAnswer={(a, extra) => decide(a, extra, a === "loved" || a === "fav" ? [0, -1] : ["disliked", "dropped", "never"].includes(a) ? [-1, 0] : [1, 0])} />
           )}
         </div>
       )}
 
-      <div className="mt-4 flex w-full items-center justify-between text-xs text-muted">
-        <span>{count} this session · ← → ↑ ↓ keys</span>
+      <div className="mt-2 flex w-full shrink-0 items-center justify-between text-xs text-muted md:mt-4">
+        <span className="hidden md:inline">{count} this session · ← → ↑ ↓ keys</span>
+        <span className="md:hidden">{count} this session</span>
         <div className="flex gap-3">
           {e && <button onClick={() => setSkip((s) => new Set(s).add(e.key))} className="hover:text-ink">Skip</button>}
           <button onClick={undo} className="hover:text-ink">↶ Undo</button>
@@ -176,7 +182,7 @@ function Deck({ domain }: { domain: string }) {
         </div>
       </div>
       {card && (
-        <p className="mt-3 w-full text-[11px] leading-relaxed text-muted/70">
+        <p className="mt-3 hidden w-full text-[11px] leading-relaxed text-muted/70 md:block">
           Why this card: uncertainty {card.info.uncertainty}, novelty {card.info.coverage}, likely known {Math.round(card.info.pSeen * 100)}%.
         </p>
       )}
@@ -194,21 +200,21 @@ function CardMeta({ d, card }: { d: DomainData; card: Card }) {
     return (
       <>
         <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{head.filter(Boolean).join(" · ")}</p>
-        <h2 className="font-display text-3xl leading-tight text-white">{e.title}</h2>
+        <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
         <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
         <p className="mt-1 line-clamp-1 text-xs text-white/70">
           {(f.g ?? []).slice(0, 3).join(" / ")}
           {f.dir?.length ? ` · ${names(f.dir, 1)}` : f.cre?.length ? ` · ${names(f.cre, 1)}` : ""}
         </p>
         {f.cast?.length ? <p className="line-clamp-1 text-xs text-white/60">{names(f.cast, 3)}</p> : null}
-        {f.ov && <p className="mt-1 line-clamp-3 text-[13px] text-white/80">{f.ov}</p>}
+        {f.ov && <p className="mt-1 line-clamp-2 text-[13px] text-white/80 md:line-clamp-3">{f.ov}</p>}
       </>
     );
   }
   return (
     <>
       <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{e.subtitle}</p>
-      <h2 className="font-display text-3xl leading-tight text-white">{e.title}</h2>
+      <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
       <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
       <p className="mt-1 line-clamp-3 text-[13px] text-white/75">{String(e.item?.meta?.description ?? e.tags.slice(0, 5).join(" · "))}</p>
     </>

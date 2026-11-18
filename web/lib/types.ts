@@ -23,6 +23,8 @@ export interface Film {
   img?: string;
   bd?: string;
   tr?: string; // YouTube trailer key
+  mlr?: number; // MovieLens mean rating /5 (individual ratings)
+  mlc?: number; // MovieLens number of ratings
   cast?: number[];
   dir?: number[];
   wri?: number[];
@@ -68,7 +70,7 @@ export interface Manifest {
   version: number;
   built_at: string;
   embed_model: string;
-  domains: Record<string, { label: string; count: number; images?: number; collections?: number; extras?: Record<string, number> }>;
+  domains: Record<string, { label: string; count: number; images?: number; collections?: number; cf_items?: number; people?: number; extras?: Record<string, number> }>;
 }
 
 /** A common view of any recommendable thing, so one engine and one card serve every domain. */

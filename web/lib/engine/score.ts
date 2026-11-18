@@ -326,9 +326,13 @@ export function prior(d: DomainData, row: number): number {
   const e = d.entities[row];
   if (e.item?.meta?.custom) return 1.2;
   const f = e.film;
-  if (f?.va && f.vc) {
+  if ((f?.va && f.vc) || (f?.mlr && f.mlc)) {
+    // TMDB audience and MovieLens individual ratings (/5, mapped to TMDB's scale), pooled by vote count
+    // and shrunk towards the mean: a 8.4 from 40 votes is not a 8.4
     const k = 300;
-    const shrunk = (f.va * f.vc + 6.5 * k) / (f.vc + k);
+    const tv = f.va && f.vc ? f.vc : 0;
+    const mv = f.mlr && f.mlc ? f.mlc : 0;
+    const shrunk = ((f.va ?? 0) * tv + (mv ? f.mlr! * 2 - 0.55 : 0) * mv + 6.5 * k) / (tv + mv + k);
     // calibrated so TMDB 8.4 -> ~4.3★, 7.0 -> ~3.4★, 6.0 -> ~2.6★ (TMDB averages run high)
     return Math.max(-2.2, Math.min(2.2, (shrunk - 6.15) * 0.75));
   }

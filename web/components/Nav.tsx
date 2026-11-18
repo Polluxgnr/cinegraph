@@ -21,6 +21,7 @@ export function spaceTabs(space: string): { href: string; label: string }[] {
   ];
   if (space === "films") return [...base, { href: "/tonight/", label: "Tonight" }, { href: "/sagas/", label: "Sagas" }, { href: "/graph/", label: "Graph" }];
   if (space === "music") return [...base, { href: "/playlists/", label: "Playlists" }, { href: "/add/", label: "+ Add" }];
+  if (space === "places") return [...base, { href: "/trips/", label: "Trips" }, { href: "/add/", label: "+ Add" }];
   return [...base, { href: "/add/", label: "+ Add" }];
 }
 

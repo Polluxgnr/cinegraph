@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Connectors from "@/components/Connectors";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { DOMAINS } from "@/lib/domains";
 import { relearn } from "@/lib/engine/learn";
@@ -33,12 +34,13 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-4xl md:text-5xl">Settings</h1>
         <div className="w-56"><ProfileSwitcher compact /></div>
       </header>
-      <p className="-mt-3 text-sm text-muted">Settings, answers and lists belong to the profile above; each profile syncs on its own.</p>
+      <p className="-mt-3 text-sm text-muted">Settings, answers and lists belong to the profile above; every profile syncs.</p>
+      <Connectors />
 
       <Section title="My streaming services" hint="Used by Tonight and the ▶ links (France). Free broadcasters are always included.">
         <div className="flex flex-wrap gap-1.5">
@@ -58,7 +60,7 @@ export default function Settings() {
         </div>
       </Section>
 
-      <Section title="Memory & sync" hint={`${counts.answers} answers, ${counts.history} events, ${counts.vault} vault items.`}>
+      <Section id="sync" title="Memory & sync" hint={`${counts.answers} answers, ${counts.history} events, ${counts.vault} vault items.`}>
         {s.gistToken ? (
           <p className="rounded-lg border border-like/40 bg-like/10 p-3 text-sm">✓ Sync is on. Every answer is saved to your private Gist a few seconds later and pulled on your other devices when you open the app.</p>
         ) : (
@@ -101,7 +103,7 @@ export default function Settings() {
         <a href={asset("/import/")} className="btn-ghost text-sm">Open Import & connect →</a>
       </Section>
 
-      <Section title="AI (optional)" hint="Your Anthropic API key enables smarter search parsing and a written taste portrait. Stored only in this browser, never synced.">
+      <Section id="ai" title="AI (optional)" hint="Your Anthropic API key enables smarter search parsing and a written taste portrait. Stored only in this browser, never synced.">
         <Secret value={s.anthropicKey} placeholder="sk-ant-…" onSave={(v) => setSettings({ anthropicKey: v || undefined })} />
       </Section>
 
@@ -131,9 +133,9 @@ export default function Settings() {
   );
 }
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({ id, title, hint, children }: { id?: string; title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="card space-y-3 p-5">
+    <section id={id} className="card scroll-mt-20 space-y-3 p-5">
       <div>
         <h2 className="font-display text-2xl">{title}</h2>
         {hint && <p className="text-xs text-muted">{hint}</p>}

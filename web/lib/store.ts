@@ -112,6 +112,29 @@ export interface Learned {
   arms: Record<string, Record<string, [number, number]>>;
 }
 
+export interface TripSpot {
+  q: string; // Wikidata id
+  name: string;
+  lat: number;
+  lon: number;
+  img?: string;
+  group: string;
+  day: number | null; // null = not planned yet
+  done?: boolean;
+}
+export interface Trip {
+  id: string;
+  place: string; // places:<qid>
+  title: string;
+  image?: string;
+  days: number;
+  start?: string; // ISO date
+  spots: TripSpot[];
+  notes: Record<number, string>; // per day
+  created: number;
+  updated: number;
+}
+
 export interface State {
   v: 1;
   feedback: Record<string, Feedback>;
@@ -124,6 +147,8 @@ export interface State {
   imports: Record<string, { at: number; summary: string; channels?: { name: string; url?: string; count: number }[] }>;
   learned: Learned;
   settings: Settings;
+  /** trips you're planning: spots per day, like a travel journal */
+  trips: Trip[];
   spotify?: {
     connectedAt: number;
     topArtists: { name: string; genres: string[]; image?: string; url?: string }[];
@@ -145,6 +170,7 @@ export function emptyState(): State {
     vault: [],
     learned: { ranker: {}, arms: {} },
     custom: [],
+    trips: [],
     imports: {},
     settings: {
       space: "films",
@@ -493,4 +519,40 @@ export function setSpace(space: string) {
 
 export function exportJSON(): string {
   return JSON.stringify(state, null, 1);
+}
+
+// ------------------------------------------------------------------ trips
+/** The trip being planned for a place (one per place), created on demand. */
+export function tripFor(place: { key: string; title: string; image?: string }, create = false): Trip | undefined {
+  const t = state.trips.find((x) => x.place === place.key);
+  if (t || !create) return t;
+  const trip: Trip = { id: crypto.randomUUID().slice(0, 8), place: place.key, title: place.title, image: place.image, days: 3, spots: [], notes: {}, created: Date.now(), updated: Date.now() };
+  update((s) => {
+    s.trips.push(trip);
+  });
+  return trip;
+}
+
+export function updateTrip(id: string, fn: (t: Trip) => void) {
+  update((s) => {
+    const t = s.trips.find((x) => x.id === id);
+    if (!t) return;
+    fn(t);
+    t.updated = Date.now();
+  });
+}
+
+export function toggleTripSpot(place: { key: string; title: string; image?: string }, spot: Omit<TripSpot, "day">) {
+  const trip = tripFor(place, true)!;
+  updateTrip(trip.id, (t) => {
+    const i = t.spots.findIndex((x) => x.q === spot.q);
+    if (i >= 0) t.spots.splice(i, 1);
+    else t.spots.push({ ...spot, day: null });
+  });
+}
+
+export function deleteTrip(id: string) {
+  update((s) => {
+    s.trips = s.trips.filter((t) => t.id !== id);
+  });
 }

@@ -65,3 +65,23 @@ def test_reaction_chips_follow_the_title():
     assert "Dropped it midway" in reaction_chips(sitcom) and "Not funny" in reaction_chips(sitcom)
     reviewed = {"kind": "movie", "extra": {"review": {"chips": ["Gorgeous but empty"]}}}
     assert reaction_chips(reviewed) == ["Gorgeous but empty"]
+
+
+def test_movielens_stats_mean_and_count(tmp_path, monkeypatch):
+    import numpy as np
+
+    from cinegraph import config
+    from cinegraph.export_static import movielens_stats
+
+    d = tmp_path / "movielens" / "ml-test"
+    d.mkdir(parents=True)
+    np.savez_compressed(d / "ratings.npz", user=np.arange(25), title_id=np.array([7] * 21 + [9] * 4),
+                        rating=np.array([4.0] * 20 + [5.0] + [1.0] * 4, dtype=np.float32))
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MOVIELENS_VARIANT", "ml-test")
+    config.get_settings.cache_clear()
+    try:
+        stats = movielens_stats(min_count=20)
+    finally:
+        config.get_settings.cache_clear()
+    assert stats == {7: (round(85 / 21, 2), 21)}  # title 9 has too few ratings

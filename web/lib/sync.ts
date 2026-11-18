@@ -29,7 +29,9 @@ export function merge(a: State, b: State): State {
   for (const [k, f] of Object.entries(b.feedback)) if ((a.feedback[k]?.at ?? 0) < f.at) feedback[k] = f;
   const vaultIds = new Set<string>();
   const vault = [...a.vault, ...b.vault].filter((v) => !vaultIds.has(v.id) && vaultIds.add(v.id));
-  return migrate({ ...newer, history, feedback, vault, lists: { ...b.lists, ...a.lists }, settings: a.settings });
+  const trips = new Map<string, State["trips"][number]>();
+  for (const t of [...(a.trips ?? []), ...(b.trips ?? [])]) if (!trips.has(t.id) || trips.get(t.id)!.updated < t.updated) trips.set(t.id, t);
+  return migrate({ ...newer, history, feedback, vault, trips: [...trips.values()], lists: { ...b.lists, ...a.lists }, settings: a.settings });
 }
 
 const fileFor = (id: string) => (id === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${id}.json`);
@@ -37,6 +39,7 @@ const strip = (s: State): State => ({ ...s, settings: { ...s.settings, gistToken
 /** Does `merged` carry anything `local` didn't have (so it's worth applying)? */
 const gained = (local: State, merged: State) =>
   merged.history.length !== local.history.length || merged.vault.length !== local.vault.length ||
+  JSON.stringify(merged.trips) !== JSON.stringify(local.trips) ||
   Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.updatedAt > local.updatedAt;
 
 let running: Promise<{ id: string; changed: boolean }> | null = null;

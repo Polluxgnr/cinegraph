@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
@@ -96,8 +97,14 @@ function Hero({ space, d }: { space: string; d: DomainData }) {
   const hero = HERO[space] ?? { title: cfg.label, sub: "" };
   return (
     <section className="pt-1">
-      <h1 className="font-display text-4xl leading-tight md:text-6xl">
-        {hero.title}<span className="text-accent">?</span>
+      <h1 className="font-display text-4xl leading-tight md:text-6xl" aria-label={`${hero.title}?`}>
+        {hero.title.split(" ").map((w, i) => (
+          <motion.span key={`${w}${i}`} className="mr-[0.25em] inline-block" initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
+                       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ delay: i * 0.07, duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}>
+            {w}
+          </motion.span>
+        ))}
+        <motion.span className="inline-block text-accent" initial={{ opacity: 0, rotate: -20 }} animate={{ opacity: 1, rotate: 0 }} transition={{ delay: 0.35, type: "spring" }}>?</motion.span>
       </h1>
       <p className="mt-1 text-sm text-muted">{hero.sub}</p>
       {isFilmData(d) && <FilmSearch films={d} />}

@@ -88,6 +88,20 @@ the list. Loading is a single shared promise, so concurrent callers cannot overw
 - **Everything**: answers lose up to half their weight over ~3 years (tastes drift; favourites never fade), and a list
   never shows more than two titles of one saga.
 
+### Individual opinions vs general scores
+The film recommender learns from **individual** ratings: MovieLens 32M is 32 million (person, film, rating) triples,
+factorised with ALS so that "people who rated like you" becomes a feature, and your own answers are folded into
+the same space. Per-film MovieLens averages (`mlr`, `mlc`) and TMDB's audience score are pooled into the crowd
+prior. Critics' scores (Rotten Tomatoes, Metacritic, IMDb via Wikidata) are shown for transparency but are not
+model inputs: they are sparse and not reliably dated. For music, Deezer's related artists come from aggregated
+listening, not from individual profiles; other spaces rely on content similarity and popularity.
+
+### Trips
+`lib/spots.ts` fetches spots around a place (two SPARQL queries: notable things in a radius, then photo and kind),
+adds filming locations of films you loved, and ranks them with the kinds of spots you star. `planDays` splits a
+trip's spots into days with k-means on coordinates (farthest-point initialisation, longitude scaled by
+cos(latitude)) and orders each day as a nearest-neighbour walk. Trips sync with the rest of a profile.
+
 ### Live sources in the browser
 Deezer (JSONP: top songs, previews, albums, related, playlists), Wikidata SPARQL (CORS: best spots around a place,
 filming locations of your films), YouTube embeds (trailers, videos), Spotify and Google OAuth (your own clients,

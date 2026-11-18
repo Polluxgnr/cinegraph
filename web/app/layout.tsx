@@ -28,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body className="min-h-dvh antialiased">
+        <div className="aurora" aria-hidden />
         <Nav />
         <main className="relative z-10 px-4 pb-28 pt-4 md:ml-64 md:px-8 md:pb-12 md:pt-20"><div className="mx-auto max-w-6xl">{children}</div></main>
         <AppShell />

@@ -16,6 +16,8 @@ import { addVault, getState, isDone, setList, setProgress, useLoaded, useStore }
 import { exploreLinks, fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import ArtistPanel from "@/components/ArtistPanel";
+import FilmSources from "@/components/FilmSources";
+import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
 import { trailerSearch } from "@/components/MediaPreview";
 import PlaceSpots from "@/components/PlaceSpots";
@@ -105,7 +107,9 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
           {f?.k === "tv" && <SeriesTracker k={e.key} seasons={f.ns ?? 0} />}
         </div>
       </div>
+      {rec && <MatchBreakdown d={d} rec={rec} s={getState()} />}
       {f && <Trailer e={e} />}
+      {f && <FilmSources f={f} />}
       {deezerArtistId(e.key) && <ArtistPanel id={deezerArtistId(e.key)!} d={d} />}
       {e.domain === "places" && <PlaceSpots e={e} />}
       {e.domain === "brands" && <BrandPieces d={d} e={e} />}

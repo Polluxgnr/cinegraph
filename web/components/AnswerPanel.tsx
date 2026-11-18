@@ -21,6 +21,11 @@ const TONE: Partial<Record<Action, string>> = {
   never: "text-nope border-nope/40",
 };
 
+const SHORT: Partial<Record<Action, string>> = {
+  fav: "★ Favourite", loved: "Loved", liked: "Liked", ok: "OK", disliked: "Nope", dropped: "Dropped", watching: "Watching",
+  asap: "Soon!", want: "My list", maybe: "Maybe", later: "Not now", unknown: "No idea", never: "Never",
+};
+
 /**
  * Two-step answer: "Seen it?" then how it felt (with reaction chips drawn from what people say
  * about this title), or "Not seen" then whether you'd watch it. Single-step domains skip step 1.
@@ -29,10 +34,13 @@ export default function AnswerPanel({
   e,
   onAnswer,
   compact = false,
+  dense = false,
 }: {
   e: Entity;
   onAnswer: (a: Action, extra: { chips?: string[] }) => void;
   compact?: boolean;
+  /** swipe deck: on phones, small buttons with short labels so card + answers fit one screen */
+  dense?: boolean;
 }) {
   const cfg = DOMAIN[e.domain];
   const [step, setStep] = useState<"ask" | "seen" | "unseen">(cfg?.singleStep ? "seen" : "ask");
@@ -47,10 +55,15 @@ export default function AnswerPanel({
         setChips([]);
         setStep(cfg?.singleStep ? "seen" : "ask");
       }}
-      className={`rounded-xl border bg-panel px-3 py-2.5 text-sm font-medium transition hover:bg-panel-2 ${TONE[a] ?? ""}`}
+      className={`rounded-xl border bg-panel font-medium transition hover:bg-panel-2 active:scale-95 ${dense ? "px-1.5 py-2 text-[13px] leading-tight md:px-3 md:py-2.5 md:text-sm" : "px-3 py-2.5 text-sm"} ${TONE[a] ?? ""}`}
       title={`Key ${k}`}
     >
-      {label}
+      {dense && label.length > 11 ? (
+        <>
+          <span className="md:hidden">{SHORT[a] ?? label}</span>
+          <span className="hidden md:inline">{label}</span>
+        </>
+      ) : label}
     </button>
   );
 
@@ -58,10 +71,10 @@ export default function AnswerPanel({
   if (step === "ask") {
     return (
       <div className={`grid grid-cols-2 gap-2 ${compact ? "" : "text-base"}`}>
-        <button onClick={() => setStep("seen")} className="rounded-xl border border-like/40 bg-panel py-3 font-semibold text-like hover:bg-panel-2">
+        <button onClick={() => setStep("seen")} className={`rounded-xl border border-like/40 bg-panel font-semibold text-like hover:bg-panel-2 active:scale-95 ${dense ? "py-2.5 md:py-3" : "py-3"}`}>
           {cfg.seen}
         </button>
-        <button onClick={() => setStep("unseen")} className="rounded-xl border border-unseen/40 bg-panel py-3 font-semibold text-unseen hover:bg-panel-2">
+        <button onClick={() => setStep("unseen")} className={`rounded-xl border border-unseen/40 bg-panel font-semibold text-unseen hover:bg-panel-2 active:scale-95 ${dense ? "py-2.5 md:py-3" : "py-3"}`}>
           {cfg.unseen}
         </button>
       </div>
@@ -71,7 +84,7 @@ export default function AnswerPanel({
   return (
     <div className="space-y-2">
       {step === "seen" && reactions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className={dense ? "no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 md:flex-wrap" : "flex flex-wrap gap-1.5"}>
           {reactions.map((c) => (
             <button
               key={c}
@@ -84,7 +97,7 @@ export default function AnswerPanel({
           ))}
         </div>
       )}
-      <div className={`grid gap-2 ${actions.length > 4 ? "grid-cols-3" : "grid-cols-2"}`}>{actions.map(([a, l], i) => btn(a, l, i + 1))}</div>
+      <div className={`grid ${dense ? "gap-1.5 md:gap-2" : "gap-2"} ${actions.length > 4 ? (dense ? "grid-cols-4 md:grid-cols-3" : "grid-cols-3") : actions.length === 4 && dense ? "grid-cols-4 md:grid-cols-2" : "grid-cols-2"}`}>{actions.map(([a, l], i) => btn(a, l, i + 1))}</div>
       {!cfg.singleStep && (
         <button className="text-xs text-muted hover:text-ink" onClick={() => setStep("ask")}>
           ← back

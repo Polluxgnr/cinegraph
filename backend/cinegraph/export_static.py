@@ -120,7 +120,7 @@ FILM_KEYS = {
     "d": "release / first air date", "rt": "runtime (min, per episode for series)", "ns": "seasons",
     "ne": "episodes", "lang": "original language (VO)", "ov": "overview", "g": "genres", "kw": "keywords",
     "c": "countries", "pop": "popularity", "va": "vote average /10", "vc": "vote count", "img": "poster url",
-    "bd": "backdrop url", "tr": "YouTube trailer key", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
+    "bd": "backdrop url", "tr": "YouTube trailer key", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
     "cre": "creators", "mus": "composers", "coll": "collection key", "aw": "awards", "nom": "nominations",
     "src": "based on", "inf": "influenced by", "loc": "narrative locations", "sub": "main subjects",
     "prov": "FR streaming (subscription / free)", "rent": "FR rent / buy", "links": "outbound links",
@@ -132,7 +132,24 @@ NOT_A_SAGA = re.compile(r"(list of|greatest|best |feature film|animated feature|
                         r"criterion|registry|canon|filmography|anthology film|productions$)", re.I)
 
 
+def movielens_stats(min_count: int = 20) -> dict[int, tuple[float, int]]:
+    """title_id -> (mean rating /5, number of ratings) from the individual MovieLens ratings, if downloaded."""
+    from .config import get_settings
+
+    s = get_settings()
+    path = s.data_dir / "movielens" / s.movielens_variant / "ratings.npz"
+    if not path.exists():
+        return {}
+    z = np.load(path)
+    tid, r = z["title_id"].astype(np.int64), z["rating"].astype(np.float64)
+    n = np.bincount(tid)
+    tot = np.bincount(tid, weights=r)
+    ids = np.nonzero(n >= min_count)[0]
+    return {int(i): (round(float(tot[i] / n[i]), 2), int(n[i])) for i in ids}
+
+
 def export_films(out: Path) -> dict:
+    ml = movielens_stats()
     rows = db.fetchall("""
         SELECT t.*, e.embedding FROM titles t JOIN title_embeddings e ON e.title_id = t.id
         ORDER BY t.id""")
@@ -191,6 +208,7 @@ def export_films(out: Path) -> dict:
             "pop": round(float(r["popularity"] or 0), 2), "va": r["vote_average"], "vc": r["vote_count"],
             "img": _img(r), "bd": TMDB_IMG + "w780" + r["backdrop_path"] if r["backdrop_path"] else None,
             "tr": (r["extra"] or {}).get("trailer"),
+            "mlr": ml.get(r["id"], (None, None))[0], "mlc": ml.get(r["id"], (None, None))[1],
             "cast": cr.get("cast", [])[:12], "dir": cr.get("director", []), "wri": cr.get("writer", [])[:4],
             "cre": cr.get("creator", []), "mus": cr.get("composer", [])[:2],
             "coll": coll_of.get(r["id"]), "aw": lab("award"), "nom": lab("nominated", 4), "src": lab("based_on", 3),
