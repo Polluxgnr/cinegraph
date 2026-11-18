@@ -57,3 +57,38 @@ describe("trip planning", () => {
     expect(planDays([], 3)).toHaveLength(3);
   });
 });
+
+describe("deletions sync", () => {
+  it("a list item removed on one device stays removed after merging", () => {
+    const phone = device([], 200);
+    phone.deleted = { "list:films:1": 150 };
+    const laptop = device([], 100);
+    laptop.lists["films:1"] = { key: "films:1", domain: "films", added: 50, status: "want" };
+    expect(merge(laptop, phone).lists["films:1"]).toBeUndefined();
+    expect(merge(phone, laptop).lists["films:1"]).toBeUndefined();
+  });
+
+  it("re-adding after the deletion wins", () => {
+    const a = device([], 300);
+    a.lists["films:1"] = { key: "films:1", domain: "films", added: 250, status: "want" };
+    const b = device([], 200);
+    b.deleted = { "list:films:1": 150 };
+    expect(merge(b, a).lists["films:1"]?.added).toBe(250);
+  });
+
+  it("an undone answer doesn't come back from the other device", () => {
+    const answered = device([fb("films:9", "loved", 100)], 100);
+    const undone = device([], 120);
+    undone.deleted = { "hist:films:9|100": 120 };
+    const m = merge(answered, undone);
+    expect(m.feedback["films:9"]).toBeUndefined();
+    expect(m.history).toHaveLength(0);
+  });
+
+  it("keeps your own items from both devices", () => {
+    const item = (id: string) => ({ id, domain: "brands", title: id, tags: [], created: 1, source: "manual" });
+    const a = device([], 10, { custom: [item("brands:custom:a")] });
+    const b = device([], 20, { custom: [item("brands:custom:b")] });
+    expect(merge(a, b).custom.map((c) => c.id).sort()).toEqual(["brands:custom:a", "brands:custom:b"]);
+  });
+});

@@ -16,10 +16,15 @@ function headers(token: string) {
 
 export function merge(a: State, b: State): State {
   const newer = a.updatedAt >= b.updatedAt ? a : b;
+  // deletions from either side win over anything older than them
+  const deleted: Record<string, number> = { ...(b.deleted ?? {}) };
+  for (const [k, t] of Object.entries(a.deleted ?? {})) deleted[k] = Math.max(t, deleted[k] ?? 0);
+  const gone = (k: string, at: number) => (deleted[k] ?? -1) >= at;
   const seen = new Set<string>();
   const history = [...a.history, ...b.history]
     .sort((x, y) => x.at - y.at)
     .filter((h) => {
+      if (deleted[`hist:${h.key}|${h.at}`]) return false;
       const k = `${h.key}|${h.at}|${h.action}`;
       if (seen.has(k)) return false;
       seen.add(k);
@@ -27,11 +32,15 @@ export function merge(a: State, b: State): State {
     });
   const feedback = { ...b.feedback, ...a.feedback };
   for (const [k, f] of Object.entries(b.feedback)) if ((a.feedback[k]?.at ?? 0) < f.at) feedback[k] = f;
+  for (const [k, f] of Object.entries(feedback)) if (deleted[`hist:${k}|${f.at}`]) delete feedback[k];
   const vaultIds = new Set<string>();
-  const vault = [...a.vault, ...b.vault].filter((v) => !vaultIds.has(v.id) && vaultIds.add(v.id));
+  const vault = [...a.vault, ...b.vault].filter((v) => !gone(`vault:${v.id}`, v.created) && !vaultIds.has(v.id) && vaultIds.add(v.id));
+  const lists = Object.fromEntries(Object.entries({ ...b.lists, ...a.lists }).filter(([k, l]) => !gone(`list:${k}`, l.added)));
+  const customIds = new Set<string>();
+  const custom = [...a.custom, ...b.custom].filter((c) => !gone(`custom:${c.id}`, c.created) && !customIds.has(c.id) && customIds.add(c.id));
   const trips = new Map<string, State["trips"][number]>();
-  for (const t of [...(a.trips ?? []), ...(b.trips ?? [])]) if (!trips.has(t.id) || trips.get(t.id)!.updated < t.updated) trips.set(t.id, t);
-  return migrate({ ...newer, history, feedback, vault, trips: [...trips.values()], lists: { ...b.lists, ...a.lists }, settings: a.settings });
+  for (const t of [...(a.trips ?? []), ...(b.trips ?? [])]) if (!gone(`trip:${t.id}`, t.updated) && (!trips.has(t.id) || trips.get(t.id)!.updated < t.updated)) trips.set(t.id, t);
+  return migrate({ ...newer, history, feedback, vault, custom, deleted, trips: [...trips.values()], lists, settings: a.settings });
 }
 
 const fileFor = (id: string) => (id === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${id}.json`);
@@ -40,7 +49,8 @@ const strip = (s: State): State => ({ ...s, settings: { ...s.settings, gistToken
 const gained = (local: State, merged: State) =>
   merged.history.length !== local.history.length || merged.vault.length !== local.vault.length ||
   JSON.stringify(merged.trips) !== JSON.stringify(local.trips) ||
-  Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.updatedAt > local.updatedAt;
+  Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.custom.length !== local.custom.length ||
+  Object.keys(merged.deleted ?? {}).length !== Object.keys(local.deleted ?? {}).length || merged.updatedAt > local.updatedAt;
 
 let running: Promise<{ id: string; changed: boolean }> | null = null;
 

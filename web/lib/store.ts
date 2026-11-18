@@ -151,6 +151,8 @@ export interface State {
   settings: Settings;
   /** trips you're planning: spots per day, like a travel journal */
   trips: Trip[];
+  /** deletions, so they sync: "list:<key>" | "custom:<id>" | "trip:<id>" | "vault:<id>" | "hist:<key>|<at>" -> when */
+  deleted: Record<string, number>;
   spotify?: {
     connectedAt: number;
     topArtists: { name: string; genres: string[]; image?: string; url?: string }[];
@@ -173,6 +175,7 @@ export function emptyState(): State {
     learned: { ranker: {}, arms: {} },
     custom: [],
     trips: [],
+    deleted: {},
     imports: {},
     settings: {
       space: "films",
@@ -307,6 +310,8 @@ export interface ProfileInfo {
 export interface Profiles {
   active: string;
   list: ProfileInfo[];
+  /** deleted profile ids -> when (so a deletion reaches the other devices) */
+  deleted?: Record<string, number>;
 }
 let profiles: Profiles = { active: "default", list: [{ id: "default", name: "Me", emoji: "🙂" }] };
 const stateKey = (id: string) => (id === "default" ? "state" : `state:${id}`);
@@ -375,7 +380,7 @@ export async function renameProfile(id: string, name: string, emoji: string) {
 
 export async function deleteProfile(id: string) {
   if (id === "default" || id === profiles.active) return;
-  profiles = { ...profiles, list: profiles.list.filter((p) => p.id !== id) };
+  profiles = { ...profiles, list: profiles.list.filter((p) => p.id !== id), deleted: { ...profiles.deleted, [id]: Date.now() } };
   await saveProfiles();
   await idbDelete(stateKey(id)).catch(() => {});
   emit();
@@ -384,10 +389,13 @@ export async function deleteProfile(id: string) {
 /** Profiles created on another device (from sync) appear here too; nothing is ever removed this way. */
 export async function mergeProfiles(remote: Profiles | undefined) {
   if (!remote?.list?.length) return;
+  const deleted = { ...remote.deleted, ...profiles.deleted };
+  for (const [id, t] of Object.entries(remote.deleted ?? {})) deleted[id] = Math.max(t, profiles.deleted?.[id] ?? 0);
   const known = new Set(profiles.list.map((p) => p.id));
-  const extra = remote.list.filter((p) => !known.has(p.id));
-  if (!extra.length) return;
-  profiles = { ...profiles, list: [...profiles.list, ...extra] };
+  const extra = remote.list.filter((p) => !known.has(p.id) && !deleted[p.id]);
+  const list = [...profiles.list, ...extra].filter((p) => p.id === "default" || p.id === profiles.active || !deleted[p.id]);
+  if (list.length === profiles.list.length && !extra.length && JSON.stringify(deleted) === JSON.stringify(profiles.deleted ?? {})) return;
+  profiles = { ...profiles, list, deleted };
   await saveProfiles();
   emit();
 }
@@ -493,6 +501,7 @@ export function recordFeedback(f: Omit<Feedback, "at"> & { at?: number }) {
     } else if (isDone(fb.action)) {
       if (s.lists[fb.key]) s.lists[fb.key].status = "done";
     } else if (fb.action === "never") {
+      if (s.lists[fb.key]) s.deleted[`list:${fb.key}`] = fb.at;
       delete s.lists[fb.key];
     }
   });
@@ -503,6 +512,7 @@ export function undoLast(): Feedback | null {
   if (!last) return null;
   update((s) => {
     s.history.pop();
+    s.deleted[`hist:${last.key}|${last.at}`] = Date.now();
     const prev = [...s.history].reverse().find((h) => h.key === last.key);
     if (prev) s.feedback[last.key] = prev;
     else delete s.feedback[last.key];
@@ -512,7 +522,10 @@ export function undoLast(): Feedback | null {
 
 export function setList(key: string, domain: string, status: ListEntry["status"] | null) {
   update((s) => {
-    if (status === null) delete s.lists[key];
+    if (status === null) {
+      delete s.lists[key];
+      s.deleted[`list:${key}`] = Date.now();
+    }
     else s.lists[key] = { ...(s.lists[key] ?? { key, domain, added: Date.now() }), status };
   });
 }
@@ -532,6 +545,7 @@ export function addVault(v: Omit<VaultItem, "id" | "created">) {
 export function removeVault(id: string) {
   update((s) => {
     s.vault = s.vault.filter((v) => v.id !== id);
+    s.deleted[`vault:${id}`] = Date.now();
   });
 }
 
@@ -566,6 +580,7 @@ export function removeCustom(id: string) {
     s.custom = s.custom.filter((c) => c.id !== id);
     delete s.feedback[id];
     delete s.lists[id];
+    s.deleted[`custom:${id}`] = Date.now();
   });
 }
 
@@ -610,5 +625,6 @@ export function toggleTripSpot(place: { key: string; title: string; image?: stri
 export function deleteTrip(id: string) {
   update((s) => {
     s.trips = s.trips.filter((t) => t.id !== id);
+    s.deleted[`trip:${id}`] = Date.now();
   });
 }
