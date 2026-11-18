@@ -8,7 +8,7 @@
  */
 import JSZip from "jszip";
 import { loadSpace as loadDomain } from "./custom";
-import { loadFilms, manifest } from "./data";
+import { filmDetails, isFilmData, loadFilms, manifest } from "./data";
 import { DOMAIN } from "./domains";
 import { actionLabel } from "./domains";
 import { getState, recordFeedback, update, type Action } from "./store";
@@ -130,6 +130,7 @@ export async function exportObsidian() {
     if (!d) continue;
     const answers = Object.values(s.feedback).filter((f) => f.domain === name && f.action !== "unknown" && f.action !== "never");
     if (!answers.length) continue;
+    if (isFilmData(d)) await Promise.all(answers.map((a) => d.films[d.index.get(a.key) ?? -1]).filter(Boolean).map((fl) => filmDetails(fl)));
     const folder = root.folder(`Taste/${DOMAIN[name]?.label ?? name}`)!;
     index.push(`## ${DOMAIN[name]?.label ?? name}`, "");
     for (const f of answers.sort((a, b) => b.at - a.at)) {

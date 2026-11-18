@@ -100,6 +100,56 @@ function norms(m: QMatrix | null): Float32Array {
   return out;
 }
 
+const TMDB = "https://image.tmdb.org/t/p/";
+
+/** Format 3 stores poster paths and link ids; rebuild the URLs once, at load time. */
+export function expandFilm(f: Film): Film {
+  if (f.img?.startsWith("/")) f.img = `${TMDB}w342${f.img}`;
+  if (f.bd?.startsWith("/")) f.bd = `${TMDB}w780${f.bd}`;
+  if (f.x && !f.links) f.links = filmLinks(f);
+  return f;
+}
+
+export function filmLinks(f: Film): Record<string, string> {
+  const x = f.x ?? {};
+  const tv = f.k === "tv";
+  const out: Record<string, string> = {};
+  if (x.tm) out.tmdb = `https://www.themoviedb.org/${tv ? "tv" : "movie"}/${x.tm}`;
+  if (x.im) out.imdb = `https://www.imdb.com/title/${x.im}/`;
+  if (x.wd) out.wikidata = `https://www.wikidata.org/wiki/${x.wd}`;
+  if (x.ac) out.allocine = tv ? `https://www.allocine.fr/series/ficheserie_gen_cserie=${x.ac}.html` : `https://www.allocine.fr/film/fichefilm_gen_cfilm=${x.ac}.html`;
+  if (x.sc) out.senscritique = `https://www.senscritique.com/${tv ? "serie" : "film"}/-/${x.sc}`;
+  if (x.lb) out.letterboxd = `https://letterboxd.com/film/${x.lb}/`;
+  else if (!tv && x.tm) out.letterboxd = `https://letterboxd.com/tmdb/${x.tm}/`;
+  if (x.wp) out.wikipedia = `https://${x.wp.slice(0, 2)}.wikipedia.org/wiki/${x.wp.slice(3)}`;
+  if (x.tm) out.justwatch = `https://www.themoviedb.org/${tv ? "tv" : "movie"}/${x.tm}/watch?locale=FR`;
+  return out;
+}
+
+const detailShards = new Map<number, Promise<Record<string, Partial<Film>>>>();
+
+/** Synopsis, full keywords & cast, rent/buy offers, nominations: fetched with the film's shard, merged in place. */
+export async function filmDetails(f: Film): Promise<Film> {
+  if (f.full) return f;
+  const m = await manifest();
+  const shards = m.domains.films?.detail_shards;
+  if (!shards) {
+    f.full = true; // older catalogues carry everything inline
+    return f;
+  }
+  const n = f.id % shards;
+  if (!detailShards.has(n)) detailShards.set(n, json<Record<string, Partial<Film>>>(`/data/films/details/${n}.json`).catch(() => ({})));
+  const d = (await detailShards.get(n)!)[String(f.id)] ?? {};
+  Object.assign(f, d, { full: true });
+  if (d.jw && f.links) f.links.justwatch = d.jw;
+  return f;
+}
+
+/** Every film's details (for full-text search and exports). */
+export async function allFilmDetails(d: FilmData): Promise<void> {
+  await Promise.all(d.films.map((f) => filmDetails(f)));
+}
+
 export function filmEntity(f: Film): Entity {
   const sub = [f.k === "tv" ? "Series" : "Film", f.y, f.g?.slice(0, 2).join(" / ")].filter(Boolean).join(" · ");
   return {
@@ -154,6 +204,7 @@ export function loadFilms(): Promise<FilmData> {
           qmatrix("/data/films/cf"),
           json<number[]>("/data/films/cf_ids.json").catch(() => [] as number[]),
         ]);
+        films.forEach(expandFilm);
         const entities = films.map(filmEntity);
         const collectionOf = new Map(collections.map((c) => [c.key, c]));
         return {

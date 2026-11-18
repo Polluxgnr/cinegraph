@@ -1,5 +1,5 @@
 /** Natural-language search over films & series: AI parse when a key is set, regex parse otherwise. */
-import type { FilmData } from "../data";
+import { allFilmDetails, type FilmData } from "../data";
 import { aiEnabled, type Intent, parseQueryAI } from "../ai";
 import { normTitle } from "../text";
 import type { State } from "../store";
@@ -72,6 +72,7 @@ export interface QueryResult {
 }
 
 export async function runQuery(d: FilmData, s: State, q: string, n = 12): Promise<QueryResult> {
+  await allFilmDetails(d); // synopses are searched too (one-off ~3 MB, cached)
   let intent: Intent | null = null;
   let parser: "ai" | "rules" = "rules";
   if (aiEnabled()) {

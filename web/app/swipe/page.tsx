@@ -16,6 +16,7 @@ import { answer } from "@/lib/engine/learn";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { type Action, getState, undoLast, useLoaded, useStore } from "@/lib/store";
 import { fmtRuntime, LANG_NAMES } from "@/lib/text";
+import { useFilmDetails } from "@/lib/useFilmDetails";
 
 const THRESHOLD = 110;
 
@@ -193,6 +194,7 @@ function Deck({ domain }: { domain: string }) {
 function CardMeta({ d, card }: { d: DomainData; card: Card }) {
   const e = card.rec.entity;
   const f = e.film;
+  useFilmDetails(f);
   if (f && isFilmData(d)) {
     const fd = d as FilmData;
     const names = (ids?: number[], n = 3) => (ids ?? []).slice(0, n).map((i) => fd.people[i]).join(", ");

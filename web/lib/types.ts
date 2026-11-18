@@ -40,6 +40,11 @@ export interface Film {
   prov?: string[];
   rent?: string[];
   links?: Record<string, string>;
+  /** compact link ids (format 3), expanded into `links` by the loader */
+  x?: { tm?: number; im?: string; wd?: string; ac?: string | number; sc?: string | number; lb?: string; wp?: string };
+  jw?: string; // JustWatch link (details)
+  /** details (synopsis, full keywords & cast, rent, nominations) have been merged in */
+  full?: boolean;
   chips?: string[];
   blk?: string;
 }
@@ -70,7 +75,7 @@ export interface Manifest {
   version: number;
   built_at: string;
   embed_model: string;
-  domains: Record<string, { label: string; count: number; images?: number; collections?: number; cf_items?: number; people?: number; extras?: Record<string, number> }>;
+  domains: Record<string, { label: string; count: number; images?: number; collections?: number; cf_items?: number; people?: number; detail_shards?: number; extras?: Record<string, number> }>;
 }
 
 /** A common view of any recommendable thing, so one engine and one card serve every domain. */

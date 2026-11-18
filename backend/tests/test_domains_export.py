@@ -85,3 +85,18 @@ def test_movielens_stats_mean_and_count(tmp_path, monkeypatch):
     finally:
         config.get_settings.cache_clear()
     assert stats == {7: (round(85 / 21, 2), 21)}  # title 9 has too few ratings
+
+
+def test_reduce_dims_keeps_neighbours():
+    import numpy as np
+
+    from cinegraph.export_static import reduce_dims
+
+    rng = np.random.default_rng(0)
+    base = rng.normal(size=(400, 24))
+    m = base @ rng.normal(size=(24, 384))  # 384-d vectors living in a 24-d subspace
+    m /= np.linalg.norm(m, axis=1, keepdims=True)
+    z, kept = reduce_dims(m, 64)
+    assert z.shape == (400, 64) and kept > 0.99
+    near = lambda x: np.argsort(-(x @ x[0]))[1:6]  # noqa: E731
+    assert set(near(m)) == set(near(z))

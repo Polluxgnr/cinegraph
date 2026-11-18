@@ -84,9 +84,52 @@ def reaction_chips(t: dict) -> list[str]:
 
 # ------------------------------------------------------------------ films + series
 def _img(t: dict) -> str | None:
+    """TMDB posters are stored as their path ("/abc.jpg"; the app prefixes the w342 base), others as full URLs."""
     if t.get("poster_path"):
-        return TMDB_IMG + "w342" + t["poster_path"]
+        return t["poster_path"]
     return (t.get("extra") or {}).get("image")
+
+
+def _ids(t: dict) -> dict:
+    """Outbound link ids, rebuilt into URLs by the app (web/lib/data.ts filmLinks): ~4x smaller than URLs."""
+    ex = (t.get("extra") or {}).get("links") or {}
+    out = {"tm": t["tmdb_id"]}
+    if t.get("imdb_id"):
+        out["im"] = t["imdb_id"]
+    if t.get("wikidata_id"):
+        out["wd"] = t["wikidata_id"]
+    ac = ex.get("allocine_film") if t["kind"] == "movie" else ex.get("allocine_series")
+    if ac:
+        out["ac"] = ac
+    if ex.get("senscritique"):
+        out["sc"] = ex["senscritique"]
+    if ex.get("letterboxd"):
+        out["lb"] = ex["letterboxd"]
+    if ex.get("frwiki"):
+        out["wp"] = "fr:" + ex["frwiki"].replace(" ", "_")
+    elif ex.get("enwiki"):
+        out["wp"] = "en:" + ex["enwiki"].replace(" ", "_")
+    return out
+
+
+def reduce_dims(m: np.ndarray, k: int = 192) -> tuple[np.ndarray, float]:
+    """PCA to k dimensions (centred, top-k right singular vectors), rows re-normalised: halves the download
+    while keeping cosine neighbourhoods. Returns the matrix and the share of variance kept."""
+    if m.shape[1] <= k or m.shape[0] <= k:
+        return m, 1.0
+    c = m - m.mean(axis=0, keepdims=True)
+    _, s, vt = np.linalg.svd(c, full_matrices=False)
+    z = c @ vt[:k].T
+    z /= np.linalg.norm(z, axis=1, keepdims=True) + 1e-9
+    return z.astype(np.float32), float((s[:k] ** 2).sum() / (s ** 2).sum())
+
+
+DETAIL_SHARDS = 64
+CORE_KW = CORE_CAST = 8
+
+
+DETAIL_SHARDS = 64
+CORE_KW = CORE_CAST = 8
 
 
 def _links(t: dict) -> dict:
@@ -119,11 +162,11 @@ FILM_KEYS = {
     "id": "internal id", "k": "kind movie|tv", "t": "title", "ot": "original title", "y": "year",
     "d": "release / first air date", "rt": "runtime (min, per episode for series)", "ns": "seasons",
     "ne": "episodes", "lang": "original language (VO)", "ov": "overview", "g": "genres", "kw": "keywords",
-    "c": "countries", "pop": "popularity", "va": "vote average /10", "vc": "vote count", "img": "poster url",
-    "bd": "backdrop url", "tr": "YouTube trailer key", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
+    "c": "countries", "pop": "popularity", "va": "vote average /10", "vc": "vote count", "img": "poster: TMDB path (/x.jpg, w342) or full url", "x": "link ids (tm imdb wd ac sc lb wp)",
+    "bd": "backdrop TMDB path (w780)", "tr": "YouTube trailer key", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
     "cre": "creators", "mus": "composers", "coll": "collection key", "aw": "awards", "nom": "nominations",
     "src": "based on", "inf": "influenced by", "loc": "narrative locations", "sub": "main subjects",
-    "prov": "FR streaming (subscription / free)", "rent": "FR rent / buy", "links": "outbound links",
+    "prov": "FR streaming (subscription / free)", "rent": "FR rent / buy", "details/<id % 64>.json": "ov kw cast rent nom jw, loaded on demand",
     "chips": "reaction chips", "blk": "hard-filter reason (romance / musical / sitcom)",
 }
 
@@ -195,6 +238,7 @@ def export_films(out: Path) -> dict:
             coll_of[i] = g["key"]
 
     catalog, vecs = [], []
+    details: list[dict[int, dict]] = [{} for _ in range(DETAIL_SHARDS)]
     for r in rows:
         cr = credits[r["id"]]
         f = facts[r["id"]]
@@ -203,19 +247,23 @@ def export_films(out: Path) -> dict:
         t = {
             "id": r["id"], "k": r["kind"], "t": r["title"], "y": r["year"],
             "d": r["release_date"].isoformat() if r["release_date"] else None,
-            "rt": r["runtime"], "lang": r["original_language"], "ov": r["overview"],
-            "g": r["genres"], "kw": (r["keywords"] or [])[:25], "c": (r["countries"] or [])[:3],
+            "rt": r["runtime"], "lang": r["original_language"],
+            "g": r["genres"], "kw": (r["keywords"] or [])[:CORE_KW], "c": (r["countries"] or [])[:3],
             "pop": round(float(r["popularity"] or 0), 2), "va": r["vote_average"], "vc": r["vote_count"],
-            "img": _img(r), "bd": TMDB_IMG + "w780" + r["backdrop_path"] if r["backdrop_path"] else None,
+            "img": _img(r), "bd": r["backdrop_path"] or None,
             "tr": (r["extra"] or {}).get("trailer"),
             "mlr": ml.get(r["id"], (None, None))[0], "mlc": ml.get(r["id"], (None, None))[1],
-            "cast": cr.get("cast", [])[:12], "dir": cr.get("director", []), "wri": cr.get("writer", [])[:4],
+            "cast": cr.get("cast", [])[:CORE_CAST], "dir": cr.get("director", []), "wri": cr.get("writer", [])[:4],
             "cre": cr.get("creator", []), "mus": cr.get("composer", [])[:2],
-            "coll": coll_of.get(r["id"]), "aw": lab("award"), "nom": lab("nominated", 4), "src": lab("based_on", 3),
+            "coll": coll_of.get(r["id"]), "aw": lab("award"), "src": lab("based_on", 3),
             "inf": lab("influenced_by", 4), "loc": lab("narrative_location", 4), "sub": lab("main_subject", 4),
-            "prov": sorted(provs[r["id"]]["prov"]), "rent": sorted(provs[r["id"]]["rent"]),
-            "links": _links(r), "chips": reaction_chips(r),
+            "prov": sorted(provs[r["id"]]["prov"]),
+            "x": _ids(r), "chips": reaction_chips(r),
         }
+        # loaded on demand when the film is shown (web/lib/data.ts filmDetails)
+        detail = {"ov": r["overview"], "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:12],
+                  "rent": sorted(provs[r["id"]]["rent"]), "nom": lab("nominated", 4), "jw": ex.get("watch_link")}
+        details[r["id"] % DETAIL_SHARDS][r["id"]] = {k: v for k, v in detail.items() if v not in (None, [], {}, "")}
         if r["original_title"] and r["original_title"] != r["title"]:
             t["ot"] = r["original_title"]
         if r["kind"] == "tv":
@@ -233,7 +281,12 @@ def export_films(out: Path) -> dict:
     size = write_json(fd / "catalog.json", catalog)
     write_json(fd / "people.json", names)
     write_json(fd / "collections.json", collections)
-    write_matrix(fd / "emb", np.vstack(vecs))
+    (fd / "details").mkdir(exist_ok=True)
+    for i, shard in enumerate(details):
+        write_json(fd / "details" / f"{i}.json", shard)
+    emb, kept = reduce_dims(np.vstack(vecs))
+    log.info("film embeddings: %d -> %d dims (%.0f%% of variance kept)", vecs[0].shape[0], emb.shape[1], kept * 100)
+    write_matrix(fd / "emb", emb)
     model = cf.load_model()
     cf_ids = []
     if model is not None:
@@ -245,7 +298,8 @@ def export_films(out: Path) -> dict:
     log.info("films: %d titles (%d with images), %d collections, %d people, %.1f MB",
              len(catalog), with_img, len(collections), len(names), size / 1e6)
     return {"count": len(catalog), "images": with_img, "collections": len(collections), "people": len(names),
-            "cf_items": len(cf_ids), "dim": int(vecs[0].shape[0]) if vecs else 0}
+            "format": 3, "detail_shards": DETAIL_SHARDS,
+            "cf_items": len(cf_ids), "dim": int(emb.shape[1]) if vecs else 0}
 
 
 # ------------------------------------------------------------------ other domains

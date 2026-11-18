@@ -16,6 +16,7 @@ import { addVault, getState, isDone, setList, setProgress, useLoaded, useStore }
 import { exploreLinks, fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import ArtistPanel from "@/components/ArtistPanel";
+import { useFilmDetails } from "@/lib/useFilmDetails";
 import FilmSources from "@/components/FilmSources";
 import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
@@ -44,6 +45,7 @@ export default function ItemPage() {
 
 function Detail({ d, row }: { d: DomainData; row: number }) {
   const e = d.entities[row];
+  useFilmDetails(e.film);
   const cfg = DOMAIN[e.domain];
   const loaded = useLoaded();
   const version = useStore((s) => s.updatedAt);
