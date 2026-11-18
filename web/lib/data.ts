@@ -2,6 +2,7 @@
  * Loads the static catalogue (JSON + int8 matrices) once per session. GitHub Pages serves the
  * files gzipped and the service worker caches them, so repeat visits work offline.
  */
+import { tunePrior } from "./engine/score";
 import type { Collection, Entity, Film, Item, Manifest } from "./types";
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -184,7 +185,10 @@ const cache = new Map<string, Promise<DomainData | FilmData>>();
 let manifestP: Promise<Manifest> | null = null;
 
 export function manifest(): Promise<Manifest> {
-  manifestP ??= json<Manifest>("/data/manifest.json").catch((e) => {
+  manifestP ??= json<Manifest>("/data/manifest.json").then((m) => {
+    tunePrior(m.eval); // evidence-based starting weights for the ranker
+    return m;
+  }).catch((e) => {
     manifestP = null; // retry next time (offline, deploy in progress)
     throw e;
   });

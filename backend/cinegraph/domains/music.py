@@ -33,7 +33,7 @@ def _genre_like(title: str) -> bool:
                                          "enfant", "jeunesse", "comptine", "disney")))
 
 
-def collect(radios_per_genre: int = 8, max_artists: int = 2500, related: bool = True) -> list[Item]:
+def collect(radios_per_genre: int = 12, max_artists: int = 4000, related: bool = True) -> list[Item]:
     """Deezer's per-genre chart endpoints currently return the national chart for every genre, so the
     catalogue is built from genre *radios* instead (Jazz -> "Jazz vocal", Dance -> "Deep House"...):
     the artists playing on them, tagged with genre + sub-genre."""

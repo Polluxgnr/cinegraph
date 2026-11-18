@@ -303,8 +303,24 @@ function cos(d: DomainData, i: number, j: number): number {
 }
 
 // ------------------------------------------------------------------ ranker
+/**
+ * Starting weights before you've answered, informed by the weekly offline evaluation: if collaborative
+ * filtering finds hidden favourites better than content similarity, its feature starts stronger (capped),
+ * and popularity gets the share the evaluation's best blend gave it. Your answers then move them as usual.
+ */
+let PRIOR_W: number[] = [...DEFAULT_W];
+export function tunePrior(ev?: { als?: { ndcg10: number }; content?: { ndcg10: number }; hybrid_weights?: Record<string, number> }) {
+  const w = [...DEFAULT_W];
+  if (ev?.als && ev.content && ev.content.ndcg10 > 0) {
+    const ratio = Math.min(2.5, Math.max(0.5, ev.als.ndcg10 / ev.content.ndcg10));
+    w[F.cf] = DEFAULT_W[F.cf] * ratio;
+  }
+  if (ev?.hybrid_weights?.popularity != null) w[F.popularity] = DEFAULT_W[F.popularity] * (1 + ev.hybrid_weights.popularity);
+  PRIOR_W = w;
+}
+
 export function weights(learned: { w: number[]; n: number } | undefined): number[] {
-  return learned?.w?.length === FEATURES.length ? learned.w : DEFAULT_W;
+  return learned?.w?.length === FEATURES.length ? learned.w : PRIOR_W;
 }
 
 export function predict(w: number[], x: Float32Array): number {
@@ -357,7 +373,7 @@ export function sgdStep(w: number[], x: Float32Array, y: number, n: number): num
   const lr = 0.6 / Math.sqrt(1 + n / 10);
   const lambda = 0.02;
   const p = predict(w, x);
-  return w.map((wi, i) => wi + lr * ((y - p) * x[i] - lambda * (wi - DEFAULT_W[i])));
+  return w.map((wi, i) => wi + lr * ((y - p) * x[i] - lambda * (wi - PRIOR_W[i])));
 }
 
 export const stars = (p: number) => Math.round((0.5 + 4.5 * p) * 2) / 2;

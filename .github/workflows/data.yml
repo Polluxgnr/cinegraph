@@ -42,7 +42,7 @@ jobs:
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}  # optional: video length, likes, comments
       WIKIDATA_CONTACT: https://github.com/${{ github.repository }}
       MOVIELENS_VARIANT: ml-32m          # 32M ratings from 200k people: the "who likes what" signal
-      MOVIELENS_MIN_RATINGS: "1500"     # only well-known films become new catalogue entries
+      MOVIELENS_MIN_RATINGS: "800"      # well-known films become new catalogue entries
       GH_TOKEN: ${{ github.token }}
     defaults:
       run:
@@ -72,7 +72,7 @@ jobs:
 
       - name: TMDB (posters, credits, keywords, FR streaming)
         if: env.TMDB_API_KEY != ''
-        run: uv run cinegraph ingest tmdb --top-movies 6000 --top-tv 3000 ${{ inputs.full_tmdb && '--full' || '' }}
+        run: uv run cinegraph ingest tmdb --top-movies 9000 --top-tv 4500 ${{ inputs.full_tmdb && '--full' || '' }}
 
       - name: Trailers (TMDB videos, new titles only)
         if: env.TMDB_API_KEY != ''
