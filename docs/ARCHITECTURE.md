@@ -128,3 +128,33 @@ catalogue (stale-while-revalidate) and images (cache-first).
 `backend/cinegraph/api` (FastAPI) and the Postgres-side ranker (`recsys/pipeline.py`, LightGBM LambdaRank)
 are the v1 server implementation. They still run (`docker compose --profile server up`) and their tests still
 pass; the static app reimplements the online parts in the browser.
+
+## Measured quality
+`backend/cinegraph/recsys/evaluate.py`, run weekly after the models: for up to 2,000 MovieLens users with at
+least 15 positives (ratings >= 4/5), 20% of positives are hidden; ALS is trained without them, and each method
+ranks the catalogue films the user hasn't rated. HR@10 = share of users with a hidden favourite in the top 10,
+NDCG@10 = how high, Recall@20 = what share comes back. Methods: most popular, content (mean embedding of known
+positives), ALS, and a z-score blend. Blend weights are chosen on half of the users and reported on the other
+half. Results go into `manifest.json` (`eval`), the README badge and the Taste page, and the browser ranker
+starts from weights scaled by the measured CF/content ratio (`tunePrior`).
+
+## Catalogue format 3
+`films/catalog.json` keeps what ranking and cards need: link ids (`x`: tmdb, imdb, wikidata, allociné,
+senscritique, letterboxd, wikipedia) instead of URLs, TMDB poster/backdrop paths, 8 keywords, 8 cast. Synopsis,
+full keywords and cast, rent offers, nominations and JustWatch links are in `films/details/<id % 64>.json`,
+fetched when a film is displayed (`filmDetails`). Embeddings are PCA-reduced to 192 dimensions. The loader still
+reads older catalogues.
+
+## Security model
+Static site, no backend, so the threats are a malicious script on the page and someone reading the browser's
+storage. Tokens (GitHub, Anthropic) are encrypted with AES-GCM before any write, using a non-extractable
+CryptoKey kept in IndexedDB; plain values exist only in memory. A Content-Security-Policy (meta tag; GitHub Pages
+can't send headers) restricts scripts to the site, Deezer JSONP and Google sign-in, and network calls to the
+services the app uses. `'unsafe-inline'` remains for scripts because a static Next.js export inlines its boot
+data and nonces need a server. Device pairing uses a QR code that disappears after two minutes.
+
+## Sync and deletions
+Each profile is one Gist file. A round reads the Gist, merges every profile (history union, newest answer per
+item, unions of notes, own items and trips), applies what's new locally and writes back. Deletions are recorded
+in `deleted` ("list:<key>", "custom:<id>", "trip:<id>", "vault:<id>", "hist:<key>|<at>") and win over anything
+older; profile deletions are recorded in the profiles file.

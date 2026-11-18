@@ -9,6 +9,7 @@ everything across devices. No server: it runs entirely in your browser, on GitHu
 [![CI](https://github.com/Polluxgnr/cinegraph/actions/workflows/ci.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Polluxgnr/cinegraph/actions/workflows/pages.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/pages.yml)
 [![Catalogue](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml/badge.svg)](https://github.com/Polluxgnr/cinegraph/actions/workflows/data.yml)
+[![HR@10](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpolluxgnr.github.io%2Fcinegraph%2Fdata%2Fmanifest.json&query=%24.eval.hybrid.hr10&label=HR%4010%20%28hidden%20favourites%29&color=f2a93b)](docs/ARCHITECTURE.md#measured-quality)
 
 **One app, seven spaces.** Pick a space in the sidebar (Films & series, Videos & docs, Music, Recipes,
 Destinations, Dream garage, Style) and the whole app becomes about it: its own home, swipe deck,
@@ -60,7 +61,22 @@ flowchart LR
 - **Modular.** Each taste domain is one collector file in Python and one config entry in TypeScript; the same
   engine, card and swipe deck serve all of them.
 
+- **Measured, not claimed.** Every week the pipeline hides 20% of what 2,000 MovieLens users loved and checks
+  whether each method finds it again (HR@10, NDCG@10, Recall@20): most popular, content, collaborative
+  filtering and the hybrid. The result is in the badge above and on the Taste page, and it sets the ranker's
+  starting weights.
+
 Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Engineering
+
+| | |
+|---|---|
+| **Tests** | `backend`: pytest (ingestion, matching, ranking, evaluation protocol, export formats, a Postgres end-to-end pipeline). `web`: Vitest (engine maths, sync merges incl. deletions, trip planning, calendar export) and **Playwright** end-to-end tests on the static build, desktop and phone (swipe fits the screen, search, film sources, profiles, trip planning, no CSP violations). All run in CI on every push. |
+| **Security** | No server and no account: memory lives in your browser and, optionally, a private Gist. Tokens are AES-GCM encrypted at rest with a non-extractable browser key; a Content-Security-Policy limits where the page can send data; new devices pair by QR code (expires in 2 minutes). Secrets are never synced or exported. |
+| **Performance** | Film catalogue in a compact format (link ids instead of URLs, poster paths) with details in 64 shards loaded on demand, 192-d PCA embeddings: about 6 MB on a first visit, cached by the service worker afterwards. Recommendations are computed on-device in milliseconds. |
+| **Sync** | Read-merge-write rounds per profile; deletions are recorded (tombstones) so they propagate; the latest answer wins per item. |
+| **Data pipeline** | Weekly GitHub Actions run: resumable TMDB crawl, MovieLens 32M, Wikidata, trailers, embeddings, ALS, evaluation, static export; a source that fails keeps last week's data. |
 
 ## Use it
 
@@ -148,5 +164,6 @@ docs/      Architecture notes
 ```
 
 Data credits: TMDB (this product uses the TMDB API but is not endorsed or certified by TMDB), Wikidata &
-Wikimedia Commons, MovieLens (GroupLens, research use; only derived model factors are published),
+Wikimedia Commons, MovieLens (GroupLens, non-commercial research use: the ratings are never published; only
+derived model factors and per-film averages are, and a commercial use would require removing them),
 TheMealDB, Deezer API, YouTube.

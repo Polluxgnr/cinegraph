@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Film } from "@/lib/types";
+import { sparql } from "@/lib/wikidata";
 
 /**
  * Where a film's reputation comes from, source by source, live from open data: review scores Wikidata records
@@ -31,9 +32,7 @@ async function wikidataScores(qid: string): Promise<{ scores: Score[]; ids: Reco
     OPTIONAL { wd:${qid} p:P444 ?st . ?st ps:P444 ?score . OPTIONAL { ?st pq:P447 ?by } OPTIONAL { ?st pq:P459 ?method } OPTIONAL { ?st pq:P585 ?date } }
     OPTIONAL { wd:${qid} wdt:P1258 ?rt } OPTIONAL { wd:${qid} wdt:P1712 ?mc } OPTIONAL { wd:${qid} wdt:P345 ?imdb } OPTIONAL { wd:${qid} wdt:P1265 ?ac }
     SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". } }`;
-  const r = await fetch(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(q)}`, { headers: { Accept: "application/sparql-results+json" }, signal: AbortSignal.timeout(30_000) });
-  if (!r.ok) throw new Error(`Wikidata ${r.status}`);
-  const rows: Record<string, { value: string }>[] = (await r.json()).results.bindings;
+  const rows = (await sparql(q, 30_000)) as Record<string, { value: string }>[];
   const ids: Record<string, string> = {};
   const first = rows[0] ?? {};
   if (first.rt) ids["Rotten Tomatoes"] = first.rt.value;

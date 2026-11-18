@@ -6,6 +6,7 @@
 import { loadFilms } from "./data";
 import { getState } from "./store";
 import type { Entity } from "./types";
+import { sparql } from "./wikidata";
 
 export interface Spot { q: string; name: string; desc?: string; img?: string; type?: string; group: string; sl: number; dist: number; lat: number; lon: number; film?: string }
 
@@ -24,14 +25,6 @@ const ABSTRACT = /\b(country|empire|state|city|comune|capital|region|province|ci
 
 const groupOf = (type?: string, desc?: string) =>
   GROUPS.find(([, re]) => re.test(type ?? ""))?.[0] ?? GROUPS.find(([, re]) => re.test(desc ?? ""))?.[0] ?? "Other places";
-
-function sparql(q: string): Promise<Record<string, { value: string }>[]> {
-  return fetch(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(q)}`, {
-    headers: { Accept: "application/sparql-results+json" }, signal: AbortSignal.timeout(45_000),
-  })
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Wikidata ${r.status}`))))
-    .then((j) => j.results.bindings);
-}
 
 const point = (v?: string) => {
   const m = v?.match(/Point\(([-\d.]+) ([-\d.]+)\)/);
@@ -68,14 +61,14 @@ async function load(e: Entity, { lon, lat }: { lon: number; lat: number }): Prom
   } ORDER BY DESC(?sl) LIMIT 90`);
   const self = e.key.split(":")[1];
   let list = rows
-    .map((r) => ({ q: r.a.value.split("/").pop()!, name: r.aLabel?.value ?? "", desc: r.aDescription?.value, sl: Number(r.sl?.value ?? 0), dist: Number(r.dist?.value ?? 0), ...(point(r.loc?.value) ?? { lon, lat }) }))
+    .map((r) => ({ q: (r.a?.value ?? "").split("/").pop()!, name: r.aLabel?.value ?? "", desc: r.aDescription?.value, sl: Number(r.sl?.value ?? 0), dist: Number(r.dist?.value ?? 0), ...(point(r.loc?.value) ?? { lon, lat }) }))
     .filter((s, i, all) => s.name && s.q !== self && !/^Q\d+$/.test(s.name) && all.findIndex((x) => x.q === s.q) === i);
   const det = await sparql(`SELECT ?a (SAMPLE(?i) AS ?img) (GROUP_CONCAT(DISTINCT ?tl; separator="|") AS ?types) WHERE {
     VALUES ?a { ${list.map((x) => `wd:${x.q}`).join(" ")} }
     OPTIONAL { ?a wdt:P18 ?i }
     OPTIONAL { ?a wdt:P31 ?t . ?t rdfs:label ?tl . FILTER(LANG(?tl) = "en") }
   } GROUP BY ?a`).catch(() => []);
-  const info = new Map(det.map((r) => [r.a.value.split("/").pop()!, r]));
+  const info = new Map(det.map((r) => [(r.a?.value ?? "").split("/").pop()!, r]));
   const spots: Spot[] = list
     .map((x) => {
       const r = info.get(x.q);
@@ -96,7 +89,7 @@ async function load(e: Entity, { lon, lat }: { lon: number; lat: number }): Prom
         SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
       } LIMIT 30`).catch(() => []);
       for (const h of hits) {
-        const q = h.a.value.split("/").pop()!;
+        const q = (h.a?.value ?? "").split("/").pop()!;
         const spot = spots.find((x) => x.q === q);
         if (spot) spot.film = h.filmLabel?.value;
         else spots.unshift({ q, name: h.aLabel?.value ?? q, film: h.filmLabel?.value, sl: 0, dist: Number(h.dist?.value ?? 0), ...(point(h.loc?.value) ?? { lon, lat }), type: "filming location", group: "Filming locations" });
