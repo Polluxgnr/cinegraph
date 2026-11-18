@@ -89,6 +89,10 @@ jobs:
           uv run cinegraph build embeddings
           uv run cinegraph build cf
 
+      - name: Offline evaluation (hidden favourites, 4 methods)
+        continue-on-error: true   # a measurement, never a reason to skip publishing the catalogue
+        run: uv run cinegraph evaluate --users 2000
+
       - name: Static export (all domains)
         run: |
           # start from the previous export so a source that times out keeps last week's data

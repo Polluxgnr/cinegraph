@@ -8,6 +8,7 @@ import type { DomainData } from "@/lib/data";
 import { DOMAIN, DOMAINS } from "@/lib/domains";
 import { summarise, summaryText, type TasteSummary } from "@/lib/engine/summary";
 import { useManifest, useSpace } from "@/lib/hooks";
+import ModelQuality from "@/components/ModelQuality";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { getState, useLoaded, useStore } from "@/lib/store";
 
@@ -55,6 +56,7 @@ export default function Me() {
         <p className="text-sm text-muted">{total} answer{total === 1 ? "" : "s"} so far across {sums.length} area{sums.length === 1 ? "" : "s"}. Everything here updates with each answer.</p>
       </header>
 
+      <ModelQuality />
       <section className="card space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-2xl">Portrait</h2>

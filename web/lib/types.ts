@@ -71,8 +71,11 @@ export interface Item {
   related?: string[];
 }
 
+export interface EvalScores { hr10: number; ndcg10: number; recall20: number }
 export interface Manifest {
   version: number;
+  /** offline evaluation on hidden MovieLens favourites (backend/cinegraph/recsys/evaluate.py) */
+  eval?: { users: number; items: number; protocol: string; hybrid_weights: Record<string, number> } & Partial<Record<"popular" | "content" | "als" | "hybrid", EvalScores>>;
   built_at: string;
   embed_model: string;
   domains: Record<string, { label: string; count: number; images?: number; collections?: number; cf_items?: number; people?: number; detail_shards?: number; extras?: Record<string, number> }>;

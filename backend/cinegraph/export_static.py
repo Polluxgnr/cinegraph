@@ -365,6 +365,11 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
                 items = json.loads((d / "items.json").read_text("utf-8"))
                 manifest["domains"][d.name] = {"label": DOMAINS.get(d.name, (d.name,))[0], "count": len(items),
                                                "images": sum(1 for i in items if i.get("image"))}
+        from .config import get_settings
+
+        ev = get_settings().data_dir / "eval.json"
+        if ev.exists():
+            manifest["eval"] = json.loads(ev.read_text("utf-8"))
         manifest.update(version=2, built_at=dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
                         embed_model=emb.name, film_keys=FILM_KEYS)
         write_json(manifest_path, manifest)

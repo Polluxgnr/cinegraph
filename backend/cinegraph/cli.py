@@ -67,6 +67,14 @@ def ingest_tmdb(
         raise typer.Exit(f"TMDB error: {e}")
 
 
+@app.command("evaluate")
+def evaluate_cmd(users: int = typer.Option(2000, help="test users")) -> None:
+    """Offline evaluation (hidden MovieLens favourites): popular vs content vs ALS vs hybrid."""
+    from .recsys.evaluate import run
+
+    _echo(run(users))
+
+
 @ingest_app.command("trailers")
 def ingest_trailers(limit: Optional[int] = typer.Option(None, help="stop after N titles")) -> None:
     """Official YouTube trailer of every catalogue title (TMDB videos; new titles only on later runs)."""
