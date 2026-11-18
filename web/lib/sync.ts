@@ -1,18 +1,13 @@
 /**
  * Memory across devices: your state is mirrored to a *private* GitHub Gist with a token you
  * create (classic token, scope `gist` only). The token stays in this browser.
- * Conflict rule: the newest `updatedAt` wins; histories are merged by timestamp.
+ * Every profile is a file in that Gist; each sync round merges both sides (nothing answered anywhere is lost).
  */
 import { asset } from "./data";
-import { getProfiles, getState, mergeProfiles, migrate, replaceState, setSettings, type State } from "./store";
+import { getProfiles, getState, mergeProfiles, migrate, readProfileState, replaceState, saveProfileState, setSettings, type State } from "./store";
 
 const PROFILES_FILE = "cinegraph-profiles.json";
 
-/** One Gist file per profile, so each profile syncs its own memory. */
-const fileName = () => {
-  const p = getProfiles();
-  return p.active === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${p.active}.json`;
-};
 const API = "https://api.github.com";
 
 function headers(token: string) {
@@ -37,65 +32,89 @@ export function merge(a: State, b: State): State {
   return migrate({ ...newer, history, feedback, vault, lists: { ...b.lists, ...a.lists }, settings: a.settings });
 }
 
-export async function pushGist(): Promise<string> {
-  const s = getState();
-  const token = s.settings.gistToken;
-  if (!token) throw new Error("Add a GitHub token in Settings first");
-  // never upload secrets
-  const safe: State = { ...s, settings: { ...s.settings, gistToken: undefined, anthropicKey: undefined } };
-  const files = { [fileName()]: { content: JSON.stringify(safe) }, [PROFILES_FILE]: { content: JSON.stringify(getProfiles()) } };
-  const body = JSON.stringify({ files });
-  if (s.settings.gistId) {
-    const r = await fetch(`${API}/gists/${s.settings.gistId}`, { method: "PATCH", headers: headers(token), body });
-    if (r.ok) {
+const fileFor = (id: string) => (id === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${id}.json`);
+const strip = (s: State): State => ({ ...s, settings: { ...s.settings, gistToken: undefined, anthropicKey: undefined } });
+/** Does `merged` carry anything `local` didn't have (so it's worth applying)? */
+const gained = (local: State, merged: State) =>
+  merged.history.length !== local.history.length || merged.vault.length !== local.vault.length ||
+  Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.updatedAt > local.updatedAt;
+
+let running: Promise<{ id: string; changed: boolean }> | null = null;
+
+/**
+ * One sync round for every profile: read the Gist, merge each profile's remote copy with this device's
+ * (answers from both sides survive, the most recent answer wins per item), apply what's new here, then
+ * write every profile back. Rounds never overlap.
+ */
+export function syncNow(): Promise<{ id: string; changed: boolean }> {
+  running ??= (async () => {
+    try {
+      const token = getState().settings.gistToken;
+      if (!token) throw new Error("Add a GitHub token in Settings first");
+      let gistId = getState().settings.gistId;
+      if (!gistId) {
+        const r = await fetch(`${API}/gists?per_page=100`, { headers: headers(token) });
+        if (!r.ok) throw new Error(`GitHub: ${r.status}`);
+        const found = (await r.json()).find((g: { files: Record<string, unknown> }) => PROFILES_FILE in g.files || "cinegraph-memory.json" in g.files);
+        gistId = found?.id;
+      }
+      // 1. read
+      let files: Record<string, { truncated?: boolean; raw_url: string; content: string }> = {};
+      if (gistId) {
+        const r = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) });
+        if (r.ok) files = (await r.json()).files ?? {};
+        else if (r.status === 404) gistId = undefined;
+        else throw new Error(`GitHub: ${r.status}`);
+      }
+      const read = async (name: string) => {
+        const f = files[name];
+        return !f ? null : f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+      };
+      const remoteProfiles = await read(PROFILES_FILE);
+      if (remoteProfiles) await mergeProfiles(JSON.parse(remoteProfiles));
+      // 2. merge every profile
+      let changed = false;
+      const out: Record<string, { content: string }> = { [PROFILES_FILE]: { content: JSON.stringify(getProfiles()) } };
+      for (const p of getProfiles().list) {
+        const active = p.id === getProfiles().active;
+        const local = active ? getState() : await readProfileState(p.id);
+        const text = await read(fileFor(p.id));
+        let merged = local;
+        if (text) {
+          merged = merge(local, migrate(JSON.parse(text)));
+          merged.settings = local.settings; // device settings stay with the device
+          if (gained(local, merged)) {
+            changed = true;
+            if (active) replaceState(merged);
+            else await saveProfileState(p.id, merged);
+          }
+        }
+        if (merged.updatedAt || merged.history.length) out[fileFor(p.id)] = { content: JSON.stringify(strip(merged)) };
+      }
+      // 3. write back
+      const body = JSON.stringify(gistId ? { files: out } : { description: "CineGraph memory (private)", public: false, files: out });
+      const w = await fetch(gistId ? `${API}/gists/${gistId}` : `${API}/gists`, { method: gistId ? "PATCH" : "POST", headers: headers(token), body });
+      if (!w.ok) throw new Error(`GitHub: ${w.status}`);
+      const id = gistId ?? (await w.json()).id;
+      if (getState().settings.gistId !== id) setSettings({ gistId: id });
       markSynced();
-      return s.settings.gistId;
+      return { id, changed };
+    } finally {
+      running = null;
     }
-    if (r.status !== 404) throw new Error(`GitHub: ${r.status}`);
-  }
-  const r = await fetch(`${API}/gists`, {
-    method: "POST",
-    headers: headers(token),
-    body: JSON.stringify({ description: "CineGraph memory (private)", public: false, files }),
-  });
-  if (!r.ok) throw new Error(`GitHub: ${r.status}`);
-  const g = await r.json();
-  setSettings({ gistId: g.id });
-  markSynced();
-  return g.id;
+  })();
+  return running;
 }
 
+/** Kept for callers: push = a full sync round, returns the Gist id. */
+export async function pushGist(): Promise<string> {
+  return (await syncNow()).id;
+}
+
+/** Pull = a full sync round; true if this device received something new. */
 export async function pullGist(): Promise<boolean> {
-  const s = getState();
-  const { gistToken: token } = s.settings;
-  let { gistId } = s.settings;
-  if (!token) return false;
-  if (!gistId) {
-    const r = await fetch(`${API}/gists?per_page=100`, { headers: headers(token) });
-    if (!r.ok) throw new Error(`GitHub: ${r.status}`);
-    const found = (await r.json()).find((g: { files: Record<string, unknown> }) => fileName() in g.files || PROFILES_FILE in g.files);
-    if (!found) return false;
-    gistId = found.id as string;
-  }
-  const r = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) });
-  if (!r.ok) throw new Error(`GitHub: ${r.status}`);
-  const g = await r.json();
-  const read = async (f: { truncated?: boolean; raw_url: string; content: string } | undefined) =>
-    !f ? null : f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
-  const profilesText = await read(g.files[PROFILES_FILE]);
-  if (profilesText) await mergeProfiles(JSON.parse(profilesText));
-  const file = g.files[fileName()];
-  if (!file) {
-    setSettings({ gistId }); // this profile has no copy yet: the next push creates it
-    return false;
-  }
-  const content = file.truncated ? await (await fetch(file.raw_url)).text() : file.content;
-  const remote = migrate(JSON.parse(content));
-  const merged = merge(getState(), remote);
-  merged.settings = { ...getState().settings, gistId };
-  replaceState(merged);
-  markSynced();
-  return true;
+  if (!getState().settings.gistToken) return false;
+  return (await syncNow()).changed;
 }
 
 let timer: ReturnType<typeof setTimeout> | null = null;

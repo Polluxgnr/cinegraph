@@ -245,6 +245,12 @@ export async function readProfileState(id: string): Promise<State> {
   return migrate(s ?? {});
 }
 
+/** Store a synced copy of a non-active profile as is (no timestamp bump, so it doesn't look like a new edit). */
+export async function saveProfileState(id: string, s: State) {
+  if (id === profiles.active) return;
+  await idbSet(stateKey(id), s);
+}
+
 /** Write to another (non-active) profile's memory. */
 export async function updateProfileState(id: string, fn: (s: State) => void) {
   if (id === profiles.active) return update(fn);

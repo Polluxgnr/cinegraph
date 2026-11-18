@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { pullGist } from "@/lib/sync";
 import { createProfile, deleteProfile, renameProfile, switchProfile, useProfiles } from "@/lib/store";
 
 const EMOJIS = ["🙂", "😎", "🦊", "🐻", "🌙", "🌸", "🔥", "🎧", "🍜", "🧭"];
@@ -22,7 +23,7 @@ export default function ProfileSwitcher({ compact = false }: { compact?: boolean
         <div className="absolute inset-x-0 top-full z-50 mt-1 space-y-1 rounded-xl border border-line bg-bg p-2 shadow-2xl">
           {p.list.map((x) => (
             <div key={x.id} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${x.id === p.active ? "bg-panel-2" : "hover:bg-panel"}`}>
-              <button className="flex flex-1 items-center gap-2 text-left" onClick={() => { switchProfile(x.id); setOpen(false); }}>
+              <button className="flex flex-1 items-center gap-2 text-left" onClick={() => { switchProfile(x.id).then(() => pullGist().catch(() => {})); setOpen(false); }}>
                 <span>{x.emoji}</span>
                 <span className="truncate">{x.name}</span>
               </button>
@@ -39,6 +40,7 @@ export default function ProfileSwitcher({ compact = false }: { compact?: boolean
             e.preventDefault();
             if (!name.trim()) return;
             await createProfile(name.trim(), EMOJIS[p.list.length % EMOJIS.length]);
+            pullGist().catch(() => {}); // the new profile appears on your other devices
             setName("");
           }}>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New profile (e.g. Léa)"
