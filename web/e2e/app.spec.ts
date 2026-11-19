@@ -84,3 +84,19 @@ test("trip planner splits spots into days", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Day 1/ })).toBeVisible();
   await expect(page.getByText("2 stops").first()).toBeVisible();
 });
+
+test("navigation: four destinations, the rest under More", async ({ page, isMobile }) => {
+  await open(page, "/");
+  const bar = isMobile ? page.locator("nav.fixed") : page.locator("header.fixed");
+  for (const name of ["Home", "Swipe", "Discover", "My list"]) await expect(bar.getByRole("link", { name, exact: true })).toBeVisible();
+  await expect(bar.getByRole("link", { name: "Taste", exact: true })).toHaveCount(0);
+  await bar.getByRole("button", { name: /More/ }).click();
+  await expect(page.getByRole("link", { name: "My taste" })).toBeVisible();
+  await page.getByRole("link", { name: "Settings" }).last().click();
+  await expect(page).toHaveURL(/settings/);
+  await page.goto("/lists/?tab=sagas");
+  await expect(page.getByText("Franchises in viewing order").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tonight" })).toHaveCount(0); // Tonight lives on Home
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Tonight" })).toBeVisible();
+});

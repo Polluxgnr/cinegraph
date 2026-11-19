@@ -10,20 +10,27 @@ import SyncBadge from "@/components/SyncBadge";
 import ProfileSwitcher from "@/components/ProfileSwitcher";
 import { ACTION_VALUE, setSpace, useProfiles, useStore } from "@/lib/store";
 
-/** Tabs inside the current space; some spaces have extra tools. */
-export function spaceTabs(space: string): { href: string; label: string }[] {
-  const base = [
-    { href: "/", label: "Home" },
-    { href: "/swipe/", label: "Swipe" },
-    { href: "/discover/", label: "Discover" },
-    { href: "/lists/", label: "My list" },
-    { href: "/me/", label: "Taste" },
-  ];
-  if (space === "films") return [...base, { href: "/tonight/", label: "Tonight" }, { href: "/sagas/", label: "Sagas" }, { href: "/graph/", label: "Graph" }];
-  if (space === "music") return [...base, { href: "/playlists/", label: "Playlists" }, { href: "/add/", label: "+ Add" }];
-  if (space === "places") return [...base, { href: "/trips/", label: "Trips" }, { href: "/add/", label: "+ Add" }];
-  return [...base, { href: "/add/", label: "+ Add" }];
+type NavLink = { href: string; label: string };
+
+/** The four destinations of every space (docs/NAVIGATION.md). */
+export const MAIN: NavLink[] = [
+  { href: "/", label: "Home" },
+  { href: "/swipe/", label: "Swipe" },
+  { href: "/discover/", label: "Discover" },
+  { href: "/lists/", label: "My list" },
+];
+
+/** Space tools that live under "More" (rarely used, still one tap away). */
+export function moreTabs(space: string): NavLink[] {
+  const taste = { href: "/me/", label: "My taste" };
+  if (space === "films") return [taste, { href: "/tonight/", label: "Tonight (full page)" }, { href: "/graph/", label: "Taste graph" }];
+  if (space === "music") return [taste, { href: "/playlists/", label: "Playlists" }, { href: "/add/", label: "+ Add" }];
+  if (space === "places") return [taste, { href: "/trips/", label: "Trips" }, { href: "/add/", label: "+ Add" }];
+  return [taste, { href: "/add/", label: "+ Add" }];
 }
+
+/** Everything reachable from a space, for "stay on the same tab when switching space". */
+export const spaceTabs = (space: string): NavLink[] => [...MAIN, ...moreTabs(space)];
 
 const GLOBAL = [
   { href: "/together/", label: "Pick together", icon: "M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20a6 6 0 0112 0M10 20a6 6 0 0112 0" },
@@ -47,9 +54,12 @@ export default function Nav() {
   const m = useManifest().data;
   const counts = useCounts();
   const [sheet, setSheet] = useState(false);
+  const [more, setMore] = useState(false);
+  const [moreSheet, setMoreSheet] = useState(false);
   const spaces = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
   const cfg = DOMAIN[space] ?? DOMAINS[0];
+  const moreActive = [...moreTabs(space), ...GLOBAL].some((t) => active(t.href));
   const profiles = useProfiles();
   const me = profiles.list.find((p) => p.id === profiles.active) ?? profiles.list[0];
 
@@ -70,7 +80,7 @@ export default function Nav() {
         <SpaceList spaces={spaces} space={space} counts={counts} path={path} />
         <div className="mt-auto space-y-0.5 border-t border-line/60 pt-3">
           <SyncBadge />
-          {GLOBAL.map((g) => (
+          {GLOBAL.filter((g) => g.href === "/settings/").map((g) => (
             <Link key={g.href} href={g.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active(g.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={g.icon} /></svg>
               {g.label}
@@ -82,11 +92,19 @@ export default function Nav() {
       {/* desktop: tabs of the current space */}
       <header className="fixed left-64 right-0 top-0 z-20 hidden h-14 items-center gap-1 border-b border-line/60 bg-bg/85 px-6 backdrop-blur md:flex">
         <span className="mr-3 text-sm text-muted">{cfg.emoji} {cfg.label}</span>
-        {spaceTabs(space).map((t) => (
+        {MAIN.map((t) => (
           <Link key={t.href} href={t.href} className={`rounded-lg px-3 py-1.5 text-sm transition ${active(t.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
             {t.label}
           </Link>
         ))}
+        <div className="relative">
+          <button onClick={() => setMore(!more)} aria-expanded={more} className={`rounded-lg px-3 py-1.5 text-sm transition ${more || moreActive ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>More ▾</button>
+          {more && (
+            <div className="absolute left-0 top-full mt-2 w-60 rounded-2xl border border-line bg-bg/95 p-2 shadow-2xl backdrop-blur" onMouseLeave={() => setMore(false)}>
+              <MoreLinks space={space} active={active} onPick={() => setMore(false)} />
+            </div>
+          )}
+        </div>
       </header>
 
       {/* mobile: space switcher on top */}
@@ -106,12 +124,13 @@ export default function Nav() {
             <div className="mb-2"><SyncBadge /></div>
             <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
             <SpaceList spaces={spaces} space={space} counts={counts} path={path} onPick={() => setSheet(false)} />
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3">
-              {GLOBAL.map((g) => <Link key={g.href} href={g.href} onClick={() => setSheet(false)} className="rounded-xl bg-panel p-3 text-center text-xs">{g.label}</Link>)}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {spaceTabs(space).slice(5).map((t) => <Link key={t.href} href={t.href} onClick={() => setSheet(false)} className="chip">{t.label}</Link>)}
-            </div>
+          </div>
+        </div>
+      )}
+      {moreSheet && (
+        <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMoreSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-bg p-4 pb-24" onClick={(e) => e.stopPropagation()}>
+            <MoreLinks space={space} active={active} onPick={() => setMoreSheet(false)} />
           </div>
         </div>
       )}
@@ -119,7 +138,7 @@ export default function Nav() {
       {/* mobile: bottom tabs of the current space */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="grid grid-cols-5">
-          {spaceTabs(space).slice(0, 5).map((t, i) => (
+          {MAIN.map((t, i) => (
             <Link key={t.href} href={t.href} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${active(t.href) ? "text-accent" : "text-muted"}`}>
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d={MOBILE_ICONS[i]} />
@@ -127,9 +146,37 @@ export default function Nav() {
               {t.label}
             </Link>
           ))}
+          <button onClick={() => setMoreSheet(true)} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${moreActive ? "text-accent" : "text-muted"}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} />
+            </svg>
+            More
+          </button>
         </div>
       </nav>
     </>
+  );
+}
+
+/** "More": this space's tools, then app-wide pages. */
+function MoreLinks({ space, active, onPick }: { space: string; active: (href: string) => boolean; onPick: () => void }) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="mb-1 px-2 text-[11px] uppercase tracking-[0.18em] text-muted">{DOMAIN[space]?.short ?? "Space"}</p>
+        {moreTabs(space).map((t) => (
+          <Link key={t.href} href={t.href} onClick={onPick} className={`block rounded-xl px-3 py-2 text-sm ${active(t.href) ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>{t.label}</Link>
+        ))}
+      </div>
+      <div className="border-t border-line pt-2">
+        {GLOBAL.map((g) => (
+          <Link key={g.href} href={g.href} onClick={onPick} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active(g.href) ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={g.icon} /></svg>
+            {g.label}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 

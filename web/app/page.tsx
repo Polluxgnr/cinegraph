@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
 import ExtraRow from "@/components/ExtraRow";
 import Welcome from "@/components/Welcome";
+import TonightPanel from "@/components/TonightPanel";
 import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
 import type { DomainData, FilmData } from "@/lib/data";
 import { isFilmData } from "@/lib/data";
@@ -41,6 +42,7 @@ export default function Home() {
       <ConnectStrip space={space} />
       {isFilmData(d) && <ContinueRow films={d} />}
       <ForYou d={d} />
+      {isFilmData(d) && <TonightPanel compact />}
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
       {space === "music" && <ExtraRow d={d} name="releases" title="New releases" hint="out in the last weeks, artists you like first" />}

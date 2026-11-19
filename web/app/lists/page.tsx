@@ -11,13 +11,19 @@ import { actionLabel, DOMAIN } from "@/lib/domains";
 import { useSpace } from "@/lib/hooks";
 import { scoreOne } from "@/lib/engine/recommend";
 import { type Feedback, getState, type ListEntry, setList, useLoaded, useStore } from "@/lib/store";
+import SagasPanel from "@/components/SagasPanel";
 import { fmtRuntime } from "@/lib/text";
 
-type Tab = "want" | "watching" | "loved" | "history";
+type Tab = "want" | "watching" | "loved" | "history" | "sagas";
 type Sort = "added" | "release" | "match" | "title" | "length";
 
 export default function Lists() {
   const [tab, setTab] = useState<Tab>("want");
+  // /lists/?tab=sagas (old /sagas/ links land here too)
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t) Promise.resolve().then(() => setTab(t));
+  }, []);
   const space = useSpace();
   const [allSpaces, setAllSpaces] = useState(false);
   const dom = allSpaces ? "all" : space;
@@ -28,6 +34,7 @@ export default function Lists() {
   const [data, setData] = useState<Record<string, DomainData>>({});
 
   const rows: (ListEntry | Feedback)[] = useMemo(() => {
+    if (tab === "sagas") return [];
     if (tab === "want" || tab === "watching") return Object.values(lists).filter((l) => l.status === tab);
     if (tab === "loved") return Object.values(feedback).filter((f) => f.action === "fav" || f.action === "loved" || (f.rating ?? 0) >= 4.5);
     return Object.values(feedback);
@@ -78,14 +85,15 @@ export default function Lists() {
         </label>
       </header>
       <div className="flex flex-wrap gap-1.5">
-        {([["want", "To watch / try"], ["watching", "In progress"], ["loved", "Loved"], ["history", "Everything I answered"]] as const).map(([t, l]) => (
+        {([["want", "Watchlist"], ["watching", "In progress"], ["loved", "Loved"], ["history", "Diary"], ...(space === "films" ? [["sagas", "Sagas"]] : [])] as [Tab, string][]).map(([t, l]) => (
           <button key={t} className="chip" data-on={tab === t} onClick={() => setTab(t)}>{l}</button>
         ))}
       </div>
+      {tab === "sagas" && <SagasPanel embedded />}
       <label className="flex items-center gap-2 text-xs text-muted">
         <input type="checkbox" checked={allSpaces} onChange={(e) => setAllSpaces(e.target.checked)} /> show every space ({rows.length})
       </label>
-      {loaded && !rows.length && <p className="card p-4 text-sm text-muted">Nothing here yet. Swipe, or tap “+ My list” on any card.</p>}
+      {loaded && !rows.length && tab !== "sagas" && <p className="card p-4 text-sm text-muted">Nothing here yet. Swipe, or tap “+ My list” on any card.</p>}
       <ul className="grid gap-2 md:grid-cols-2">
         {items.map(({ r, e, rec, at }) => (
           <li key={e.key} className="card flex gap-3 overflow-hidden p-2">
