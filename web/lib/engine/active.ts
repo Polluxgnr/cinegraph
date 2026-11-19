@@ -12,6 +12,7 @@
  * towards things you'll actually enjoy while still probing the uncertain bits.
  * p_seen favours well-known titles, and adapts to your recent "not seen" rate.
  */
+import { votesPct } from "./known";
 import { isFilmData, type DomainData } from "../data";
 import { ACTION_VALUE, type State } from "../store";
 import type { Entity } from "../types";
@@ -66,7 +67,7 @@ export interface Card {
 export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(), rnd = Math.random): Card | null {
   const red = reduced(d);
   if (!red) return null;
-  const { Z, popPct } = red;
+  const { Z } = red;
   const profile = buildProfile(d, s);
   const ctx = context(d, s, profile);
 
@@ -96,7 +97,8 @@ export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(),
     const answeredKinds = [...profile.answered].map((k) => d.entities[d.index.get(k) ?? 0]?.film?.k);
     const nm = answeredKinds.filter((k) => k === "movie").length;
     const nt = answeredKinds.filter((k) => k === "tv").length;
-    kindWanted = nt < nm ? "tv" : "movie";
+    // soft balance: only steer when one kind dominates (you may simply know many more films than series)
+    if (nm + nt >= 10 && Math.max(nm, nt) / (nm + nt) > 0.7) kindWanted = nt < nm ? "tv" : "movie";
   }
 
   // candidate pool: the 1500 most popular unanswered (fast, and these are the ones you can judge)
@@ -107,7 +109,7 @@ export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(),
     if (kindWanted && e.film && e.film.k !== kindWanted) continue;
     rows.push(i);
   }
-  rows.sort((a, b) => popPct[b] - popPct[a]);
+  rows.sort((a, b) => votesPct(d, b) - votesPct(d, a)); // the titles people have actually seen
   const pool = rows.slice(0, 1500);
   if (!pool.length) return null;
 
@@ -124,7 +126,7 @@ export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(),
       for (let k = 0; k < K; k++) sim += Z[r * K + k] * Z[l * K + k];
       cover = Math.min(cover, 1 - sim);
     }
-    const ps = 1 / (1 + Math.exp(-steep * (popPct[r] - shift)));
+    const ps = 1 / (1 + Math.exp(-steep * (votesPct(d, r) - shift)));
     return { r, unc: Math.sqrt(Math.max(unc, 0)), cover: Math.max(cover, 0), ps };
   });
   // quick pre-score without the ranker, then rank the top 60 with the full model

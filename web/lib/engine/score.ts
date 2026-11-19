@@ -28,12 +28,15 @@ export const FEATURES = [
   "recency",
   "saga_next", // next unwatched entry of a saga you started
   "listed", // on your list
+  "genre_aff", // your affinity for the title's genres only (tags mix in keywords)
+  "kind_aff", // films vs series: which you like more
 ] as const;
 export type FeatureName = (typeof FEATURES)[number];
 const F = Object.fromEntries(FEATURES.map((f, i) => [f, i])) as Record<FeatureName, number>;
 
 export const DEFAULT_W: number[] = [
-  -0.6, 2.2, 2.6, -2.0, 1.6, 1.4, 1.0, 1.0, 0.6, 0.4, 0.5, 0.9, 0.35, 0.15, 1.2, 0.4,
+  // emb_max_neg and tag_aff raised after replaying real answers (rejections were under-weighted)
+  -0.6, 2.2, 2.6, -3.5, 2.4, 1.4, 1.0, 1.0, 0.6, 0.4, 0.5, 0.9, 0.35, 0.15, 1.2, 0.4, 1.4, 0.8,
 ];
 
 // ------------------------------------------------------------------ knowledge graph (films)
@@ -232,6 +235,19 @@ export function features(c: Ctx, row: number): Scored {
       x[F.runtime_fit] = -Math.min(over * over, 3) * 0.3 - tooLong;
     }
     if (f.va && (f.vc ?? 0) >= 20) x[F.quality] = (f.va - 6.5) / 1.5;
+    if (p.genre && f.g?.length) {
+      let ga = 0;
+      let gn = 0;
+      for (const g of f.g) {
+        const v = p.genre.get(g);
+        if (v != null) {
+          ga += v;
+          gn++;
+        }
+      }
+      x[F.genre_aff] = gn ? ga / gn : 0;
+    }
+    x[F.kind_aff] = p.kind?.get(f.k) ?? 0;
     x[F.saga_next] = c.sagaNext.has(e.key) ? 1 : 0;
   } else if (e.item?.related?.length) {
     // music: "related artists" edges act as the graph
@@ -320,7 +336,10 @@ export function tunePrior(ev?: { als?: { ndcg10: number }; content?: { ndcg10: n
 }
 
 export function weights(learned: { w: number[]; n: number } | undefined): number[] {
-  return learned?.w?.length === FEATURES.length ? learned.w : PRIOR_W;
+  if (learned?.w?.length === FEATURES.length) return learned.w;
+  // weights learned before features were added: keep them, start the new ones from the prior
+  if (learned?.w?.length && learned.w.length < FEATURES.length) return [...learned.w, ...PRIOR_W.slice(learned.w.length)];
+  return PRIOR_W;
 }
 
 export function predict(w: number[], x: Float32Array): number {

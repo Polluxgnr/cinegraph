@@ -27,6 +27,8 @@ export interface Profile {
   // films only
   people?: Map<number, number>;
   lang?: Map<string, number>;
+  genre?: Map<string, number>;
+  kind?: Map<string, number>;
   decade?: Map<number, number>;
   runtimePref?: { mean: number; tolerance: number }; // minutes
   chipPenalty?: Map<string, number>; // "Too long" -> strength
@@ -116,6 +118,8 @@ function filmPreferences(d: FilmData, s: State, anchors: Anchor[]) {
   const people = new Map<number, number[]>();
   const lang = new Map<string, number[]>();
   const decade = new Map<number, number[]>();
+  const genre = new Map<string, number[]>();
+  const kind = new Map<string, number[]>();
   const liked: number[] = [];
   for (const a of anchors) {
     const f = d.films[a.row];
@@ -123,6 +127,10 @@ function filmPreferences(d: FilmData, s: State, anchors: Anchor[]) {
       people.set(pid, [...(people.get(pid) ?? []), a.w]);
     }
     if (f.lang) lang.set(f.lang, [...(lang.get(f.lang) ?? []), a.w]);
+    // "not for me: not my genre" counts double against the title's genres
+    const notGenre = s.feedback[a.key]?.chips?.includes("Not my genre") ? 2 : 1;
+    for (const g of f.g ?? []) genre.set(g, [...(genre.get(g) ?? []), ...Array(notGenre).fill(a.w)]);
+    kind.set(f.k, [...(kind.get(f.k) ?? []), a.w]);
     if (f.y) {
       const dec = Math.floor(f.y / 10) * 10;
       decade.set(dec, [...(decade.get(dec) ?? []), a.w]);
@@ -139,6 +147,8 @@ function filmPreferences(d: FilmData, s: State, anchors: Anchor[]) {
     people: shrunkMean(people, 1) as Map<number, number>,
     lang: shrunkMean(lang, 3) as Map<string, number>,
     decade: shrunkMean(decade, 3) as Map<number, number>,
+    genre: shrunkMean(genre, 2) as Map<string, number>,
+    kind: shrunkMean(kind, 4) as Map<string, number>,
     runtimePref: { mean, tolerance: Math.max(20, sd) },
     chipPenalty,
     cfUser: foldInCF(d, anchors),

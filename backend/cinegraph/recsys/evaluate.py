@@ -27,6 +27,7 @@ K = 10
 class Split:
     train: sp.csr_matrix      # users x items confidence
     known: list[np.ndarray]   # per test user: item indices visible to the models
+    known_r: list[np.ndarray]  # their ratings (for replaying the app engine)
     hidden: list[np.ndarray]  # per test user: held-out positive item indices
     test_rows: np.ndarray     # row of each test user in `train`
 
@@ -45,7 +46,7 @@ def make_split(users: np.ndarray, items: np.ndarray, ratings: np.ndarray, n_item
     hide_mask = np.zeros(len(ratings), dtype=bool)
     order = np.argsort(urow, kind="stable")
     bounds = np.searchsorted(urow[order], np.arange(len(uid) + 1))
-    known, hidden = [], []
+    known, known_r, hidden = [], [], []
     for u in test:
         idx = order[bounds[u]:bounds[u + 1]]
         p = idx[pos[idx]]
@@ -54,9 +55,10 @@ def make_split(users: np.ndarray, items: np.ndarray, ratings: np.ndarray, n_item
         hidden.append(items[h])
         k = idx[(conf[idx] > 0) & ~np.isin(idx, h)]
         known.append(items[k])
+        known_r.append(ratings[k])
     keep = (conf > 0) & ~hide_mask
     train = sp.csr_matrix((conf[keep], (urow[keep], items[keep])), shape=(len(uid), n_items))
-    return Split(train, known, hidden, test)
+    return Split(train, known, known_r, hidden, test)
 
 
 def _metrics(scores: np.ndarray, known: np.ndarray, hidden: np.ndarray) -> tuple[float, float, float]:
@@ -152,4 +154,9 @@ def run(n_users: int = 2000) -> dict:
     res = evaluate(z["user"][keep], items, z["rating"][keep], len(ids), vecs, n_users=n_users)
     path = s.data_dir / "eval.json"
     path.write_text(json.dumps(res, indent=1))
+    # held-out users for replaying the in-browser engine (kept in the CI workspace, never published)
+    split = make_split(z["user"][keep], items, z["rating"][keep], len(ids), n_users=300, seed=11)
+    users = [{"known": [[int(ids[i]), float(r)] for i, r in zip(k, kr)], "hidden": [int(ids[i]) for i in h]}
+             for k, kr, h in zip(split.known, split.known_r, split.hidden)]
+    (s.data_dir / "eval_users.json").write_text(json.dumps(users))
     return res

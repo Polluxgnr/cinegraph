@@ -24,10 +24,14 @@ def blocked_reason(title: dict) -> str | None:
     genres = list(title.get("genres") or [])
     kws = _kw(title)
 
+    if "Soap" in genres or norm_title(title.get("title")) in _listed("romance"):
+        return "romance"  # soaps, telenovelas and romance-first series
     if "Romance" in genres or kws & {"romance", "romance film", "romantic drama", "romantic fantasy"}:
         # a love story inside a thriller / sci-fi / war film is fine; a romance with extras isn't
-        strong = set(genres) & set(r["romance"]["strong_genres"])
-        if (genres and genres[0] == "Romance") or not strong:
+        strong = set(r["romance"]["strong_genres"])
+        if "Romance" in genres[:2] and not (genres and genres[0] in strong):
+            return "romance"
+        if not set(genres) & strong:
             return "romance"
     if kws & {k.lower() for k in r["romance"]["keywords"]}:
         return "romance"
@@ -35,7 +39,8 @@ def blocked_reason(title: dict) -> str | None:
     if kws & {k.lower() for k in r["musicals"]["keywords"]}:
         return "musical"
 
-    if title.get("kind") == "tv" and (kws & {k.lower() for k in r["kids"]["keywords"]} or "Kids" in genres):
+    if title.get("kind") == "tv" and (kws & {k.lower() for k in r["kids"]["keywords"]} or {"Kids", "Family"} & set(genres)
+                                      or norm_title(title.get("title")) in _listed("kids")):
         return "kids"
 
     if title.get("kind") == "tv":
@@ -45,6 +50,11 @@ def blocked_reason(title: dict) -> str | None:
         if norm_title(title.get("title")) in _blocked_sitcoms():
             return "laugh-track sitcom"
     return None
+
+
+@lru_cache
+def _listed(rule: str) -> frozenset[str]:
+    return frozenset(norm_title(t) for t in rules()[rule].get("titles", []))
 
 
 @lru_cache

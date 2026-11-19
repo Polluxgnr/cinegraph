@@ -6,7 +6,49 @@ romance:
   # "strong" genres (a love story inside a thriller or a war film stays)
   strong_genres: [Thriller, Crime, War, Science Fiction, Horror, Mystery, Action, Western, Documentary,
                   Animation, History, Action & Adventure, Sci-Fi & Fantasy, War & Politics]
-  keywords: [romantic comedy, romcom, love triangle, chick flick]
+  keywords: [romantic comedy, romcom, love triangle, chick flick, teen romance, telenovela]
+  # romance-first series and films that genre tags miss
+  titles:
+    - "Grey's Anatomy"
+    - "Private Practice"
+    - "Station 19"
+    - "Gossip Girl"
+    - "One Tree Hill"
+    - "The O.C."
+    - "Dawson's Creek"
+    - "Gilmore Girls"
+    - "The Vampire Diaries"
+    - "The Originals"
+    - "Pretty Little Liars"
+    - "Riverdale"
+    - "Bridgerton"
+    - "Emily in Paris"
+    - "Virgin River"
+    - "Sweet Magnolias"
+    - "Outlander"
+    - "This Is Us"
+    - "Jane the Virgin"
+    - "Yo soy Betty, la fea"
+    - "Ugly Betty"
+    - "Sex and the City"
+    - "Desperate Housewives"
+    - "90210"
+    - "Beverly Hills, 90210"
+    - "Twilight"
+    - "The Twilight Saga: New Moon"
+    - "Fifty Shades of Grey"
+    - "After"
+    - "The Notebook"
+    - "Me Before You"
+    - "The Kissing Booth"
+    - "To All the Boys I've Loved Before"
+    - "Elite"
+    - "Euphoria"
+    - "Skins"
+    - "Never Have I Ever"
+    - "Heartstopper"
+    - "Normal People"
+    - "The Summer I Turned Pretty"
 
 musicals:
   keywords: [musical, jukebox musical, broadway musical, stage musical, singing]
@@ -14,6 +56,25 @@ musicals:
 kids:
   # children's / preschool series (switchable in the app's Settings)
   keywords: ["children's", children's television series, preschool, educational television, kids]
+  titles:
+    - "Ben 10"
+    - "Ben 10: Alien Force"
+    - "Ben 10: Ultimate Alien"
+    - "The Thundermans"
+    - "Henry Danger"
+    - "Danger Force"
+    - "SpongeBob SquarePants"
+    - "The Loud House"
+    - "Paw Patrol"
+    - "Peppa Pig"
+    - "Bluey"
+    - "Miraculous: Tales of Ladybug & Cat Noir"
+    - "Teen Titans Go!"
+    - "The Amazing World of Gumball"
+    - "Phineas and Ferb"
+    - "Kim Possible"
+    - "Totally Spies!"
+    - "Code Lyoko"
 
 laugh_track_sitcoms:
   keywords: [laugh track, multi-camera, multi camera, live studio audience, studio audience, canned laughter]
@@ -58,6 +119,35 @@ laugh_track_sitcoms:
     - Hélène et les Garçons
     - Un gars, une fille
     - Caméra Café
+    - M*A*S*H
+    - The Thundermans
+    - Henry Danger
+    - That's So Raven
+    - Wizards of Waverly Place
+    - Sonny with a Chance
+    - Good Luck Charlie
+    - Drake & Josh
+    - Victorious
+    - Zoey 101
+    - Austin & Ally
+    - Jessie
+    - Liv and Maddie
+    - The Suite Life of Zack & Cody
+    - Boy Meets World
+    - Girl Meets World
+    - Saved by the Bell
+    - Step by Step
+    - The Golden Girls
+    - Three's Company
+    - Happy Days
+    - Night Court
+    - Reba
+    - Dharma & Greg
+    - Becker
+    - Man with a Plan
+    - The Neighborhood
+    - Call Me Kat
+    - The Odd Couple
     - H
     - Le Miel et les Abeilles
     - Premiers baisers

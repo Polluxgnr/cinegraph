@@ -6,7 +6,7 @@
  */
 import { isFilmData, type DomainData, type FilmData } from "../data";
 import { isDone, type State } from "../store";
-import type { Entity } from "../types";
+import type { Entity, Film } from "../types";
 import { sampleBeta } from "./linalg";
 import { buildProfile, type Profile } from "./profile";
 import { blend, type Ctx, explain, features, makeCtx, predict, prior, quickScore, stars, weights, type Scored } from "./score";
@@ -28,6 +28,7 @@ export interface RecOptions {
   explore?: number; // share of exploration slots
   diversity?: number; // MMR lambda (1 = none)
   boost?: Map<string, number>; // extra score (NL queries)
+  auteurCap?: boolean; // at most two titles per director / creator (default on)
 }
 
 /** Next unwatched entry of every saga you've started. */
@@ -52,8 +53,22 @@ export function context(d: DomainData, s: State, profile?: Profile): Ctx {
   return makeCtx(d, p, listed, isFilmData(d) ? sagaNext(d, s) : new Set());
 }
 
+const STRONG = new Set(["Thriller", "Crime", "War", "Science Fiction", "Horror", "Mystery", "Action", "Western", "Documentary",
+  "Animation", "History", "Action & Adventure", "Sci-Fi & Fantasy", "War & Politics"]);
+
+/** The genre rules of backend/cinegraph/recsys/filters.py, so catalogues built before a rule change still obey it. */
+export function blockReason(f?: Film): string | undefined {
+  if (!f) return undefined;
+  if (f.blk) return f.blk;
+  const g = f.g ?? [];
+  if (g.includes("Soap")) return "romance";
+  if (g.slice(0, 2).includes("Romance") && !STRONG.has(g[0])) return "romance";
+  if (f.k === "tv" && (g.includes("Kids") || g.includes("Family"))) return "kids";
+  return undefined;
+}
+
 export function blocked(e: Entity, s: State): boolean {
-  const b = e.film?.blk;
+  const b = blockReason(e.film);
   return !!b && s.settings.hideBlocked && s.settings.blocked.includes(b);
 }
 
@@ -94,14 +109,19 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   scored.sort((a, b) => b.p - a.p);
 
   const nExplore = Math.round(n * (o.explore ?? 0.12));
-  // at most two titles of the same saga in one list, so a franchise can't fill a row
-  const perSaga = new Map<string, number>();
+  // at most two titles of one saga and two by one director/creator in a list, so nobody floods a row
+  const seen = new Map<string, number>();
+  const capped = (key: string) => {
+    const k = seen.get(key) ?? 0;
+    seen.set(key, k + 1);
+    return k >= 2;
+  };
   const pool = scored.slice(0, Math.max(6 * n, 100)).filter(({ row }) => {
-    const coll = d.entities[row].film?.coll;
-    if (!coll) return true;
-    const k = perSaga.get(coll) ?? 0;
-    perSaga.set(coll, k + 1);
-    return k < 2;
+    const f = d.entities[row].film;
+    if (!f) return true;
+    if (f.coll && capped(`c:${f.coll}`)) return false;
+    const auteur = o.auteurCap === false ? undefined : f.dir?.[0] ?? f.cre?.[0];
+    return auteur == null || !capped(`p:${auteur}`);
   });
   const picked = mmr(d, pool, n - nExplore, o.diversity ?? 0.8);
   const pickedRows = new Set(picked.map((x) => x.row));

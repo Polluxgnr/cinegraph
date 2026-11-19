@@ -22,6 +22,8 @@ const LABEL: Record<string, string> = {
   recency: "How recent",
   saga_next: "Next in a saga you started",
   listed: "On your list",
+  genre_aff: "Genres you rate well",
+  kind_aff: "Films vs series, as you like them",
 };
 
 /**

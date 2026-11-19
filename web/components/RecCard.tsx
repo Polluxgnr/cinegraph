@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import EntityImage from "@/components/EntityImage";
 import Match from "@/components/Match";
 import { DOMAIN } from "@/lib/domains";
 import { answer } from "@/lib/engine/learn";
 import type { Rec } from "@/lib/engine/recommend";
-import { setList, useStore } from "@/lib/store";
+import { type Action, setList, useStore } from "@/lib/store";
 import { fmtRuntime, itemFacts } from "@/lib/text";
 import { tilt } from "@/lib/tilt";
 import { streamsOn } from "@/lib/watch";
@@ -19,6 +20,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   const e = r.entity;
   const cfg = DOMAIN[e.domain];
   const listed = useStore((s) => s.lists[e.key]?.status);
+  const [why, setWhy] = useState(false);
   const answered = useStore((s) => s.feedback[e.key]?.action);
   const platforms = useStore((s) => s.settings.platforms);
   const f = e.film;
@@ -52,12 +54,32 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
           >
             {listed ? "✓ Listed" : "+ List"}
           </button>
-          <button onClick={() => answer(e.key, e.domain, "never", { source: "card" })} className="btn-ghost px-2 py-1.5 text-xs text-muted" title="Not for me">
+          <button onClick={() => setWhy(!why)} className="btn-ghost px-2 py-1.5 text-xs text-muted" title="Not for me" aria-expanded={why}>
             ✕
           </button>
         </div>
+        {why && <NotForMe onPick={(a, chip) => answer(e.key, e.domain, a, { source: "card", chips: chip ? [chip] : undefined })} film={!!f} />}
       </div>
     </article>
+  );
+}
+
+/** "Not for me because…": one tap, and the reason teaches the model something specific. */
+export const NOT_FOR_ME: [string, Action, string | undefined][] = [
+  ["Not my genre", "never", "Not my genre"],
+  ["Too long", "never", "Too long"],
+  ["Seen it, didn't like it", "disliked", undefined],
+  ["Not in the mood", "later", undefined],
+  ["Just not for me", "never", undefined],
+];
+
+function NotForMe({ onPick, film }: { onPick: (a: Action, chip?: string) => void; film: boolean }) {
+  return (
+    <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="Why not?">
+      {NOT_FOR_ME.filter(([l]) => film || l !== "Too long").map(([label, a, chip]) => (
+        <button key={label} className="chip text-[11px]" onClick={() => onPick(a, chip)}>{label}</button>
+      ))}
+    </div>
   );
 }
 

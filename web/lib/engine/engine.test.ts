@@ -32,7 +32,7 @@ function world(n = 120, dim = 16): DomainData & { films: Film[] } {
     scale[i] = mx / 127;
     v.forEach((x, j) => (q[i * dim + j] = Math.round(x / scale[i])));
     films.push({ id: i + 1, k: i % 4 < 2 ? "movie" : "tv", t: `Title ${i}`, y: 1990 + (i % 30), g: [isCrime ? "Crime" : "Drama"],
-      kw: [isCrime ? "heist" : "love"], vc: 1000 - i * 5, pop: 50 - i / 3, rt: 90 + (i % 60), dir: [isCrime ? 1 : 2] });
+      kw: [isCrime ? "heist" : "love"], vc: 1000 - i * 5, pop: 50 - i / 3, rt: 90 + (i % 60), dir: [isCrime ? 1 + (i % 12) : 20 + (i % 12)] }); // a dozen directors per cluster
   }
   const emb = new QMatrix(q, scale, dim);
   const entities = films.map(filmEntity);
@@ -117,12 +117,18 @@ describe("taste profile and ranking", () => {
 });
 
 describe("active learning deck", () => {
-  it("never repeats an answered card and alternates films / series", () => {
+  it("never repeats an answered card", () => {
     const d = world();
-    const s = withAnswers([[0, "loved"], [1, "liked"]]); // both films
-    const card = nextCard(d, s, new Set(), rng(5))!;
-    expect(s.feedback[card.rec.entity.key]).toBeUndefined();
-    expect(card.rec.entity.film!.k).toBe("tv");
+    const s = withAnswers([[0, "loved"], [1, "liked"]]);
+    for (let i = 0; i < 5; i++) expect(s.feedback[nextCard(d, s, new Set(), rng(i + 5))!.rec.entity.key]).toBeUndefined();
+  });
+
+  it("steers towards series only when films dominate the answers", () => {
+    const d = world();
+    const films = d.entities.map((e, i) => [i, e.film!.k] as const).filter(([, k]) => k === "movie").map(([i]) => i).slice(0, 10);
+    if (films.length < 10) return; // the synthetic world is too small to dominate
+    const s = withAnswers(films.map((i) => [i, "liked"] as [number, "liked"]));
+    expect(nextCard(d, s, new Set(), rng(3))!.rec.entity.film!.k).toBe("tv");
   });
 
   it("explores the unvisited cluster early on", () => {
@@ -150,5 +156,16 @@ describe("text & query parsing", () => {
     expect(ruleParse("une série coréenne après 2015").kind).toBe("tv");
     expect(ruleParse("une série coréenne après 2015").language).toBe("ko");
     expect(ruleParse("film under 95 min").maxRuntime).toBe(95);
+  });
+});
+
+describe("diversity", () => {
+  it("never shows more than two titles by one director in a list", () => {
+    const d = world();
+    const s = withAnswers([[0, "loved"], [2, "loved"]]);
+    const recs = recommend(d, s, { n: 20, explore: 0 });
+    const per = new Map<number, number>();
+    for (const r of recs) for (const p of r.entity.film!.dir ?? []) per.set(p, (per.get(p) ?? 0) + 1);
+    expect(Math.max(...per.values())).toBeLessThanOrEqual(2);
   });
 });

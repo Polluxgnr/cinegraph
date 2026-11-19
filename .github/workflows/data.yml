@@ -100,6 +100,23 @@ jobs:
           if gh release download data-latest --pattern data.tar.gz --dir /tmp 2>/dev/null; then tar -xzf /tmp/data.tar.gz -C ../site-data; fi
           uv run cinegraph export-static --out ../site-data
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: The app's own engine on held-out users (before / after the last tuning)
+        continue-on-error: true
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          CINEGRAPH_DATA=../site-data/films CINEGRAPH_EVAL_USERS=$DATA_DIR/eval_users.json CINEGRAPH_EVAL_OUT=/tmp/app-eval.json             npx vitest run --config vitest.replay.config.ts lib/engine/heldout.eval.ts
+          python3 - <<'PY'
+          import json, pathlib
+          m = pathlib.Path("../site-data/manifest.json")
+          man = json.loads(m.read_text())
+          man.setdefault("eval", {})["app"] = json.loads(pathlib.Path("/tmp/app-eval.json").read_text())
+          m.write_text(json.dumps(man))
+          PY
+
       - name: Publish data release (static catalogue only)
         run: |
           tar -czf /tmp/data.tar.gz -C ../site-data .

@@ -43,6 +43,12 @@ export default function ModelQuality() {
           );
         })}
       </ul>
+      {ev.app && (
+        <p className="text-sm">
+          The app&apos;s own engine (what you see): HR@10 <b>{Math.round(ev.app.after.hr10 * 100)}%</b>, NDCG@10 {ev.app.after.ndcg10.toFixed(3)}
+          <span className="text-muted"> · before the last tuning {Math.round(ev.app.before.hr10 * 100)}% / {ev.app.before.ndcg10.toFixed(3)} ({ev.app.after.users} users)</span>
+        </p>
+      )}
       <p className="text-[11px] text-muted">
         Share of people with a hidden favourite in the top 10 (HR@10). NDCG@10 {ev.hybrid?.ndcg10.toFixed(3)} · Recall@20 {ev.hybrid?.recall20.toFixed(3)} for CineGraph.
         Blend weights picked on half the users, scores reported on the other half.
