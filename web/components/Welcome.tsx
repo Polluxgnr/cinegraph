@@ -39,10 +39,7 @@ export default function Welcome() {
   return (
     <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card relative space-y-3 p-5">
       <button onClick={close} aria-label="Dismiss" className="absolute right-3 top-3 text-muted hover:text-ink">✕</button>
-      <div>
-        <p className="text-[11px] uppercase tracking-[0.2em] text-accent">Welcome</p>
-        <h2 className="font-display text-3xl">Three steps to a taste engine that knows you</h2>
-      </div>
+      <h2 className="font-display text-3xl">Three steps to a taste engine that knows you</h2>
       <ol className="grid gap-2 md:grid-cols-3">
         {steps.map(([title, hint, href, done], i) => (
           <li key={title}>

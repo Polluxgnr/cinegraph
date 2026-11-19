@@ -30,6 +30,38 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   const streams = f ? streamsOn(f, platforms) : [];
 
   if (answered === "never" || answered === "disliked" || answered === "dropped") return null;
+  if (f) {
+    // Films & series: poster first, text kept to a title and one line
+    const pct = Math.round(r.p * 100);
+    return (
+      <article className="group relative flex flex-col gap-2">
+        <div className="relative overflow-hidden rounded-xl ring-1 ring-line/70 transition duration-300 group-hover:ring-accent/70">
+          <Link href={detailHref(e.key)} className="block">
+            <EntityImage e={e} aspect="2/3" className="transition duration-500 group-hover:scale-[1.04]" />
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent" />
+            {streams.length > 0 && <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{streams[0]}</span>}
+            {r.explore && <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] text-unseen">New for you</span>}
+          </Link>
+          <div className="absolute right-1.5 top-1.5 flex gap-1 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+            <button onClick={() => (listed ? setList(e.key, e.domain, null) : answer(e.key, e.domain, "want", { source: "card" }))}
+                    className={`grid h-8 w-8 place-items-center rounded-full text-sm backdrop-blur ${listed ? "bg-accent text-bg" : "bg-black/60 text-white hover:bg-black/80"}`}
+                    aria-label={listed ? "Remove from my list" : "Add to my list"} title={listed ? "On my list" : "Add to my list"}>{listed ? "✓" : "+"}</button>
+            <button onClick={() => setWhy(!why)} aria-expanded={why} aria-label="Not for me" title="Not for me"
+                    className="grid h-8 w-8 place-items-center rounded-full bg-black/60 text-sm text-white backdrop-blur hover:bg-black/80">✕</button>
+          </div>
+        </div>
+        <div className="min-w-0 px-0.5">
+          <Link href={detailHref(e.key)} className="line-clamp-1 text-sm font-medium hover:text-accent">{e.title}</Link>
+          <p className="text-xs text-muted">
+            <span className={pct >= 70 ? "text-like" : pct >= 45 ? "text-accent" : ""}>{pct}% match</span>
+            {f.y ? `  ·  ${f.y}` : ""}{f.k === "tv" ? "  ·  Series" : f.rt ? `  ·  ${fmtRuntime(f.rt)}` : ""}
+          </p>
+          {showWhy && <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{r.why}</p>}
+          {why && <NotForMe onPick={(a, chip) => answer(e.key, e.domain, a, { source: "card", chips: chip ? [chip] : undefined })} film />}
+        </div>
+      </article>
+    );
+  }
   return (
     <article className="group card flex flex-col overflow-hidden">
       <Link href={detailHref(e.key)} className="tilt relative block overflow-hidden" {...tilt}>

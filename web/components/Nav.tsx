@@ -64,9 +64,13 @@ export default function Nav() {
   const me = profiles.list.find((p) => p.id === profiles.active) ?? profiles.list[0];
 
   // each space has its own accent colour
+  const theme = useStore((s) => s.settings.theme ?? "dark");
   useEffect(() => {
     document.documentElement.dataset.space = space;
   }, [space]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   return (
     <>

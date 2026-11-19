@@ -41,6 +41,13 @@ export default function Settings() {
         <div className="w-56"><ProfileSwitcher compact /></div>
       </header>
       <p className="-mt-3 text-sm text-muted">Settings, answers and lists belong to the profile above; every profile syncs.</p>
+      <Section id="appearance" title="Appearance">
+        <div className="flex flex-wrap gap-1.5">
+          {(["dark", "light"] as const).map((t) => (
+            <button key={t} className="chip" data-on={(s.theme ?? "dark") === t} onClick={() => setSettings({ theme: t })}>{t === "dark" ? "Dark (cinema)" : "Light"}</button>
+          ))}
+        </div>
+      </Section>
       <Connectors />
 
       <Section title="My streaming services" hint="Used by Tonight and the ▶ links (France). Free broadcasters are always included.">

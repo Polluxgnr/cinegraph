@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
 import ExtraRow from "@/components/ExtraRow";
+import FilmHero from "@/components/FilmHero";
 import Welcome from "@/components/Welcome";
 import TonightPanel from "@/components/TonightPanel";
 import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
@@ -34,6 +35,7 @@ export default function Home() {
   const loaded = useLoaded();
   const { data: d } = useDomain(space);
   if (!loaded || !d) return <Skeleton />;
+  if (isFilmData(d)) return <FilmHome d={d} />;
   return (
     <div key={space} className="rise space-y-10">
       <Welcome />
@@ -82,6 +84,35 @@ function ConnectStrip({ space }: { space: string }) {
       <span className="flex-1 text-muted">{c.text}</span>
       <span className="text-accent">{c.cta} →</span>
     </Link>
+  );
+}
+
+/** Films & series: one big pick, then rows of posters (streaming-app layout). */
+function FilmHome({ d }: { d: FilmData }) {
+  const recs = useRecs(d, { n: 16, explore: 0.12 }, "films-home");
+  const version = useStore((s) => s.updatedAt);
+  const cal = useMemo(() => calibration(d, getState()), [d, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="space-y-10">
+      {recs?.[0] ? <FilmHero r={recs[0]} label={cal < 0.3 ? "A good place to start" : "Tonight's pick for you"} /> : <div className="-mx-4 -mt-4 h-[62vh] animate-pulse bg-panel md:-mx-8" />}
+      <Welcome />
+      <SyncNudge />
+      {cal < 1 && (
+        <Link href="/swipe/" className="card flex flex-wrap items-center gap-4 p-4 hover:border-accent">
+          <div className="min-w-48 flex-1">
+            <p className="font-medium">{cal === 0 ? "Teach it your taste: swipe 20 titles" : "Keep swiping: picks get sharper"}</p>
+            <Progress className="mt-2" value={cal} />
+          </div>
+          <span className="btn">Swipe</span>
+        </Link>
+      )}
+      <ContinueRow films={d} />
+      {recs && recs.length > 1 && (
+        <Row title="For you" href="/discover/">{recs.slice(1).map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>
+      )}
+      <TonightPanel compact />
+      <BecauseYouLiked d={d} />
+    </div>
   );
 }
 

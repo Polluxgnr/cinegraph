@@ -67,16 +67,20 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
   return (
     <div className="space-y-10">
       {backdrop && (
-        <div className="pointer-events-none fixed inset-x-0 top-0 h-[55vh] bg-cover bg-center opacity-25"
-             style={{ backgroundImage: `url(${backdrop})`, maskImage: "linear-gradient(black, transparent)" }} />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[75vh] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- TMDB backdrop */}
+          <img src={backdrop} alt="" className="hero-backdrop h-full w-full object-cover object-top opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/70 to-bg/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-bg/80 to-transparent" />
+        </div>
       )}
-      <div className="relative grid gap-6 md:grid-cols-[280px_1fr]">
-        <div className="mx-auto w-52 self-start overflow-hidden rounded-2xl border border-line md:w-full">
+      <div className={`relative grid gap-6 md:grid-cols-[280px_1fr] ${backdrop ? "pt-[22vh] md:pt-[28vh]" : ""}`}>
+        <div className="mx-auto w-52 self-start overflow-hidden rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-line md:w-full">
           <EntityImage e={e} aspect={cfg?.aspect ?? "2/3"} big />
         </div>
         <div className="space-y-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">{cfg?.emoji} {cfg?.label}</p>
+            {!f && <p className="text-xs uppercase tracking-[0.2em] text-muted">{cfg?.emoji} {cfg?.label}</p>}
             <h1 className="font-display text-4xl leading-tight md:text-6xl">{e.title}</h1>
             {f?.ot && <p className="text-muted">{f.ot}</p>}
             {!f && e.subtitle && <p className="text-muted">{e.subtitle}</p>}

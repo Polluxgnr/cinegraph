@@ -16,7 +16,26 @@
 }
 
 /* every space has its own accent so switching area feels like switching app */
-:root[data-space="films"] { --accent: #f2a93b; }
+/* Films & series: a screening room. Velvet-seat black, curtain panels, screen-white text, projector amber */
+:root[data-space="films"] {
+  --accent: #f2a93b;
+  --bg: #120b0e;
+  --panel: #1d1317;
+  --panel-2: #26191f;
+  --line: #352630;
+  --ink: #f3eee8;
+  --muted: #a3949a;
+}
+/* light option (Settings → Appearance): the same room with the lights up */
+:root[data-theme="light"] {
+  --bg: #f6f2ee;
+  --panel: #ffffff;
+  --panel-2: #efe8e3;
+  --line: #ddd2cc;
+  --ink: #1c1418;
+  --muted: #6e6066;
+}
+:root[data-theme="light"][data-space="films"] { --accent: #b86e00; }
 :root[data-space="youtube"] { --accent: #ff5a4e; }
 :root[data-space="music"] { --accent: #34d27c; }
 :root[data-space="recipes"] { --accent: #ff9f43; }
@@ -160,3 +179,13 @@ body::before {
   .aurora::before, .aurora::after, .stagger > * { animation: none !important; }
   .tilt { transform: none !important; }
 }
+
+/* Films: no ambient glow and no card tilt; the artwork carries the page */
+:root[data-space="films"] .aurora { display: none; }
+:root[data-space="films"] .tilt { transform: none; }
+:root[data-space="films"] .tilt::after { display: none; }
+
+/* the one orchestrated moment: the hero backdrop settles while its title arrives */
+@keyframes hero-settle { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+.hero-backdrop { animation: hero-settle 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .hero-backdrop { animation: none; } }
