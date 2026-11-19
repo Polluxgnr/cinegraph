@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
@@ -15,6 +17,7 @@ const SpotMap = dynamic(() => import("@/components/SpotMap"), { ssr: false, load
  * spots you star everywhere). ☆ teaches your taste; "+ Trip" adds it to this place's trip plan.
  */
 export default function PlaceSpots({ e }: { e: Entity }) {
+  const T = useT();
   const [spots, setSpots] = useState<Spot[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [group, setGroup] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export default function PlaceSpots({ e }: { e: Entity }) {
   }, [focus]);
 
   if (!coord) return null;
-  if (err) return <p className="text-sm text-muted">Couldn&apos;t load the best spots ({err}).</p>;
+  if (err) return <p className="text-sm text-muted">{T("Couldn't load the best spots (")}{err}).</p>;
   if (!spots) return <div className="card h-48 animate-pulse" />;
   const groups = [...new Set(ranked.map((x) => x.group))];
   const isStarred = (q: string) => starred.find((c) => c.url?.endsWith(`/${q}`));
@@ -60,13 +63,13 @@ export default function PlaceSpots({ e }: { e: Entity }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="font-display text-2xl">Best spots around {e.title}</h2>
-          <p className="text-xs text-muted">within {radiusOf(e)} km · ☆ teaches your taste · + Trip builds your plan</p>
+          <h2 className="font-display text-2xl">{T("Best spots around")}{" "}{e.title}</h2>
+          <p className="text-xs text-muted">{T("within")}{" "}{radiusOf(e)} {T("km · ☆ teaches your taste · + Trip builds your plan")}</p>
         </div>
-        {trip?.spots.length ? <Link href={`/trips/?id=${trip.id}`} className="btn px-3 py-1.5 text-sm">Plan the trip · {trip.spots.length} spots →</Link> : null}
+        {trip?.spots.length ? <Link href={`/trips/?id=${trip.id}`} className="btn px-3 py-1.5 text-sm">{T("Plan the trip ·")}{" "}{trip.spots.length} {T("spots →")}</Link> : null}
       </div>
       <div className="flex flex-wrap gap-1.5">
-        <button className="chip" data-on={!group} onClick={() => setGroup(null)}>All</button>
+        <button className="chip" data-on={!group} onClick={() => setGroup(null)}>{T("All")}</button>
         {groups.map((g) => (
           <button key={g} className="chip" data-on={group === g} onClick={() => setGroup(group === g ? null : g)}>
             <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: GROUP_COLOR[g] }} />{g}{pref.get(g) ? " ★" : ""}
@@ -91,16 +94,16 @@ export default function PlaceSpots({ e }: { e: Entity }) {
                 <p className="line-clamp-2 text-sm font-medium leading-snug">{s.name}</p>
                 <p className="line-clamp-2 text-[11px] text-muted">{[s.group, s.dist ? `${s.dist.toFixed(1)} km` : "", s.desc].filter(Boolean).join(" · ")}</p>
                 <div className="mt-auto flex gap-1.5 pt-1">
-                  <button className="btn-ghost px-2 py-1 text-xs" title="I'd go: teaches your taste" onClick={() => {
+                  <button className="btn-ghost px-2 py-1 text-xs" title={T("I'd go: teaches your taste")} onClick={() => {
                     if (star) return removeCustom(star.id);
                     const [id] = addCustom([{ domain: "places", title: s.name, subtitle: `${e.title} · ${s.group}`, url: `https://www.wikidata.org/wiki/${s.q}`, image: s.img, tags: ["spot", s.group, e.title.toLowerCase()], source: "spots" }]);
                     recordFeedback({ key: id, domain: "places", action: "want", source: "spots" });
                   }}>{star ? "★" : "☆"}</button>
                   <button className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium transition ${added ? "bg-accent text-bg" : "btn-ghost"}`}
                           onClick={() => toggleTripSpot(place, { q: s.q, name: s.name, lat: s.lat, lon: s.lon, img: s.img, group: s.group })}>
-                    {added ? "✓ In trip" : "+ Trip"}
+                    {added ? T("✓ In trip") : T("+ Trip")}
                   </button>
-                  {(s.lat || s.lon) ? <a className="btn-ghost px-2 py-1 text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`}>Map</a> : null}
+                  {(s.lat || s.lon) ? <a className="btn-ghost px-2 py-1 text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`}>{T("Map")}</a> : null}
                 </div>
               </div>
             </motion.article>

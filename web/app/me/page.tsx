@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { aiEnabled, tastePortrait } from "@/lib/ai";
@@ -14,6 +16,7 @@ import { getState, useLoaded, useStore } from "@/lib/store";
 
 /** "Understand my tastes": per-domain portrait, taste axes, what the model learned, accuracy. */
 export default function Me() {
+  const T = useT();
   const m = useManifest().data;
   const loaded = useLoaded();
   const version = useStore((s) => s.updatedAt);
@@ -52,22 +55,22 @@ export default function Me() {
     <div className="space-y-8">
       <header className="relative">
         <div className="mb-3 w-56 md:absolute md:right-0 md:top-0 md:mb-0"><ProfileSwitcher compact /></div>
-        <h1 className="font-display text-4xl md:text-6xl">My taste</h1>
-        <p className="text-sm text-muted">{total} answer{total === 1 ? "" : "s"} so far across {sums.length} area{sums.length === 1 ? "" : "s"}. Everything here updates with each answer.</p>
+        <h1 className="font-display text-4xl md:text-6xl">{T("My taste")}</h1>
+        <p className="text-sm text-muted">{total} {T("answer")}{total === 1 ? "" : "s"} {T("so far across")}{" "}{sums.length} {T("area")}{sums.length === 1 ? "" : "s"}{T(". Everything here updates with each answer.")}</p>
       </header>
 
       <ModelQuality />
       <section className="card space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-2xl">Portrait</h2>
+          <h2 className="font-display text-2xl">{T("Portrait")}</h2>
           {aiEnabled() ? (
-            <button className="btn px-3 py-1.5 text-sm" onClick={writePortrait} disabled={busy || !total}>{busy ? "Writing…" : "Write my portrait with Claude"}</button>
+            <button className="btn px-3 py-1.5 text-sm" onClick={writePortrait} disabled={busy || !total}>{busy ? T("Writing…") : T("Write my portrait with Claude")}</button>
           ) : (
-            <Link href="/settings/" className="text-xs text-muted hover:text-ink">Add an Anthropic key for a written portrait →</Link>
+            <Link href="/settings/" className="text-xs text-muted hover:text-ink">{T("Add an Anthropic key for a written portrait →")}</Link>
           )}
         </div>
         <p className="whitespace-pre-line leading-relaxed text-ink/90">
-          {portrait ?? (sums.length ? sums.map((s) => `${DOMAIN[s.domain]?.emoji} ${summaryText(s)}`).join("\n\n") : "Swipe a few cards in any area and your portrait starts here.")}
+          {portrait ?? (sums.length ? sums.map((s) => `${DOMAIN[s.domain]?.emoji} ${summaryText(s)}`).join("\n\n") : T("Swipe a few cards in any area and your portrait starts here."))}
         </p>
       </section>
 
@@ -77,15 +80,15 @@ export default function Me() {
 
       {spotify && (
         <section className="card p-5">
-          <h2 className="font-display text-2xl">🎧 From Spotify</h2>
-          <p className="mb-3 text-xs text-muted">Imported {new Date(spotify.connectedAt).toLocaleDateString("fr-FR")}</p>
+          <h2 className="font-display text-2xl">{T("🎧 From Spotify")}</h2>
+          <p className="mb-3 text-xs text-muted">{T("Imported")}{" "}{new Date(spotify.connectedAt).toLocaleDateString("fr-FR")}</p>
           <div className="flex flex-wrap gap-1.5">{spotify.topArtists.slice(0, 30).map((a) => <a key={a.name} href={a.url} target="_blank" rel="noreferrer" className="chip text-xs">{a.name}</a>)}</div>
-          <h3 className="mt-4 text-sm text-muted">Playlists</h3>
-          <ul className="mt-1 grid gap-1 text-sm sm:grid-cols-2">{spotify.playlists.map((p) => <li key={p.name}><a href={p.url} target="_blank" rel="noreferrer" className="hover:text-accent">{p.name}</a> <span className="text-xs text-muted">{p.tracks} tracks</span></li>)}</ul>
+          <h3 className="mt-4 text-sm text-muted">{T("Playlists")}</h3>
+          <ul className="mt-1 grid gap-1 text-sm sm:grid-cols-2">{spotify.playlists.map((p) => <li key={p.name}><a href={p.url} target="_blank" rel="noreferrer" className="hover:text-accent">{p.name}</a> <span className="text-xs text-muted">{p.tracks} {T("tracks")}</span></li>)}</ul>
         </section>
       )}
       {!sums.length && loaded && (
-        <div className="flex flex-wrap gap-2">{DOMAINS.map((d) => <Link key={d.name} className="btn-ghost" href={`/swipe/?d=${d.name}`}>{d.emoji} Swipe {d.short}</Link>)}</div>
+        <div className="flex flex-wrap gap-2">{DOMAINS.map((d) => <Link key={d.name} className="btn-ghost" href={`/swipe/?d=${d.name}`}>{d.emoji} {T("Swipe")}{" "}{d.short}</Link>)}</div>
       )}
     </div>
   );
@@ -106,12 +109,13 @@ function Bars({ items, neg = false }: { items: [string, number][]; neg?: boolean
 }
 
 function DomainCard({ s }: { s: TasteSummary }) {
+  const T = useT();
   const cfg = DOMAIN[s.domain];
   return (
     <section className="card space-y-4 p-5">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-2xl">{cfg?.emoji} {cfg?.label}</h2>
-        <span className="text-xs text-muted">{s.answers} answer{s.answers === 1 ? "" : "s"}{s.accuracy != null ? ` · model right ${Math.round(s.accuracy * 100)}% of the time` : ""}</span>
+        <h2 className="font-display text-2xl">{cfg?.emoji} {T(cfg?.label ?? "")}</h2>
+        <span className="text-xs text-muted">{s.answers} {T("answer")}{s.answers === 1 ? "" : "s"}{s.accuracy != null ? ` · model right ${Math.round(s.accuracy * 100)}% of the time` : ""}</span>
       </div>
       <p className="text-sm text-ink/85">{summaryText(s)}</p>
       {s.axes.some((a) => a.value !== 0) && s.domain === "films" && (
@@ -128,14 +132,14 @@ function DomainCard({ s }: { s: TasteSummary }) {
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        {s.likedTags.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">You like</h3><Bars items={s.likedTags} /></div>}
-        {s.dislikedTags.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">Not for you</h3><Bars items={s.dislikedTags} neg /></div>}
-        {s.people.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">People</h3><Bars items={s.people} /></div>}
-        {s.languages.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">Original language</h3><Bars items={s.languages} /></div>}
-        {s.decades.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">Decades</h3><Bars items={s.decades} /></div>}
+        {s.likedTags.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("You like")}</h3><Bars items={s.likedTags} /></div>}
+        {s.dislikedTags.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("Not for you")}</h3><Bars items={s.dislikedTags} neg /></div>}
+        {s.people.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("People")}</h3><Bars items={s.people} /></div>}
+        {s.languages.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("Original language")}</h3><Bars items={s.languages} /></div>}
+        {s.decades.length > 0 && <div><h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("Decades")}</h3><Bars items={s.decades} /></div>}
         {s.learnedSignals.length > 0 && (
           <div>
-            <h3 className="mb-1 text-xs uppercase tracking-wider text-muted">What your ranker learned</h3>
+            <h3 className="mb-1 text-xs uppercase tracking-wider text-muted">{T("What your ranker learned")}</h3>
             <ul className="space-y-0.5 text-xs">{s.learnedSignals.map(([f, v]) => <li key={f}>{v > 0 ? "▲" : "▼"} {f.replace(/_/g, " ")} <span className="text-muted">({v > 0 ? "+" : ""}{v.toFixed(2)})</span></li>)}</ul>
           </div>
         )}

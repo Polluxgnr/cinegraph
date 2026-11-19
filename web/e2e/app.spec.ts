@@ -100,3 +100,24 @@ test("navigation: four destinations, the rest under More", async ({ page, isMobi
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Tonight" })).toBeVisible();
 });
+
+test("language: switching to French translates the interface", async ({ page, isMobile }) => {
+  await open(page, "/settings/");
+  // the page reloads itself in the new language
+  await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Français" }).click()]);
+  await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+  await page.goto("/");
+  const nav = page.locator(isMobile ? "nav.fixed" : "header.fixed");
+  await expect(nav.getByText("Accueil")).toBeVisible();
+  await expect(nav.getByText("Plus")).toBeVisible();
+  await expect(page.getByText(/% pour vous/).first()).toBeVisible();
+});
+
+test.describe("French browser", () => {
+  test.use({ locale: "fr-FR" });
+  test("language: a French browser gets French by default", async ({ page, isMobile }) => {
+    await open(page, "/");
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+    await expect(page.locator(isMobile ? "nav.fixed" : "header.fixed").getByText("Ma liste")).toBeVisible();
+  });
+});

@@ -5,6 +5,7 @@
  *   -> MMR diversity on embeddings -> Thompson-sampling exploration slots -> explanations
  */
 import { isFilmData, type DomainData, type FilmData } from "../data";
+import { t } from "../i18n";
 import { isDone, type State } from "../store";
 import type { Entity, Film } from "../types";
 import { sampleBeta } from "./linalg";
@@ -132,7 +133,7 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   }));
   explorePicks.forEach((x, k) => {
     out.splice(Math.min(out.length, 3 + k * 5), 0, {
-      entity: d.entities[x.row], p: x.p, stars: stars(x.p), why: `Exploring: ${explain(x.sc, c, x.p).toLowerCase()}`,
+      entity: d.entities[x.row], p: x.p, stars: stars(x.p), why: `${t("Exploring")}: ${explain(x.sc, c, x.p).toLowerCase()}`,
       explore: true, scored: x.sc,
     });
   });

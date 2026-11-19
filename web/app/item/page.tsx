@@ -1,5 +1,7 @@
 "use client";
 
+import { filmOverview, useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useMemo } from "react";
 import AnswerPanel from "@/components/AnswerPanel";
@@ -33,17 +35,19 @@ const LINK_LABEL: Record<string, string> = {
 };
 
 export default function ItemPage() {
+  const T = useT();
   const [k] = useQueryParam("k");
   const domain = k?.split(":")[0] ?? "films";
   const { data: d } = useDomain(domain);
   if (!k) return null;
   if (!d) return <div className="card h-96 animate-pulse" />;
   const row = d.index.get(k);
-  if (row == null) return <p className="card p-4">Not found in the catalogue.</p>;
+  if (row == null) return <p className="card p-4">{T("Not found in the catalogue.")}</p>;
   return <Detail d={d} row={row} />;
 }
 
 function Detail({ d, row }: { d: DomainData; row: number }) {
+  const T = useT();
   const e = d.entities[row];
   useFilmDetails(e.film);
   const cfg = DOMAIN[e.domain];
@@ -96,16 +100,16 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
 
           <div className="card space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted">{fb ? `Your answer: ${actionLabel(e.domain, fb.action)}${fb.chips?.length ? ` (${fb.chips.join(", ")})` : ""}` : "What do you think?"}</p>
+              <p className="text-sm text-muted">{fb ? `${T("Your answer")}: ${actionLabel(e.domain, fb.action)}${fb.chips?.length ? ` (${fb.chips.join(", ")})` : ""}` : T("What do you think?")}</p>
               <div className="flex gap-2">
-                <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => setList(e.key, e.domain, listed ? null : "want")}>{listed ? "✓ On my list" : "+ My list"}</button>
-                <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => addVault({ title: e.title, url: e.item?.url ?? f?.links?.wikipedia, tags: [e.domain, ...e.tags.slice(0, 3)], domain: e.domain, image: e.image })}>Save to vault</button>
+                <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => setList(e.key, e.domain, listed ? null : "want")}>{listed ? T("✓ On my list") : T("+ My list")}</button>
+                <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => addVault({ title: e.title, url: e.item?.url ?? f?.links?.wikipedia, tags: [e.domain, ...e.tags.slice(0, 3)], domain: e.domain, image: e.image })}>{T("Save to vault")}</button>
               </div>
             </div>
             <AnswerPanel e={e} onAnswer={(a, extra) => answer(e.key, e.domain, a, { ...extra, source: "detail" })} compact />
             {f && (
               <div className="flex items-center gap-3 border-t border-line pt-3">
-                <span className="text-xs text-muted">Rate it</span>
+                <span className="text-xs text-muted">{T("Rate it")}</span>
                 <Stars value={fb?.rating ?? null} size={24} onChange={(v) => answer(e.key, e.domain, v >= 4.5 ? "loved" : v >= 3.5 ? "liked" : v >= 2.5 ? "ok" : "disliked", { rating: v, source: "detail" })} />
               </div>
             )}
@@ -120,48 +124,51 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
       {e.domain === "places" && <PlaceSpots e={e} />}
       {e.domain === "brands" && <BrandPieces d={d} e={e} />}
       {f && <Saga d={d as FilmData} row={row} />}
-      {similar.length > 0 && <Row title="Similar">{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
+      {similar.length > 0 && <Row title={T("Similar")}>{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
     </div>
   );
 }
 
 function Trailer({ e }: { e: Entity }) {
+  const T = useT();
   const key = e.film?.tr;
   return (
     <section>
-      <h2 className="mb-3 font-display text-2xl">Trailer</h2>
+      <h2 className="mb-3 font-display text-2xl">{T("Trailer")}</h2>
       {key ? (
         <div className="aspect-video max-w-3xl overflow-hidden rounded-2xl border border-line bg-black">
           <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${key}?rel=0`} title={`${e.title} trailer`}
                   allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />
         </div>
       ) : (
-        <a href={trailerSearch(e)} target="_blank" rel="noreferrer" className="btn-ghost text-sm">▶ Watch the trailer on YouTube ↗</a>
+        <a href={trailerSearch(e)} target="_blank" rel="noreferrer" className="btn-ghost text-sm">{T("▶ Watch the trailer on YouTube ↗")}</a>
       )}
     </section>
   );
 }
 
 function Links({ links }: { links?: Record<string, string> }) {
+  const T = useT();
   if (!links) return null;
   const order = ["senscritique", "allocine", "letterboxd", "imdb", "justwatch", "wikipedia", "tmdb"];
   const entries = Object.entries(links).sort((a, b) => (order.indexOf(a[0]) + 99) % 99 - (order.indexOf(b[0]) + 99) % 99);
   return (
     <div className="flex flex-wrap gap-1.5">
       {entries.map(([k, v]) => (
-        <a key={k} href={v} target="_blank" rel="noreferrer" className="chip text-xs hover:text-ink">{LINK_LABEL[k] ?? k} ↗</a>
+        <a key={k} href={v} target="_blank" rel="noreferrer" className="chip text-xs hover:text-ink">{T(LINK_LABEL[k] ?? k)} ↗</a>
       ))}
     </div>
   );
 }
 
 function FilmFacts({ d, row }: { d: FilmData; row: number }) {
+  const T = useT();
   const f = d.films[row];
   const platforms = useStore((s) => s.settings.platforms);
   const names = (ids?: number[]) => (ids ?? []).map((i) => d.people[i]).join(", ");
   const facts: [string, string][] = [
     ["Released", f.d ? new Date(f.d).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }) : String(f.y ?? "")],
-    ["Length", f.k === "tv" ? [f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "", f.ne ? `${f.ne} episode${f.ne === 1 ? "" : "s"}` : "", f.rt ? `${f.rt} min/ep` : ""].filter(Boolean).join(" · ") : fmtRuntime(f.rt)],
+    ["Length", f.k === "tv" ? [f.ns ? T(f.ns === 1 ? "{n} season" : "{n} seasons", { n: f.ns }) : "", f.ne ? T(f.ne === 1 ? "{n} episode" : "{n} episodes", { n: f.ne }) : "", f.rt ? T("{n} min/ep", { n: f.rt }) : ""].filter(Boolean).join(" · ") : fmtRuntime(f.rt)],
     ["Original language (VO)", f.lang ? LANG_NAMES[f.lang] ?? f.lang : ""],
     ["Countries", (f.c ?? []).join(", ")],
     ["Directed by", names(f.dir)],
@@ -179,15 +186,15 @@ function FilmFacts({ d, row }: { d: FilmData; row: number }) {
   const watch = watchOptions(f, platforms);
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">{(f.g ?? []).map((g) => <span key={g} className="chip">{g}</span>)}</div>
-      {f.ov && <p className="max-w-3xl leading-relaxed text-ink/90">{f.ov}</p>}
+      <div className="flex flex-wrap gap-1.5">{(f.g ?? []).map((g) => <span key={g} className="chip">{T(g)}</span>)}</div>
+      {filmOverview(f) && <p className="max-w-3xl leading-relaxed text-ink/90">{filmOverview(f)}</p>}
       <div>
-        <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">Where to watch (legal, France)</p>
+        <p className="mb-1.5 text-xs uppercase tracking-wider text-muted">{T("Where to watch (legal, France)")}</p>
         <div className="flex flex-wrap gap-1.5">
           {watch.map((w) => (
             <a key={w.label} href={w.url} target="_blank" rel="noreferrer"
                className={`chip text-xs ${w.kind === "mine" ? "border-like text-like" : w.kind === "free" ? "border-accent text-accent" : ""}`}>
-              {w.kind === "mine" ? "▶ " : w.kind === "free" ? "Free · " : ""}{w.label} ↗
+              {w.kind === "mine" ? "▶ " : w.kind === "free" ? T("Free · ") : ""}{w.label} ↗
             </a>
           ))}
         </div>
@@ -205,6 +212,7 @@ function FilmFacts({ d, row }: { d: FilmData; row: number }) {
 }
 
 function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
+  const T = useT();
   const it = e.item!;
   const meta = it.meta ?? {};
   return (
@@ -225,7 +233,7 @@ function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
       )}
       {it.date && <p className="text-xs text-muted">{new Date(it.date).toLocaleDateString("fr-FR")}</p>}
       <div className="flex flex-wrap gap-1.5">
-        {it.url && <a href={it.url} target="_blank" rel="noreferrer" className="btn px-3 py-1.5 text-sm">Open ↗</a>}
+        {it.url && <a href={it.url} target="_blank" rel="noreferrer" className="btn px-3 py-1.5 text-sm">{T("Open ↗")}</a>}
         <Links links={it.links} />
       </div>
       <Explore e={e} />
@@ -234,11 +242,12 @@ function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
 }
 
 function Explore({ e }: { e: Entity }) {
+  const T = useT();
   const links = exploreLinks(e);
   if (!Object.keys(links).length) return null;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted">Go further</p>
+      <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted">{T("Go further")}</p>
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(links).map(([k, v]) => <a key={k} href={v} target="_blank" rel="noreferrer" className="chip text-xs hover:text-ink">{k} ↗</a>)}
       </div>
@@ -247,6 +256,7 @@ function Explore({ e }: { e: Entity }) {
 }
 
 function Saga({ d, row }: { d: FilmData; row: number }) {
+  const T = useT();
   const f = d.films[row];
   const feedback = useStore((s) => s.feedback);
   if (!f.coll) return null;
@@ -257,7 +267,7 @@ function Saga({ d, row }: { d: FilmData; row: number }) {
     <section className="card p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="font-display text-2xl">{c.name}</h2>
-        <span className="text-xs text-muted">{seenN} / {c.items.length} seen</span>
+        <span className="text-xs text-muted">{seenN} / {c.items.length} {T("seen")}</span>
       </div>
       <Progress value={seenN / c.items.length} />
       <ol className="no-scrollbar mt-4 flex gap-3 overflow-x-auto">
@@ -272,7 +282,7 @@ function Saga({ d, row }: { d: FilmData; row: number }) {
                 <EntityImage e={x} aspect="2/3" />
               </Link>
               <p className="mt-1 line-clamp-2 text-xs"><span className="text-muted">{i + 1}.</span> {x.title}</p>
-              <p className="text-[11px] text-muted">{seen ? "✓ seen" : x.film?.y}</p>
+              <p className="text-[11px] text-muted">{seen ? T("✓ seen") : x.film?.y}</p>
             </li>
           );
         })}
@@ -282,12 +292,13 @@ function Saga({ d, row }: { d: FilmData; row: number }) {
 }
 
 function SeriesTracker({ k, seasons }: { k: string; seasons: number }) {
+  const T = useT();
   const p = useStore((s) => s.progress[k]);
   const season = p?.season ?? 1;
   const episode = p?.episode ?? 0;
   return (
     <div className="card flex flex-wrap items-center gap-3 p-4 text-sm">
-      <span className="text-muted">Where I am</span>
+      <span className="text-muted">{T("Where I am")}</span>
       <label className="flex items-center gap-1">S
         <input type="number" min={1} max={Math.max(seasons, 1)} value={season} onChange={(ev) => setProgress(k, +ev.target.value, episode)}
                className="w-14 rounded-lg border border-line bg-panel px-2 py-1" />
@@ -296,7 +307,7 @@ function SeriesTracker({ k, seasons }: { k: string; seasons: number }) {
         <input type="number" min={0} value={episode} onChange={(ev) => setProgress(k, season, +ev.target.value)}
                className="w-16 rounded-lg border border-line bg-panel px-2 py-1" />
       </label>
-      <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setProgress(k, season, episode + 1)}>+1 episode</button>
+      <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setProgress(k, season, episode + 1)}>{T("+1 episode")}</button>
       {seasons > 0 && <Progress className="w-full" value={Math.min(1, (season - 1) / seasons)} label={`${season - 1} of ${seasons} seasons done`} />}
     </div>
   );

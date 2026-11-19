@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
@@ -11,6 +13,7 @@ const SEEN = ["fav", "loved", "liked", "ok", "disliked", "dropped"];
 
 /** Franchises grouped (Harry Potter, Star Wars, Marvel...) with a progress bar each. */
 export default function SagasPanel({ embedded = false }: { embedded?: boolean }) {
+  const T = useT();
   const films = useFilms().data;
   const feedback = useStore((s) => s.feedback);
   const [q, setQ] = useState("");
@@ -30,15 +33,15 @@ export default function SagasPanel({ embedded = false }: { embedded?: boolean })
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        {embedded ? <p className="text-sm text-muted">Franchises in viewing order, with your progress.</p> : (
+        {embedded ? <p className="text-sm text-muted">{T("Franchises in viewing order, with your progress.")}</p> : (
           <div>
-            <h1 className="font-display text-4xl md:text-5xl">Sagas</h1>
-            <p className="text-sm text-muted">Franchises in viewing order, with your progress.</p>
+            <h1 className="font-display text-4xl md:text-5xl">{T("Sagas")}</h1>
+            <p className="text-sm text-muted">{T("Franchises in viewing order, with your progress.")}</p>
           </div>
         )}
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={onlyStarted} onChange={(e) => setOnlyStarted(e.target.checked)} /> started</label>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a saga…" className="rounded-xl border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+          <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={onlyStarted} onChange={(e) => setOnlyStarted(e.target.checked)} /> {T("started")}</label>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T("Search a saga…")} className="rounded-xl border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
         </div>
       </header>
       <div className="grid gap-3 md:grid-cols-2">

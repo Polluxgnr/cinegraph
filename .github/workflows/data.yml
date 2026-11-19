@@ -78,6 +78,10 @@ jobs:
         if: env.TMDB_API_KEY != ''
         run: uv run cinegraph ingest trailers
 
+      - name: French titles and synopses (TMDB fr-FR, new titles only)
+        if: env.TMDB_API_KEY != ''
+        run: uv run cinegraph ingest french
+
       - name: Wikidata enrichment + links + Wikipedia images
         run: |
           uv run cinegraph ingest wikidata --tv-bootstrap 1200

@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
@@ -18,6 +20,7 @@ interface Pair {
 
 /** What two profiles will both enjoy: ranked by the weaker of the two matches, plus swipe-to-agree. */
 export default function Together() {
+  const T = useT();
   const space = useSpace();
   const cfg = DOMAIN[space];
   const loaded = useLoaded();
@@ -60,8 +63,8 @@ export default function Together() {
   if (!others.length) {
     return (
       <div className="max-w-xl space-y-3">
-        <h1 className="font-display text-4xl">Pick together</h1>
-        <p className="text-muted">Add a second profile first (top of the sidebar → New profile), let each person swipe a bit, then come back here to find what you&apos;ll both enjoy.</p>
+        <h1 className="font-display text-4xl">{T("Pick together")}</h1>
+        <p className="text-muted">{T("Add a second profile first (top of the sidebar → New profile), let each person swipe a bit, then come back here to find what you'll both enjoy.")}</p>
       </div>
     );
   }
@@ -90,8 +93,8 @@ export default function Together() {
     <div key={space} className="rise space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl md:text-5xl">Pick together</h1>
-          <p className="text-sm text-muted">{cfg.label} that {me.emoji} {me.name} and {partner.emoji} {partner.name} will both like.</p>
+          <h1 className="font-display text-4xl md:text-5xl">{T("Pick together")}</h1>
+          <p className="text-sm text-muted">{cfg.label} {T("that")}{" "}{me.emoji} {me.name} {T("and")}{" "}{partner.emoji} {partner.name} {T("will both like.")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {others.length > 1 && (
@@ -99,8 +102,8 @@ export default function Together() {
               {others.map((o) => <option key={o.id} value={o.id}>{o.emoji} {o.name}</option>)}
             </select>
           )}
-          <button className="chip" data-on={mode === "list"} onClick={() => setMode("list")}>Best matches</button>
-          <button className="chip" data-on={mode === "swipe"} onClick={() => setMode("swipe")}>Swipe to agree</button>
+          <button className="chip" data-on={mode === "list"} onClick={() => setMode("list")}>{T("Best matches")}</button>
+          <button className="chip" data-on={mode === "swipe"} onClick={() => setMode("swipe")}>{T("Swipe to agree")}</button>
         </div>
       </header>
 
@@ -136,18 +139,18 @@ export default function Together() {
             return (
               <div key={who} className="flex items-center gap-2">
                 <span className="w-28 truncate text-sm">{prof.emoji} {prof.name}</span>
-                <button className="btn-ghost flex-1 text-nope disabled:opacity-40" disabled={voted != null} onClick={() => vote(who, false)}>Nope</button>
-                <button className="btn-ghost flex-1 text-like disabled:opacity-40" disabled={voted != null} onClick={() => vote(who, true)}>Yes</button>
+                <button className="btn-ghost flex-1 text-nope disabled:opacity-40" disabled={voted != null} onClick={() => vote(who, false)}>{T("Nope")}</button>
+                <button className="btn-ghost flex-1 text-like disabled:opacity-40" disabled={voted != null} onClick={() => vote(who, true)}>{T("Yes")}</button>
               </div>
             );
           })}
-          <p className="text-center text-xs text-muted">Both say yes → it goes on both lists.</p>
+          <p className="text-center text-xs text-muted">{T("Both say yes → it goes on both lists.")}</p>
         </div>
       )}
 
       {matches.length > 0 && (
         <section>
-          <h2 className="mb-2 font-display text-2xl">It&apos;s a match ({matches.length})</h2>
+          <h2 className="mb-2 font-display text-2xl">{T("It's a match (")}{matches.length})</h2>
           <div className="flex flex-wrap gap-2">
             {matches.map((k) => {
               const p = pairs.find((x) => x.key === k);

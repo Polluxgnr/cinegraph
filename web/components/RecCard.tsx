@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useState } from "react";
 import EntityImage from "@/components/EntityImage";
@@ -17,6 +19,7 @@ export function detailHref(key: string) {
 }
 
 export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boolean }) {
+  const T = useT();
   const e = r.entity;
   const cfg = DOMAIN[e.domain];
   const listed = useStore((s) => s.lists[e.key]?.status);
@@ -25,7 +28,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
   const platforms = useStore((s) => s.settings.platforms);
   const f = e.film;
   const meta = f
-    ? [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "") : fmtRuntime(f.rt), f.lang?.toUpperCase()]
+    ? [f.k === "tv" ? T("Series") : T("Film"), f.y, f.k === "tv" ? (f.ns ? T(f.ns === 1 ? "{n} season" : "{n} seasons", { n: f.ns }) : "") : fmtRuntime(f.rt), f.lang?.toUpperCase()]
     : [e.subtitle, ...itemFacts(e)];
   const streams = f ? streamsOn(f, platforms) : [];
 
@@ -40,21 +43,21 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
             <EntityImage e={e} aspect="2/3" className="transition duration-500 group-hover:scale-[1.04]" />
             <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent" />
             {streams.length > 0 && <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{streams[0]}</span>}
-            {r.explore && <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] text-unseen">New for you</span>}
+            {r.explore && <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] text-unseen">{T("New for you")}</span>}
           </Link>
           <div className="absolute right-1.5 top-1.5 flex gap-1 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
             <button onClick={() => (listed ? setList(e.key, e.domain, null) : answer(e.key, e.domain, "want", { source: "card" }))}
                     className={`grid h-8 w-8 place-items-center rounded-full text-sm backdrop-blur ${listed ? "bg-accent text-bg" : "bg-black/60 text-white hover:bg-black/80"}`}
-                    aria-label={listed ? "Remove from my list" : "Add to my list"} title={listed ? "On my list" : "Add to my list"}>{listed ? "✓" : "+"}</button>
-            <button onClick={() => setWhy(!why)} aria-expanded={why} aria-label="Not for me" title="Not for me"
+                    aria-label={listed ? T("Remove from my list") : T("Add to my list")} title={listed ? T("On my list") : T("Add to my list")}>{listed ? "✓" : "+"}</button>
+            <button onClick={() => setWhy(!why)} aria-expanded={why} aria-label={T("Not for me")} title={T("Not for me")}
                     className="grid h-8 w-8 place-items-center rounded-full bg-black/60 text-sm text-white backdrop-blur hover:bg-black/80">✕</button>
           </div>
         </div>
         <div className="min-w-0 px-0.5">
           <Link href={detailHref(e.key)} className="line-clamp-1 text-sm font-medium hover:text-accent">{e.title}</Link>
           <p className="text-xs text-muted">
-            <span className={pct >= 70 ? "text-like" : pct >= 45 ? "text-accent" : ""}>{pct}% match</span>
-            {f.y ? `  ·  ${f.y}` : ""}{f.k === "tv" ? "  ·  Series" : f.rt ? `  ·  ${fmtRuntime(f.rt)}` : ""}
+            <span className={pct >= 70 ? "text-like" : pct >= 45 ? "text-accent" : ""}>{pct}{T("% match")}</span>
+            {f.y ? `  ·  ${f.y}` : ""}{f.k === "tv" ? T("  ·  Series") : f.rt ? `  ·  ${fmtRuntime(f.rt)}` : ""}
           </p>
           {showWhy && <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{r.why}</p>}
           {why && <NotForMe onPick={(a, chip) => answer(e.key, e.domain, a, { source: "card", chips: chip ? [chip] : undefined })} film />}
@@ -66,7 +69,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
     <article className="group card flex flex-col overflow-hidden">
       <Link href={detailHref(e.key)} className="tilt relative block overflow-hidden" {...tilt}>
         <EntityImage e={e} aspect={cfg?.aspect ?? "2/3"} className="transition duration-500 group-hover:scale-[1.03]" />
-        {r.explore && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-unseen">exploring</span>}
+        {r.explore && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-unseen">{T("exploring")}</span>}
         {streams.length > 0 && (
           <span className="absolute bottom-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[11px] text-ink">{streams.join(" · ")}</span>
         )}
@@ -82,11 +85,11 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
           <button
             onClick={() => (listed ? setList(e.key, e.domain, null) : answer(e.key, e.domain, "want", { source: "card" }))}
             className="btn-ghost flex-1 whitespace-nowrap px-2 py-1.5 text-xs"
-            title={listed ? "Remove from my list" : "Add to my list"}
+            title={listed ? T("Remove from my list") : T("Add to my list")}
           >
-            {listed ? "✓ Listed" : "+ List"}
+            {listed ? T("✓ Listed") : T("+ List")}
           </button>
-          <button onClick={() => setWhy(!why)} className="btn-ghost px-2 py-1.5 text-xs text-muted" title="Not for me" aria-expanded={why}>
+          <button onClick={() => setWhy(!why)} className="btn-ghost px-2 py-1.5 text-xs text-muted" title={T("Not for me")} aria-expanded={why}>
             ✕
           </button>
         </div>
@@ -106,19 +109,21 @@ export const NOT_FOR_ME: [string, Action, string | undefined][] = [
 ];
 
 function NotForMe({ onPick, film }: { onPick: (a: Action, chip?: string) => void; film: boolean }) {
+  const T = useT();
   return (
-    <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="Why not?">
+    <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label={T("Why not?")}>
       {NOT_FOR_ME.filter(([l]) => film || l !== "Too long").map(([label, a, chip]) => (
-        <button key={label} className="chip text-[11px]" onClick={() => onPick(a, chip)}>{label}</button>
+        <button key={label} className="chip text-[11px]" onClick={() => onPick(a, chip)}>{T(label)}</button>
       ))}
     </div>
   );
 }
 
 export function Progress({ value, label, className = "" }: { value: number; label?: string; className?: string }) {
+  const T = useT();
   return (
     <div className={className}>
-      {label && <div className="mb-1 flex justify-between text-xs text-muted"><span>{label}</span><span>{Math.round(value * 100)}%</span></div>}
+      {label && <div className="mb-1 flex justify-between text-xs text-muted"><span>{T(label)}</span><span>{Math.round(value * 100)}%</span></div>}
       <div className="h-1.5 overflow-hidden rounded-full bg-panel-2">
         <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.max(2, value * 100)}%` }} />
       </div>
@@ -127,14 +132,15 @@ export function Progress({ value, label, className = "" }: { value: number; labe
 }
 
 export function Row({ title, href, children, hint }: { title: string; href?: string; children: React.ReactNode; hint?: string }) {
+  const T = useT();
   return (
     <section>
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl md:text-3xl">{title}</h2>
-          {hint && <p className="text-xs text-muted">{hint}</p>}
+          <h2 className="font-display text-2xl md:text-3xl">{T(title)}</h2>
+          {hint && <p className="text-xs text-muted">{T(hint)}</p>}
         </div>
-        {href && <Link href={href} className="shrink-0 text-sm text-accent">See all →</Link>}
+        {href && <Link href={href} className="shrink-0 text-sm text-accent">{T("See all →")}</Link>}
       </div>
       <div className="stagger no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [&>*]:w-40 [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:w-48">{children}</div>
     </section>

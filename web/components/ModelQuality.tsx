@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { motion } from "motion/react";
 import { useManifest } from "@/lib/hooks";
 
@@ -15,17 +17,16 @@ const METHODS: [string, string, string][] = [
  * has to find them again. Rebuilt with the catalogue every week.
  */
 export default function ModelQuality() {
+  const T = useT();
   const ev = useManifest().data?.eval;
   if (!ev) return null;
   const max = Math.max(...METHODS.map(([k]) => ev[k as "hybrid"]?.hr10 ?? 0), 0.01);
   return (
     <section className="card space-y-3 p-5">
       <div>
-        <h2 className="font-display text-2xl">How good is it, measured</h2>
+        <h2 className="font-display text-2xl">{T("How good is it, measured")}</h2>
         <p className="text-xs text-muted">
-          For {ev.users.toLocaleString("fr-FR")} MovieLens users, 20% of the films they rated 4/5 or more were hidden; each method ranks
-          {" "}{ev.items.toLocaleString("fr-FR")} films and we check whether a hidden favourite lands in its top 10.
-        </p>
+          {T("For")}{" "}{ev.users.toLocaleString("fr-FR")} {T("MovieLens users, 20% of the films they rated 4/5 or more were hidden; each method ranks")}{" "}{ev.items.toLocaleString("fr-FR")} {T("films and we check whether a hidden favourite lands in its top 10.")}</p>
       </div>
       <ul className="space-y-2">
         {METHODS.map(([k, label, hint], i) => {
@@ -45,14 +46,12 @@ export default function ModelQuality() {
       </ul>
       {ev.app && (
         <p className="text-sm">
-          The app&apos;s own engine (what you see): HR@10 <b>{Math.round(ev.app.after.hr10 * 100)}%</b>, NDCG@10 {ev.app.after.ndcg10.toFixed(3)}
-          <span className="text-muted"> · before the last tuning {Math.round(ev.app.before.hr10 * 100)}% / {ev.app.before.ndcg10.toFixed(3)} ({ev.app.after.users} users)</span>
+          {T("The app's own engine (what you see): HR@10")}{" "}<b>{Math.round(ev.app.after.hr10 * 100)}%</b>{T(", NDCG@10")}{" "}{ev.app.after.ndcg10.toFixed(3)}
+          <span className="text-muted"> {T("· before the last tuning")}{" "}{Math.round(ev.app.before.hr10 * 100)}% / {ev.app.before.ndcg10.toFixed(3)} ({ev.app.after.users} {T("users)")}</span>
         </p>
       )}
       <p className="text-[11px] text-muted">
-        Share of people with a hidden favourite in the top 10 (HR@10). NDCG@10 {ev.hybrid?.ndcg10.toFixed(3)} · Recall@20 {ev.hybrid?.recall20.toFixed(3)} for CineGraph.
-        Blend weights picked on half the users, scores reported on the other half.
-      </p>
+        {T("Share of people with a hidden favourite in the top 10 (HR@10). NDCG@10")}{" "}{ev.hybrid?.ndcg10.toFixed(3)} {T("· Recall@20")}{" "}{ev.hybrid?.recall20.toFixed(3)} {T("for CineGraph. Blend weights picked on half the users, scores reported on the other half.")}</p>
     </section>
   );
 }

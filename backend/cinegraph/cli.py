@@ -83,6 +83,14 @@ def ingest_trailers(limit: Optional[int] = typer.Option(None, help="stop after N
     _echo(trailers(limit))
 
 
+@ingest_app.command("french")
+def ingest_french(limit: Optional[int] = typer.Option(None, help="stop after N titles")) -> None:
+    """French title and synopsis of every catalogue title (TMDB fr-FR; new titles only on later runs)."""
+    from .ingest.tmdb_ingest import french
+
+    _echo(french(limit))
+
+
 @ingest_app.command("movielens")
 def ingest_movielens(variant: Optional[str] = typer.Option(None, help="ml-latest-small | ml-32m")) -> None:
     """Import MovieLens links, stub titles, tags and ratings."""

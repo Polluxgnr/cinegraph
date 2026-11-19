@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useLoaded, useStore } from "@/lib/store";
@@ -9,6 +11,7 @@ import { lastSynced } from "@/lib/sync";
 export default function SyncBadge() {
   const on = useStore((s) => !!s.settings.gistToken);
   const loaded = useLoaded();
+  const t = useT();
   const [at, setAt] = useState(0);
   const [now, setNow] = useState(0);
   useEffect(() => {
@@ -26,12 +29,12 @@ export default function SyncBadge() {
     };
   }, []);
   if (!loaded) return null;
-  const ago = !at ? "not yet" : now - at < 60_000 ? "just now" : now - at < 3.6e6 ? `${Math.round((now - at) / 60_000)} min ago` : `${Math.round((now - at) / 3.6e6)} h ago`;
+  const ago = !at ? t("not yet") : now - at < 60_000 ? t("just now") : now - at < 3.6e6 ? t("{n} min ago", { n: Math.round((now - at) / 60_000) }) : t("{n} h ago", { n: Math.round((now - at) / 3.6e6) });
   return (
     <Link href="/settings/" className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${on ? "text-muted hover:text-ink" : "bg-nope/10 text-nope hover:bg-nope/20"}`}
-          title={on ? "Your memory syncs to your private Gist" : "Answers are saved in this browser only"}>
+          title={on ? t("Your memory syncs to your private Gist") : t("Answers are saved in this browser only")}>
       <span>{on ? "☁" : "⚠"}</span>
-      <span>{on ? `Synced · ${ago}` : "This browser only · set up sync"}</span>
+      <span>{on ? `${t("Synced")} · ${ago}` : t("This browser only · set up sync")}</span>
     </Link>
   );
 }

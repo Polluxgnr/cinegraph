@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
 import WebLookup from "@/components/WebLookup";
@@ -15,6 +17,7 @@ import { useRecs } from "@/lib/useRecs";
 type Sort = "match" | "date" | "popular" | "rating" | "length" | "liked" | "price-up" | "price-down";
 
 export default function Discover() {
+  const T = useT();
   const domain = useSpace();
   const { data: d } = useDomain(domain);
   const [kind, setKind] = useState<"any" | "movie" | "tv">("any");
@@ -43,7 +46,7 @@ export default function Discover() {
   const fields = (e: Entity): string[] => {
     const f = e.film;
     const names = (ids?: number[]) => (f && d && "people" in d ? (ids ?? []).map((i) => (d as FilmData).people[i]).join(" ") : "");
-    return [`${e.title} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, e.tags.join(" ")].map(normTitle);
+    return [`${e.title} ${f?.t ?? ""} ${f?.tf ?? ""} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, e.tags.join(" ")].map(normTitle);
   };
   const filter = (e: Entity) => {
     if (words.length) {
@@ -83,52 +86,50 @@ export default function Discover() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-4xl md:text-5xl">{DOMAIN[domain]?.label}</h1>
         <label className="flex items-center gap-2 text-sm text-muted">
-          Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="rounded-lg border border-line bg-panel px-2 py-1 text-ink">
-            <option value="match">Best match</option>
-            <option value="date">Newest first</option>
-            <option value="popular">Most popular</option>
-            {isFilm && <option value="rating">Community rating</option>}
-            {(isFilm || domain === "youtube") && <option value="length">Shortest first</option>}
-            {domain === "youtube" && <option value="liked">Most liked</option>}
-            {(domain === "cars" || domain === "brands") && <option value="price-up">Price: low to high</option>}
-            {(domain === "cars" || domain === "brands") && <option value="price-down">Price: high to low</option>}
+          {T("Sort")}<select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="rounded-lg border border-line bg-panel px-2 py-1 text-ink">
+            <option value="match">{T("Best match")}</option>
+            <option value="date">{T("Newest first")}</option>
+            <option value="popular">{T("Most popular")}</option>
+            {isFilm && <option value="rating">{T("Community rating")}</option>}
+            {(isFilm || domain === "youtube") && <option value="length">{T("Shortest first")}</option>}
+            {domain === "youtube" && <option value="liked">{T("Most liked")}</option>}
+            {(domain === "cars" || domain === "brands") && <option value="price-up">{T("Price: low to high")}</option>}
+            {(domain === "cars" || domain === "brands") && <option value="price-down">{T("Price: high to low")}</option>}
           </select>
         </label>
       </header>
       <input value={q} onChange={(e) => setQ(e.target.value)} type="search" autoFocus
-             placeholder={domain === "films" ? "Search a title, a director, an actor, a theme…" : `Search ${DOMAIN[domain]?.label.toLowerCase()}…`}
+             placeholder={domain === "films" ? T("Search a title, a director, an actor, a theme…") : `Search ${DOMAIN[domain]?.label.toLowerCase()}…`}
              className="w-full rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" />
       <div className="space-y-2">
         {isFilm && (
           <div className="flex flex-wrap gap-1.5">
-            {(["any", "movie", "tv"] as const).map((k) => <button key={k} className="chip" data-on={kind === k} onClick={() => setKind(k)}>{k === "any" ? "Films & series" : k === "movie" ? "Films" : "Series"}</button>)}
+            {(["any", "movie", "tv"] as const).map((k) => <button key={k} className="chip" data-on={kind === k} onClick={() => setKind(k)}>{k === "any" ? T("Films & series") : k === "movie" ? T("Films") : T("Series")}</button>)}
             <span className="mx-1 w-px bg-line" />
-            {[null, 100, 120, 150].map((r) => <button key={String(r)} className="chip" data-on={maxRt === r} onClick={() => setMaxRt(r)}>{r ? `≤ ${Math.floor(r / 60)}h${r % 60 ? String(r % 60).padStart(2, "0") : ""}` : "Any length"}</button>)}
+            {[null, 100, 120, 150].map((r) => <button key={String(r)} className="chip" data-on={maxRt === r} onClick={() => setMaxRt(r)}>{r ? `≤ ${Math.floor(r / 60)}h${r % 60 ? String(r % 60).padStart(2, "0") : ""}` : T("Any length")}</button>)}
             <span className="mx-1 w-px bg-line" />
             <select value={decade ?? ""} onChange={(e) => setDecade(e.target.value ? +e.target.value : null)} className="chip bg-transparent">
-              <option value="">Any decade</option>
-              {[2020, 2010, 2000, 1990, 1980, 1970, 1960, 1950].map((x) => <option key={x} value={x}>{x}s</option>)}
+              <option value="">{T("Any decade")}</option>
+              {[2020, 2010, 2000, 1990, 1980, 1970, 1960, 1950].map((x) => <option key={x} value={x}>{x}{T("s")}</option>)}
             </select>
             <select value={lang ?? ""} onChange={(e) => setLang(e.target.value || null)} className="chip bg-transparent">
-              <option value="">Any VO</option>
+              <option value="">{T("Any VO")}</option>
               {facets.langs.map((l) => <option key={l} value={l}>{LANG_NAMES[l] ?? l}</option>)}
             </select>
           </div>
         )}
         <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-          <button className="chip shrink-0" data-on={!tag} onClick={() => setTag(null)}>All</button>
+          <button className="chip shrink-0" data-on={!tag} onClick={() => setTag(null)}>{T("All")}</button>
           {facets.tags.map((t) => <button key={t} className="chip shrink-0" data-on={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted">
-          <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> include things I already answered
-        </label>
+          <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> {T("include things I already answered")}</label>
       </div>
       {domain === "brands" && words.length > 0 && recs && recs.length < 6 && <WebLookup key={q.trim()} query={q.trim()} />}
       <div key={key + sort} className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {recs ? sorted.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>
-      {recs && !recs.length && <p className="text-muted">Nothing matches these filters.</p>}
+      {recs && !recs.length && <p className="text-muted">{T("Nothing matches these filters.")}</p>}
     </div>
   );
 }

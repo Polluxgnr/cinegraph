@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
@@ -26,6 +28,7 @@ const categoryOf = (e: Entity) => e.tags.find((t) => (CATEGORIES as readonly str
  * browse every category on the brand's own site and second hand. Works from a brand page and a piece page.
  */
 export default function BrandPieces({ d, e }: { d: DomainData; e: Entity }) {
+  const T = useT();
   const meta = e.item?.meta ?? {};
   const brand = meta.kind === "piece" && typeof meta.brand === "string" ? meta.brand : e.title;
   const brandEntity = d.entities.find((x) => x.title === brand && x.item?.meta?.kind !== "piece") ?? e;
@@ -47,12 +50,12 @@ export default function BrandPieces({ d, e }: { d: DomainData; e: Entity }) {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-3 font-display text-2xl">{brand}, piece by piece</h2>
+        <h2 className="mb-3 font-display text-2xl">{brand}{T(", piece by piece")}</h2>
         {groups.length ? (
           <div className="space-y-5">
             {groups.map(([cat, list]) => (
               <div key={cat}>
-                <p className="mb-2 text-xs uppercase tracking-[0.18em] text-muted">{LABEL[cat] ?? cat} · {list.length}</p>
+                <p className="mb-2 text-xs uppercase tracking-[0.18em] text-muted">{T(LABEL[cat] ?? cat)} · {list.length}</p>
                 <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
                   {list.map((p) => (
                     <Link key={p.key} href={detailHref(p.key)} className={`card w-40 shrink-0 overflow-hidden ${p.key === e.key ? "border-accent" : ""}`}>
@@ -68,20 +71,20 @@ export default function BrandPieces({ d, e }: { d: DomainData; e: Entity }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No pieces saved for {brand} yet. Browse below and add the ones you want to keep in mind.</p>
+          <p className="text-sm text-muted">{T("No pieces saved for")}{" "}{brand} {T("yet. Browse below and add the ones you want to keep in mind.")}</p>
         )}
       </section>
 
       <section>
-        <h2 className="mb-3 font-display text-2xl">Browse {brand} by category</h2>
+        <h2 className="mb-3 font-display text-2xl">{T("Browse")}{" "}{brand} {T("by category")}</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {CATEGORIES.map((c) => (
             <div key={c} className="card flex items-center justify-between gap-2 p-3 text-sm">
-              <span>{LABEL[c]}</span>
+              <span>{T(LABEL[c])}</span>
               <span className="flex gap-1.5">
-                {host && <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/search?q=${q(`site:${host} ${SEARCH[c]}`)}`}>On their site ↗</a>}
-                <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.vinted.fr/catalog?search_text=${q(`${brand} ${SEARCH[c].split(" ")[0]}`)}`}>Vinted ↗</a>
-                <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.grailed.com/shop?query=${q(`${brand} ${SEARCH[c].split(" ")[0]}`)}`}>Grailed ↗</a>
+                {host && <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/search?q=${q(`site:${host} ${SEARCH[c]}`)}`}>{T("On their site ↗")}</a>}
+                <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.vinted.fr/catalog?search_text=${q(`${brand} ${SEARCH[c].split(" ")[0]}`)}`}>{T("Vinted ↗")}</a>
+                <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.grailed.com/shop?query=${q(`${brand} ${SEARCH[c].split(" ")[0]}`)}`}>{T("Grailed ↗")}</a>
               </span>
             </div>
           ))}
@@ -94,6 +97,7 @@ export default function BrandPieces({ d, e }: { d: DomainData; e: Entity }) {
 }
 
 function AddPiece({ brand }: { brand: string }) {
+  const T = useT();
   const [name, setName] = useState("");
   const [cat, setCat] = useState<string>("outerwear");
   const [price, setPrice] = useState("");
@@ -101,7 +105,7 @@ function AddPiece({ brand }: { brand: string }) {
   const [done, setDone] = useState<string | null>(null);
   return (
     <section className="card space-y-3 p-4">
-      <h2 className="font-display text-xl">Add a {brand} piece you want</h2>
+      <h2 className="font-display text-xl">{T("Add a")}{" "}{brand} {T("piece you want")}</h2>
       <form className="grid gap-2 sm:grid-cols-[1fr_auto_7rem]" onSubmit={(ev) => {
         ev.preventDefault();
         if (!name.trim()) return;
@@ -113,13 +117,13 @@ function AddPiece({ brand }: { brand: string }) {
         setDone(`${brand} ${name.trim()} added to your list`);
         setName(""); setPrice(""); setUrl("");
       }}>
-        <input value={name} onChange={(ev) => setName(ev.target.value)} placeholder="e.g. Goggle jacket in navy" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+        <input value={name} onChange={(ev) => setName(ev.target.value)} placeholder={T("e.g. Goggle jacket in navy")} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
         <select value={cat} onChange={(ev) => setCat(ev.target.value)} className="rounded-lg border border-line bg-panel px-2 py-2 text-sm">
-          {CATEGORIES.map((c) => <option key={c} value={c}>{LABEL[c]}</option>)}
+          {CATEGORIES.map((c) => <option key={c} value={c}>{T(LABEL[c])}</option>)}
         </select>
-        <input value={price} onChange={(ev) => setPrice(ev.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="€ price" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
-        <input value={url} onChange={(ev) => setUrl(ev.target.value)} placeholder="Link to the product (optional)" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent sm:col-span-2" />
-        <button className="btn text-sm">Add</button>
+        <input value={price} onChange={(ev) => setPrice(ev.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder={T("€ price")} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+        <input value={url} onChange={(ev) => setUrl(ev.target.value)} placeholder={T("Link to the product (optional)")} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent sm:col-span-2" />
+        <button className="btn text-sm">{T("Add")}</button>
       </form>
       {done && <p className="text-xs text-like">✓ {done}</p>}
     </section>

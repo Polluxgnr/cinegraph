@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Film } from "@/lib/types";
@@ -63,6 +65,7 @@ async function wikipediaSummary(url: string): Promise<{ text: string; url: strin
 }
 
 export default function FilmSources({ f }: { f: Film }) {
+  const T = useT();
   const [scores, setScores] = useState<Score[] | null>(null);
   const [wiki, setWiki] = useState<{ text: string; url: string } | null>(null);
   const qid = f.links?.wikidata?.split("/").pop();
@@ -78,8 +81,8 @@ export default function FilmSources({ f }: { f: Film }) {
   }, [qid, f.links?.wikipedia]);
 
   const all: Score[] = [
-    ...(f.va && f.vc ? [{ source: "TMDB", method: `audience · ${f.vc.toLocaleString("fr-FR")} votes`, value: `${f.va.toFixed(1)}/10`, pct: Math.round(f.va * 10), url: f.links?.tmdb }] : []),
-    ...(f.mlr && f.mlc ? [{ source: "MovieLens", method: `${f.mlc.toLocaleString("fr-FR")} individual ratings`, value: `${f.mlr.toFixed(2)}/5`, pct: Math.round(f.mlr * 20), url: undefined }] : []),
+    ...(f.va && f.vc ? [{ source: "TMDB", method: T("audience · {n} votes", { n: f.vc.toLocaleString("fr-FR") }), value: `${f.va.toFixed(1)}/10`, pct: Math.round(f.va * 10), url: f.links?.tmdb }] : []),
+    ...(f.mlr && f.mlc ? [{ source: "MovieLens", method: T("{n} individual ratings", { n: f.mlc.toLocaleString("fr-FR") }), value: `${f.mlr.toFixed(2)}/5`, pct: Math.round(f.mlr * 20), url: undefined }] : []),
     ...(scores ?? []),
   ];
   const reviews: [string, string | undefined][] = [
@@ -88,7 +91,7 @@ export default function FilmSources({ f }: { f: Film }) {
 
   return (
     <section className="space-y-5">
-      <h2 className="font-display text-2xl">What everyone thinks</h2>
+      <h2 className="font-display text-2xl">{T("What everyone thinks")}</h2>
       <div className="grid gap-2 sm:grid-cols-2">
         {all.map((s, i) => (
           <motion.a key={`${s.source}${s.method}`} href={s.url} target={s.url ? "_blank" : undefined} rel="noreferrer"
@@ -102,26 +105,25 @@ export default function FilmSources({ f }: { f: Film }) {
               <motion.div className="h-full rounded-full" style={{ background: (s.pct ?? 0) >= 70 ? "var(--like)" : (s.pct ?? 0) >= 50 ? "var(--accent)" : "var(--nope)" }}
                           initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 0.8, delay: 0.1 + i * 0.05, ease: "easeOut" }} />
             </div>
-            <p className="mt-1 text-[11px] text-muted">{[s.method, s.date ? `as of ${s.date}` : ""].filter(Boolean).join(" · ")}{s.url ? " ↗" : ""}</p>
+            <p className="mt-1 text-[11px] text-muted">{[s.method, s.date ? T("as of {date}", { date: s.date }) : ""].filter(Boolean).join(" · ")}{s.url ? " ↗" : ""}</p>
           </motion.a>
         ))}
         {scores === null && <div className="card h-20 animate-pulse" />}
       </div>
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-muted">Read the reviews:</span>
+        <span className="text-muted">{T("Read the reviews:")}</span>
         {reviews.filter(([, u]) => u).map(([n, u]) => <a key={n} href={u} target="_blank" rel="noreferrer" className="chip text-xs">{n} ↗</a>)}
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${f.ot ?? f.t} ${f.y ?? ""} critique`)}`}>Video reviews ↗</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${f.ot ?? f.t} ${f.y ?? ""} critique`)}`}>{T("Video reviews ↗")}</a>
       </div>
       {wiki && (
         <div className="card space-y-2 p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted">Summary · Wikipedia</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted">{T("Summary · Wikipedia")}</p>
           <p className="text-sm leading-relaxed text-ink/90">{wiki.text}</p>
-          <a href={wiki.url} target="_blank" rel="noreferrer" className="text-xs text-accent">Full article ↗</a>
+          <a href={wiki.url} target="_blank" rel="noreferrer" className="text-xs text-accent">{T("Full article ↗")}</a>
         </div>
       )}
       <p className="text-[11px] text-muted/80">
-        Scores: Wikidata (as recorded from each site), TMDB, MovieLens (GroupLens). Summary: Wikipedia, CC BY-SA. No site is scraped.
-      </p>
+        {T("Scores: Wikidata (as recorded from each site), TMDB, MovieLens (GroupLens). Summary: Wikipedia, CC BY-SA. No site is scraped.")}</p>
     </section>
   );
 }

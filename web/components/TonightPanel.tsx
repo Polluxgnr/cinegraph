@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useState } from "react";
 import RecCard from "@/components/RecCard";
 import { MOODS, moodMatch } from "@/lib/engine/query";
@@ -12,6 +14,7 @@ const HINT: Record<string, string> = { tense: "gripping", laugh: "dark, sharp hu
 
 /** Tonight: mood x length x your platforms. Full page at /tonight/, compact section on the films Home. */
 export default function TonightPanel({ compact = false }: { compact?: boolean }) {
+  const T = useT();
   const films = useFilms().data;
   const platforms = useStore((s) => s.settings.platforms);
   const [mood, setMood] = useState<string | null>(null);
@@ -40,27 +43,27 @@ export default function TonightPanel({ compact = false }: { compact?: boolean })
   return (
     <div className="space-y-6">
       <header>
-        {compact ? <h2 className="font-display text-3xl md:text-4xl">Tonight</h2> : <h1 className="font-display text-4xl md:text-5xl">Tonight</h1>}
-        <p className="text-sm text-muted">On {platforms.join(", ")} + free (arte.tv, france.tv), in France.</p>
+        {compact ? <h2 className="font-display text-3xl md:text-4xl">{T("Tonight")}</h2> : <h1 className="font-display text-4xl md:text-5xl">{T("Tonight")}</h1>}
+        <p className="text-sm text-muted">{T("On")}{" "}{platforms.join(", ")} {T("+ free (arte.tv, france.tv), in France.")}</p>
       </header>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {Object.entries(MOODS).map(([id, m]) => (
           <button key={id} onClick={() => setMood(mood === id ? null : id)} data-on={mood === id}
                   className="card p-3 text-left transition hover:border-accent data-[on=true]:border-accent data-[on=true]:bg-accent/10">
-            <span className="block font-display text-2xl">{m.label}</span>
-            <span className="text-xs text-muted">{HINT[id]}</span>
+            <span className="block font-display text-2xl">{T(m.label)}</span>
+            <span className="text-xs text-muted">{T(HINT[id])}</span>
           </button>
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {(["any", "movie", "tv"] as const).map((k) => <button key={k} className="chip" data-on={kind === k} onClick={() => setKind(k)}>{k === "any" ? "Film or series" : k === "movie" ? "Film" : "Series"}</button>)}
+        {(["any", "movie", "tv"] as const).map((k) => <button key={k} className="chip" data-on={kind === k} onClick={() => setKind(k)}>{k === "any" ? T("Film or series") : k === "movie" ? T("Film") : T("Series")}</button>)}
         <span className="mx-1 h-5 w-px bg-line" />
-        {[null, 100, 120, 150].map((r) => <button key={String(r)} className="chip" data-on={maxRt === r} onClick={() => setMaxRt(r)}>{r ? `≤ ${Math.floor(r / 60)}h${r % 60 ? String(r % 60).padStart(2, "0") : ""}` : "Any length"}</button>)}
+        {[null, 100, 120, 150].map((r) => <button key={String(r)} className="chip" data-on={maxRt === r} onClick={() => setMaxRt(r)}>{r ? `≤ ${Math.floor(r / 60)}h${r % 60 ? String(r % 60).padStart(2, "0") : ""}` : T("Any length")}</button>)}
         <span className="mx-1 h-5 w-px bg-line" />
-        <button className="chip" data-on={mine} onClick={() => setMine(!mine)}>{mine ? "My platforms only" : "Anywhere"}</button>
+        <button className="chip" data-on={mine} onClick={() => setMine(!mine)}>{mine ? T("My platforms only") : T("Anywhere")}</button>
       </div>
       {mine && !hasProviders && films && (
-        <p className="card p-4 text-sm text-muted">Streaming availability arrives with the TMDB crawl (add the TMDB key as a GitHub secret, see README). Showing everything meanwhile.</p>
+        <p className="card p-4 text-sm text-muted">{T("Streaming availability arrives with the TMDB crawl (add the TMDB key as a GitHub secret, see README). Showing everything meanwhile.")}</p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {recs ? recs.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 6 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}

@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -9,6 +11,7 @@ const KEY = "cinegraph:welcomed";
 
 /** First visit on a device: three steps to get value fast. Disappears once done or dismissed. */
 export default function Welcome() {
+  const T = useT();
   const answers = useStore((s) => Object.keys(s.feedback).length);
   const synced = useStore((s) => !!s.settings.gistToken);
   const [hidden, setHidden] = useState(true);
@@ -38,14 +41,14 @@ export default function Welcome() {
   ];
   return (
     <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card relative space-y-3 p-5">
-      <button onClick={close} aria-label="Dismiss" className="absolute right-3 top-3 text-muted hover:text-ink">✕</button>
-      <h2 className="font-display text-3xl">Three steps to a taste engine that knows you</h2>
+      <button onClick={close} aria-label={T("Dismiss")} className="absolute right-3 top-3 text-muted hover:text-ink">✕</button>
+      <h2 className="font-display text-3xl">{T("Three steps to a taste engine that knows you")}</h2>
       <ol className="grid gap-2 md:grid-cols-3">
         {steps.map(([title, hint, href, done], i) => (
           <li key={title}>
             <Link href={href} className={`card block h-full p-3 hover:border-accent ${done ? "opacity-60" : ""}`}>
-              <p className="font-medium"><span className="mr-2 text-accent">{done ? "✓" : i + 1}</span>{title}</p>
-              <p className="mt-1 text-xs text-muted">{hint}</p>
+              <p className="font-medium"><span className="mr-2 text-accent">{done ? "✓" : i + 1}</span>{T(title)}</p>
+              <p className="mt-1 text-xs text-muted">{T(hint)}</p>
             </Link>
           </li>
         ))}

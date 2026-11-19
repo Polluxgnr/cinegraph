@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -28,6 +30,7 @@ const ago = (t?: number) => {
  * Your accounts (left) are opt-in and read in your browser; public sources need nothing.
  */
 export default function Connectors() {
+  const T = useT();
   const loaded = useLoaded();
   const m = useManifest().data;
   const s = useStore((x) => ({ settings: x.settings, imports: x.imports, spotify: x.spotify }));
@@ -86,15 +89,15 @@ export default function Connectors() {
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="font-display text-2xl">Connections</h2>
-        <p className="text-sm text-muted">Where everything comes from. Your accounts are opt-in and read in your browser; public sources need nothing.{m ? ` Catalogue built ${new Date(m.built_at).toLocaleDateString("fr-FR")}.` : ""}</p>
+        <h2 className="font-display text-2xl">{T("Connections")}</h2>
+        <p className="text-sm text-muted">{T("Where everything comes from. Your accounts are opt-in and read in your browser; public sources need nothing.")}{m ? ` Catalogue built ${new Date(m.built_at).toLocaleDateString("fr-FR")}.` : ""}</p>
       </div>
       <div>
-        <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">Your accounts & files</p>
+        <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">{T("Your accounts & files")}</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{mine.map(card)}</div>
       </div>
       <div>
-        <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">Open sources</p>
+        <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">{T("Open sources")}</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{open.map((c, i) => card(c, i + mine.length))}</div>
       </div>
     </section>

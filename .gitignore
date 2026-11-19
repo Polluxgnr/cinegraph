@@ -34,3 +34,4 @@ web/out/
 # playwright
 web/test-results/
 web/playwright-report/
+web/scripts/i18n-*.json

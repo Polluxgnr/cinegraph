@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useState } from "react";
 import { linkMeta, type LinkMeta } from "@/lib/meta";
 import { addCustom, getState, recordFeedback } from "@/lib/store";
@@ -11,6 +13,7 @@ import { addCustom, getState, recordFeedback } from "@/lib/store";
 const TLDS = ["com", "fr", "co", "store", "shop", "eu", "co.uk", "be"];
 
 export default function WebLookup({ query }: { query: string }) {
+  const T = useT();
   const [found, setFound] = useState<{ url: string; meta: LinkMeta }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [added, setAdded] = useState<string | null>(null);
@@ -41,18 +44,18 @@ export default function WebLookup({ query }: { query: string }) {
   return (
     <section className="card space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm">Looking for <b>{query}</b> beyond the catalogue?</p>
-        <button className="btn px-3 py-1.5 text-sm" onClick={lookUp} disabled={busy}>{busy ? "Looking…" : "Find their site"}</button>
+        <p className="text-sm">{T("Looking for")}{" "}<b>{query}</b> {T("beyond the catalogue?")}</p>
+        <button className="btn px-3 py-1.5 text-sm" onClick={lookUp} disabled={busy}>{busy ? T("Looking…") : T("Find their site")}</button>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/search?q=${q}+clothing+brand`}>Google ↗</a>
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.instagram.com/${slug}/`}>Instagram @{slug} ↗</a>
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.pinterest.com/search/pins/?q=${q}`}>Pinterest ↗</a>
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.vinted.fr/catalog?search_text=${q}`}>Vinted ↗</a>
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.grailed.com/shop?query=${q}`}>Grailed ↗</a>
-        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.tiktok.com/search?q=${q}`}>TikTok ↗</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/search?q=${q}+clothing+brand`}>{T("Google ↗")}</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.instagram.com/${slug}/`}>{T("Instagram @")}{slug} ↗</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.pinterest.com/search/pins/?q=${q}`}>{T("Pinterest ↗")}</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.vinted.fr/catalog?search_text=${q}`}>{T("Vinted ↗")}</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.grailed.com/shop?query=${q}`}>{T("Grailed ↗")}</a>
+        <a className="chip text-xs" target="_blank" rel="noreferrer" href={`https://www.tiktok.com/search?q=${q}`}>{T("TikTok ↗")}</a>
       </div>
-      {found && !found.length && <p className="text-xs text-muted">No site found at {slug}.com/.fr/.co/.store. Paste their link in “+ Add” if you know it.</p>}
+      {found && !found.length && <p className="text-xs text-muted">{T("No site found at")}{" "}{slug}{T(".com/.fr/.co/.store. Paste their link in “+ Add” if you know it.")}</p>}
       {found?.map(({ url, meta }) => (
         <div key={url} className="flex items-center gap-3 rounded-xl border border-line p-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- link preview */}
@@ -61,7 +64,7 @@ export default function WebLookup({ query }: { query: string }) {
             <a href={url} target="_blank" rel="noreferrer" className="block truncate text-sm font-medium hover:text-accent">{meta.title ?? url}</a>
             <p className="truncate text-xs text-muted">{new URL(url).host}{meta.description ? ` · ${meta.description}` : ""}</p>
           </div>
-          <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => add(url, meta)}>{added ? "✓ Added" : "+ Add to my style"}</button>
+          <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => add(url, meta)}>{added ? T("✓ Added") : T("+ Add to my style")}</button>
         </div>
       ))}
     </section>

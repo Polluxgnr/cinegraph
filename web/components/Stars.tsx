@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useState } from "react";
 
 /** Half-star rating input, 0.5–5, like Letterboxd. */
@@ -12,10 +14,11 @@ export default function Stars({
   onChange?: (v: number) => void;
   size?: number;
 }) {
+  const T = useT();
   const [hover, setHover] = useState<number | null>(null);
   const shown = hover ?? value ?? 0;
   return (
-    <div className="flex items-center gap-0.5" onMouseLeave={() => setHover(null)} role="radiogroup" aria-label="Rating">
+    <div className="flex items-center gap-0.5" onMouseLeave={() => setHover(null)} role="radiogroup" aria-label={T("Rating")}>
       {[1, 2, 3, 4, 5].map((i) => {
         const fill = shown >= i ? 1 : shown >= i - 0.5 ? 0.5 : 0;
         return (

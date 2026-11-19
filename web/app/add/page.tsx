@@ -1,4 +1,6 @@
 "use client";
+
+import { useT } from "@/lib/i18n";
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
@@ -21,6 +23,7 @@ const FEEL: [Action, string][] = [
 
 /** Add your own things to the current space: any link, or just a name. */
 export default function AddPage() {
+  const T = useT();
   const space = useSpace();
   const cfg = DOMAIN[space];
   const { data: d } = useDomain(space);
@@ -76,9 +79,9 @@ export default function AddPage() {
   return (
     <div key={space} className="rise max-w-3xl space-y-6">
       <header>
-        <h1 className="font-display text-4xl md:text-5xl">Add to {cfg.label}</h1>
+        <h1 className="font-display text-4xl md:text-5xl">{T("Add to")}{" "}{cfg.label}</h1>
         <p className="text-sm text-muted">
-          {space === "films" ? "Find a film or series and tell us how you feel about it." : "Paste a link (brand site, track, playlist, recipe blog, video, article) or just type a name. It joins your taste profile."}
+          {space === "films" ? T("Find a film or series and tell us how you feel about it.") : T("Paste a link (brand site, track, playlist, recipe blog, video, article) or just type a name. It joins your taste profile.")}
         </p>
       </header>
 
@@ -90,16 +93,16 @@ export default function AddPage() {
             {image ? <img src={image} alt="" className="h-24 w-24 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" /> :
               <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-panel-2 text-3xl">{busy ? "…" : cfg.emoji}</div>}
             <div className="flex-1 space-y-2">
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Name / title"
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Name / title")}
                      className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
-              <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags: e.g. techno, minimal, berlin"
+              <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={T("tags: e.g. techno, minimal, berlin")}
                      className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
             </div>
           </div>
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Why you like it (helps your profile and your second brain)"
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={T("Why you like it (helps your profile and your second brain)")}
                     className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
           {msg?.startsWith("This looks like") && (
-            <p className="text-xs text-accent">{msg}<button className="underline" onClick={() => { const g = guessSpace(url); if (g) setSpace(g); setMsg(null); }}>Switch space</button></p>
+            <p className="text-xs text-accent">{msg}<button className="underline" onClick={() => { const g = guessSpace(url); if (g) setSpace(g); setMsg(null); }}>{T("Switch space")}</button></p>
           )}
           <div className="grid grid-cols-3 gap-2">
             {FEEL.map(([a, l]) => <button key={a} className="btn-ghost" disabled={!title.trim()} onClick={() => save(a)}>{l}</button>)}
@@ -109,7 +112,7 @@ export default function AddPage() {
 
       {space === "films" && (
         <div className="space-y-3">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Search a film or series…" autoFocus
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Search a film or series…")} autoFocus
                  className="w-full rounded-xl border border-line bg-panel px-4 py-3 outline-none focus:border-accent" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {filmHits.map((e) => (
@@ -126,7 +129,7 @@ export default function AddPage() {
 
       {custom.length > 0 && (
         <section>
-          <h2 className="mb-2 font-display text-2xl">Your additions</h2>
+          <h2 className="mb-2 font-display text-2xl">{T("Your additions")}</h2>
           <ul className="grid gap-2 sm:grid-cols-2">
             {custom.slice().reverse().map((c) => (
               <li key={c.id} className="card flex items-center gap-3 p-2">
@@ -141,7 +144,7 @@ export default function AddPage() {
           </ul>
         </section>
       )}
-      <p className="text-xs text-muted/70">Spaces: {DOMAINS.map((x) => x.short).join(" · ")}. Link previews come from noembed.com / microlink.io.</p>
+      <p className="text-xs text-muted/70">{T("Spaces:")}{" "}{DOMAINS.map((x) => x.short).join(" · ")}{T(". Link previews come from noembed.com / microlink.io.")}</p>
     </div>
   );
 }

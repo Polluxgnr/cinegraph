@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -72,6 +74,7 @@ function buildGraph(d: FilmData, feedback: Record<string, Feedback>, center: str
 }
 
 export default function GraphPage() {
+  const T = useT();
   const films = useFilms().data;
   const feedback = useStore((s) => s.feedback);
   const [center, setCenter] = useQueryParam("k");
@@ -97,15 +100,15 @@ export default function GraphPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl md:text-5xl">{center ? "Around one title" : "Your taste graph"}</h1>
+          <h1 className="font-display text-4xl md:text-5xl">{center ? T("Around one title") : T("Your taste graph")}</h1>
           <p className="text-sm text-muted">
-            {center ? "Its people, saga, awards and sources, and other titles sharing them." : "What connects the titles you liked: people, sagas, awards, sources. Click a title to explore around it."}
+            {center ? T("Its people, saga, awards and sources, and other titles sharing them.") : T("What connects the titles you liked: people, sagas, awards, sources. Click a title to explore around it.")}
           </p>
         </div>
-        {center && <button className="text-sm text-muted hover:text-ink" onClick={() => setCenter(null)}>← my taste graph</button>}
+        {center && <button className="text-sm text-muted hover:text-ink" onClick={() => setCenter(null)}>{T("← my taste graph")}</button>}
       </header>
       <div ref={wrap} className="card relative overflow-hidden">
-        {graph && !graph.nodes.length && <p className="p-6 text-sm text-muted">Like a few films that share people or a saga, and the graph will draw itself.</p>}
+        {graph && !graph.nodes.length && <p className="p-6 text-sm text-muted">{T("Like a few films that share people or a saga, and the graph will draw itself.")}</p>}
         {graph && graph.nodes.length > 0 && (
           <ForceGraph2D
             ref={fg}

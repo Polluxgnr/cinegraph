@@ -411,3 +411,40 @@ async def _trailers_async(limit: int | None, batch: int = 100) -> dict:
 
 def trailers(limit: int | None = None) -> dict:
     return asyncio.run(_trailers_async(limit))
+
+
+async def _french_async(limit: int | None, batch: int = 100) -> dict:
+    """French title and synopsis of every catalogue title (TMDB fr-FR), stored in titles.extra.fr.
+    Titles already tried are skipped, so weekly runs only fetch new titles."""
+    s = get_settings()
+    done = tried = 0
+    async with TMDBClient(s.tmdb_api_key, rate=s.tmdb_rate_limit) as client:
+        while limit is None or tried < limit:
+            rows = db.fetchall(
+                """SELECT t.id, t.kind, t.tmdb_id FROM titles t JOIN title_embeddings e ON e.title_id = t.id
+                   WHERE t.tmdb_id IS NOT NULL AND NOT (t.extra ? 'fr_tried')
+                   ORDER BY t.popularity DESC NULLS LAST LIMIT %s""", (batch,))
+            if not rows:
+                break
+
+            async def one(r):
+                try:
+                    d = await client.get(f"/{'tv' if r['kind'] == 'tv' else 'movie'}/{r['tmdb_id']}", language="fr-FR") or {}
+                    return r, {"t": d.get("title") or d.get("name"), "ov": d.get("overview")}
+                except Exception:  # noqa: BLE001
+                    return r, None
+
+            results = await asyncio.gather(*(one(r) for r in rows))
+            with db.connect() as conn:
+                for r, fr in results:
+                    patch = {"fr_tried": True, **({"fr": {k: v for k, v in fr.items() if v}} if fr else {})}
+                    conn.execute("UPDATE titles SET extra = extra || %s::jsonb WHERE id = %s", (json.dumps(patch), r["id"]))
+                    done += bool(fr and fr.get("t"))
+                conn.commit()
+            tried += len(rows)
+            log.info("french: %d tried, %d found", tried, done)
+    return {"tried": tried, "found": done}
+
+
+def french(limit: int | None = None) -> dict:
+    return asyncio.run(_french_async(limit))

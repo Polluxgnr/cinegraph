@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useState } from "react";
 import { pullGist } from "@/lib/sync";
 import { createProfile, deleteProfile, renameProfile, switchProfile, useProfiles } from "@/lib/store";
@@ -11,13 +13,14 @@ export default function ProfileSwitcher({ compact = false }: { compact?: boolean
   const p = useProfiles();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const t = useT();
   const me = p.list.find((x) => x.id === p.active) ?? p.list[0];
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className={`flex w-full items-center gap-2 rounded-xl border border-line bg-panel px-3 py-2 text-left text-sm hover:border-accent ${compact ? "" : "mb-4"}`}>
         <span className="text-lg">{me.emoji}</span>
         <span className="flex-1 truncate">{me.name}</span>
-        <span className="text-xs text-muted">{p.list.length > 1 ? `${p.list.length} profiles` : "profile"} ▾</span>
+        <span className="text-xs text-muted">{p.list.length > 1 ? t("{n} profiles", { n: p.list.length }) : t("profile")} ▾</span>
       </button>
       {open && (
         <div className="absolute inset-x-0 top-full z-50 mt-1 space-y-1 rounded-xl border border-line bg-bg p-2 shadow-2xl">
@@ -43,9 +46,9 @@ export default function ProfileSwitcher({ compact = false }: { compact?: boolean
             pullGist().catch(() => {}); // the new profile appears on your other devices
             setName("");
           }}>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New profile (e.g. Léa)"
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("New profile (e.g. Léa)")}
                    className="min-w-0 flex-1 rounded-lg border border-line bg-panel px-2 py-1 text-xs outline-none focus:border-accent" />
-            <button className="btn-ghost px-2 py-1 text-xs">Add</button>
+            <button className="btn-ghost px-2 py-1 text-xs">{t("Add")}</button>
           </form>
         </div>
       )}

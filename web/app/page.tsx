@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -31,6 +33,7 @@ const HERO: Record<string, { title: string; sub: string }> = {
 };
 
 export default function Home() {
+  const T = useT();
   const space = useSpace();
   const loaded = useLoaded();
   const { data: d } = useDomain(space);
@@ -47,7 +50,7 @@ export default function Home() {
       {isFilmData(d) && <TonightPanel compact />}
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
-      {space === "music" && <ExtraRow d={d} name="releases" title="New releases" hint="out in the last weeks, artists you like first" />}
+      {space === "music" && <ExtraRow d={d} name="releases" title={T("New releases")} hint="out in the last weeks, artists you like first" />}
       {space === "brands" && <Pieces d={d} />}
       <Mine d={d} />
     </div>
@@ -56,14 +59,15 @@ export default function Home() {
 
 /** Until sync is on, answers live in one browser only: say so once there is something to lose. */
 function SyncNudge() {
+  const T = useT();
   const synced = useStore((s) => !!s.settings.gistToken);
   const answers = useStore((s) => Object.keys(s.feedback).length);
   if (synced || answers < 5) return null;
   return (
     <Link href="/settings/" className="card flex items-center gap-3 border-nope/40 p-3 text-sm hover:border-accent">
       <span className="text-lg">☁️</span>
-      <span className="flex-1"><b>{answers} answers saved in this browser only.</b> <span className="text-muted">Turn on sync to see them on your iPad and phone too.</span></span>
-      <span className="text-accent">Set up →</span>
+      <span className="flex-1"><b>{answers} {T("answers saved in this browser only.")}</b> <span className="text-muted">{T("Turn on sync to see them on your iPad and phone too.")}</span></span>
+      <span className="text-accent">{T("Set up →")}</span>
     </Link>
   );
 }
@@ -89,26 +93,27 @@ function ConnectStrip({ space }: { space: string }) {
 
 /** Films & series: one big pick, then rows of posters (streaming-app layout). */
 function FilmHome({ d }: { d: FilmData }) {
+  const T = useT();
   const recs = useRecs(d, { n: 16, explore: 0.12 }, "films-home");
   const version = useStore((s) => s.updatedAt);
   const cal = useMemo(() => calibration(d, getState()), [d, version]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-10">
-      {recs?.[0] ? <FilmHero r={recs[0]} label={cal < 0.3 ? "A good place to start" : "Tonight's pick for you"} /> : <div className="-mx-4 -mt-4 h-[62vh] animate-pulse bg-panel md:-mx-8" />}
+      {recs?.[0] ? <FilmHero r={recs[0]} label={T(cal < 0.3 ? "A good place to start" : "Tonight's pick for you")} /> : <div className="-mx-4 -mt-4 h-[62vh] animate-pulse bg-panel md:-mx-8" />}
       <Welcome />
       <SyncNudge />
       {cal < 1 && (
         <Link href="/swipe/" className="card flex flex-wrap items-center gap-4 p-4 hover:border-accent">
           <div className="min-w-48 flex-1">
-            <p className="font-medium">{cal === 0 ? "Teach it your taste: swipe 20 titles" : "Keep swiping: picks get sharper"}</p>
+            <p className="font-medium">{cal === 0 ? T("Teach it your taste: swipe 20 titles") : T("Keep swiping: picks get sharper")}</p>
             <Progress className="mt-2" value={cal} />
           </div>
-          <span className="btn">Swipe</span>
+          <span className="btn">{T("Swipe")}</span>
         </Link>
       )}
       <ContinueRow films={d} />
       {recs && recs.length > 1 && (
-        <Row title="For you" href="/discover/">{recs.slice(1).map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>
+        <Row title={T("For you")} href="/discover/">{recs.slice(1).map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>
       )}
       <TonightPanel compact />
       <BecauseYouLiked d={d} />
@@ -126,14 +131,15 @@ function Skeleton() {
 }
 
 function Hero({ space, d }: { space: string; d: DomainData }) {
+  const T = useT();
   const cfg = DOMAIN[space];
   const version = useStore((s) => s.updatedAt);
   const cal = useMemo(() => calibration(d, getState()), [d, version]); // eslint-disable-line react-hooks/exhaustive-deps
   const hero = HERO[space] ?? { title: cfg.label, sub: "" };
   return (
     <section className="pt-1">
-      <h1 className="font-display text-4xl leading-tight md:text-6xl" aria-label={`${hero.title}?`}>
-        {hero.title.split(" ").map((w, i) => (
+      <h1 className="font-display text-4xl leading-tight md:text-6xl" aria-label={`${T(hero.title)}?`}>
+        {T(hero.title).split(" ").map((w, i) => (
           <motion.span key={`${w}${i}`} className="mr-[0.25em] inline-block" initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ delay: i * 0.07, duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}>
             {w}
@@ -141,15 +147,15 @@ function Hero({ space, d }: { space: string; d: DomainData }) {
         ))}
         <motion.span className="inline-block text-accent" initial={{ opacity: 0, rotate: -20 }} animate={{ opacity: 1, rotate: 0 }} transition={{ delay: 0.35, type: "spring" }}>?</motion.span>
       </h1>
-      <p className="mt-1 text-sm text-muted">{hero.sub}</p>
+      <p className="mt-1 text-sm text-muted">{T(hero.sub)}</p>
       {isFilmData(d) && <FilmSearch films={d} />}
       {cal < 1 && (
         <Link href="/swipe/" className="card mt-5 flex flex-wrap items-center gap-4 p-4 hover:border-accent">
           <div className="min-w-48 flex-1">
-            <p className="font-semibold">{cal === 0 ? `Teach it your ${cfg.short.toLowerCase()} taste` : "Keep calibrating"}</p>
+            <p className="font-semibold">{cal === 0 ? `Teach it your ${cfg.short.toLowerCase()} taste` : T("Keep calibrating")}</p>
             <Progress className="mt-2" value={cal} />
           </div>
-          <span className="btn">{cal === 0 ? "Start swiping" : "Swipe more"} →</span>
+          <span className="btn">{cal === 0 ? T("Start swiping") : T("Swipe more")} →</span>
         </Link>
       )}
     </section>
@@ -159,6 +165,7 @@ function Hero({ space, d }: { space: string; d: DomainData }) {
 const EXAMPLES = ["like Fauda but funnier, under 2h", "a mind-bending film like Interstellar", "korean thriller series", "epic war film after 2000"];
 
 function FilmSearch({ films }: { films: FilmData }) {
+  const T = useT();
   const [q, setQ] = useState("");
   const [res, setRes] = useState<QueryResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -175,9 +182,9 @@ function FilmSearch({ films }: { films: FilmData }) {
   return (
     <div className="mt-5">
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); ask(q); }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="like Fauda but funnier, under 2h, on Netflix…"
-               className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" aria-label="Describe what you want to watch" />
-        <button className="btn" disabled={busy}>{busy ? "…" : "Ask"}</button>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T("like Fauda but funnier, under 2h, on Netflix…")}
+               className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" aria-label={T("Describe what you want to watch")} />
+        <button className="btn" disabled={busy}>{busy ? "…" : T("Ask")}</button>
       </form>
       <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
         {EXAMPLES.map((ex) => <button key={ex} className="chip shrink-0 hover:text-ink" onClick={() => ask(ex)}>{ex}</button>)}
@@ -186,16 +193,16 @@ function FilmSearch({ films }: { films: FilmData }) {
         <section className="rise mt-6">
           <div className="mb-1 flex items-baseline gap-3">
             <h2 className="font-display text-3xl">“{q}”</h2>
-            <button className="text-sm text-muted hover:text-ink" onClick={() => setRes(null)}>clear</button>
+            <button className="text-sm text-muted hover:text-ink" onClick={() => setRes(null)}>{T("clear")}</button>
           </div>
           <p className="mb-3 text-xs text-muted">
-            {res.anchors.length > 0 && <>anchored on {res.anchors.map((a) => a.title).join(", ")} · </>}
-            understood by {res.parser === "ai" ? "Claude" : "rules (add an Anthropic key in Settings for smarter parsing)"}
+            {res.anchors.length > 0 && <>{T("anchored on")}{" "}{res.anchors.map((a) => a.title).join(", ")} · </>}
+            {T("understood by")}{" "}{res.parser === "ai" ? T("Claude") : T("rules (add an Anthropic key in Settings for smarter parsing)")}
           </p>
           {res.notes.map((n) => <p key={n} className="mb-2 text-xs text-accent">{n}</p>)}
           {res.items.length ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{res.items.map((r) => <RecCard key={r.entity.key} r={r} />)}</div>
-          ) : <p className="text-muted">Nothing fits all of that. Loosen one constraint.</p>}
+          ) : <p className="text-muted">{T("Nothing fits all of that. Loosen one constraint.")}</p>}
         </section>
       )}
     </div>
@@ -203,13 +210,14 @@ function FilmSearch({ films }: { films: FilmData }) {
 }
 
 function ForYou({ d }: { d: DomainData }) {
+  const T = useT();
   const recs = useRecs(d, { n: 15, explore: 0.15 }, d.name);
   if (!recs?.length) return null;
   return (
     <section>
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="font-display text-3xl">For you</h2>
-        <Link href="/discover/" className="text-sm text-accent">Discover more →</Link>
+        <h2 className="font-display text-3xl">{T("For you")}</h2>
+        <Link href="/discover/" className="text-sm text-accent">{T("Discover more →")}</Link>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</div>
     </section>
@@ -253,26 +261,29 @@ function verb(label: string): string {
 }
 
 function Fresh({ d }: { d: DomainData }) {
+  const T = useT();
   const recs = useRecs(d, { n: 12, explore: 0, filter: (e) => !!e.date && Date.now() - Date.parse(e.date) < 21 * 864e5 }, "fresh");
   if (!recs?.length) return null;
-  return <Row title="New this week" hint="latest from the channels, ranked for you">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
+  return <Row title={T("New this week")} hint="latest from the channels, ranked for you">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
 }
 
 /** Style: individual pieces (with an approximate price), ranked by your taste in brands and pieces. */
 function Pieces({ d }: { d: DomainData }) {
+  const T = useT();
   const recs = useRecs(d, { n: 16, explore: 0.1, filter: (e) => e.tags.includes("piece") }, "pieces");
   if (!recs?.length) return null;
-  return <Row title="Pieces for you" hint="iconic pieces from brands close to your style · ≈ retail price">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
+  return <Row title={T("Pieces for you")} hint="iconic pieces from brands close to your style · ≈ retail price">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
 }
 
 function Mine({ d }: { d: DomainData }) {
+  const T = useT();
   const custom = useStore((s) => s.custom.filter((c) => c.domain === d.name));
   if (d.name === "films") return null;
   return (
     <section>
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="font-display text-2xl">Added by you</h2>
-        <Link href="/add/" className="btn-ghost px-3 py-1.5 text-sm">+ Add {DOMAIN[d.name]?.short.toLowerCase()}</Link>
+        <h2 className="font-display text-2xl">{T("Added by you")}</h2>
+        <Link href="/add/" className="btn-ghost px-3 py-1.5 text-sm">{T("+ Add")}{" "}{DOMAIN[d.name]?.short.toLowerCase()}</Link>
       </div>
       {custom.length ? (
         <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
@@ -288,7 +299,7 @@ function Mine({ d }: { d: DomainData }) {
           })}
         </div>
       ) : (
-        <p className="text-sm text-muted">Paste links to things you like (a brand site, a track, a recipe blog, a video): they join your taste profile.</p>
+        <p className="text-sm text-muted">{T("Paste links to things you like (a brand site, a track, a recipe blog, a video): they join your taste profile.")}</p>
       )}
     </section>
   );
@@ -296,6 +307,7 @@ function Mine({ d }: { d: DomainData }) {
 
 /** Series you're watching, sagas you started (next entry + progress bar). */
 function ContinueRow({ films }: { films: FilmData }) {
+  const T = useT();
   const lists = useStore((s) => s.lists);
   const feedback = useStore((s) => s.feedback);
   const progress = useStore((s) => s.progress);
@@ -310,7 +322,7 @@ function ContinueRow({ films }: { films: FilmData }) {
     .filter((x) => x.seen > 0 && x.next);
   if (!watching.length && !sagas.length) return null;
   return (
-    <Row title="Continue" hint="what you're watching and sagas you started">
+    <Row title={T("Continue")} hint="what you're watching and sagas you started">
       {watching.map((w) => {
         const row = films.index.get(w.key);
         if (row == null) return null;
@@ -322,7 +334,7 @@ function ContinueRow({ films }: { films: FilmData }) {
             <EntityImage e={e} aspect="2/3" />
             <div className="p-3">
               <p className="line-clamp-1 font-semibold">{e.title}</p>
-              <p className="text-xs text-muted">{p ? `S${p.season} · E${p.episode}` : "Watching"}</p>
+              <p className="text-xs text-muted">{p ? `S${p.season} · E${p.episode}` : T("Watching")}</p>
               {total > 0 && <Progress className="mt-2" value={Math.min(1, ((p?.season ?? 1) - 1) / total)} />}
             </div>
           </Link>
@@ -335,9 +347,9 @@ function ContinueRow({ films }: { films: FilmData }) {
             <EntityImage e={e} aspect="2/3" />
             <div className="p-3">
               <p className="line-clamp-1 text-xs uppercase tracking-wider text-accent">{c.name}</p>
-              <p className="line-clamp-1 font-semibold">Next: {e.title}</p>
+              <p className="line-clamp-1 font-semibold">{T("Next:")}{" "}{e.title}</p>
               <Progress className="mt-2" value={seen / total} />
-              <p className="mt-1 text-[11px] text-muted">{seen} / {total} seen</p>
+              <p className="mt-1 text-[11px] text-muted">{seen} / {total} {T("seen")}</p>
             </div>
           </Link>
         );

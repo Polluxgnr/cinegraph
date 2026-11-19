@@ -6,6 +6,7 @@
  * - parseQuery: free text ("like Fauda but funnier, under 2h, on Netflix") -> structured intent
  * - tastePortrait: a short written portrait of your taste across all domains
  */
+import { currentLang } from "./i18n";
 import Anthropic from "@anthropic-ai/sdk";
 import { getState } from "./store";
 
@@ -26,7 +27,9 @@ async function json<T>(system: string, user: string, schema: Record<string, unkn
     const res = await client().beta.messages.create({
       model: getState().settings.anthropicModel || MODEL,
       max_tokens: maxTokens,
-      system,
+      // everything written for the person follows the interface language
+      system: `${system}
+Write every human-readable text in ${currentLang() === "fr" ? "French" : "English"}.`,
       messages: [{ role: "user", content: user }],
       thinking: { type: "adaptive" },
       output_config: { effort: "low", format: { type: "json_schema", schema } },
@@ -93,7 +96,7 @@ export async function tastePortrait(facts: string): Promise<string | null> {
   const r = await json<{ portrait: string; suggestions: string[] }>(
     "You write a warm, specific, non-flattering portrait of one person's taste from data about their likes " +
       "and dislikes across films, series, videos, music, food, travel, cars and style. 120-180 words, second " +
-      "person, in French. Name concrete patterns and tensions; no generic praise. Then 3 short, concrete " +
+      "person. Name concrete patterns and tensions; no generic praise. Then 3 short, concrete " +
       "suggestions of things to try that stretch their taste a little.",
     facts,
     {

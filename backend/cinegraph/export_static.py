@@ -163,7 +163,7 @@ FILM_KEYS = {
     "d": "release / first air date", "rt": "runtime (min, per episode for series)", "ns": "seasons",
     "ne": "episodes", "lang": "original language (VO)", "ov": "overview", "g": "genres", "kw": "keywords",
     "c": "countries", "pop": "popularity", "va": "vote average /10", "vc": "vote count", "img": "poster: TMDB path (/x.jpg, w342) or full url", "x": "link ids (tm imdb wd ac sc lb wp)",
-    "bd": "backdrop TMDB path (w780)", "tr": "YouTube trailer key", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
+    "bd": "backdrop TMDB path (w780)", "tr": "YouTube trailer key", "tf": "French title (TMDB fr-FR, when different)", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
     "cre": "creators", "mus": "composers", "coll": "collection key", "aw": "awards", "nom": "nominations",
     "src": "based on", "inf": "influenced by", "loc": "narrative locations", "sub": "main subjects",
     "prov": "FR streaming (subscription / free)", "rent": "FR rent / buy", "details/<id % 64>.json": "ov kw cast rent nom jw, loaded on demand",
@@ -252,6 +252,7 @@ def export_films(out: Path) -> dict:
             "pop": round(float(r["popularity"] or 0), 2), "va": r["vote_average"], "vc": r["vote_count"],
             "img": _img(r), "bd": r["backdrop_path"] or None,
             "tr": (r["extra"] or {}).get("trailer"),
+            "tf": ((r["extra"] or {}).get("fr") or {}).get("t") if ((r["extra"] or {}).get("fr") or {}).get("t") != r["title"] else None,
             "mlr": ml.get(r["id"], (None, None))[0], "mlc": ml.get(r["id"], (None, None))[1],
             "cast": cr.get("cast", [])[:CORE_CAST], "dir": cr.get("director", []), "wri": cr.get("writer", [])[:4],
             "cre": cr.get("creator", []), "mus": cr.get("composer", [])[:2],
@@ -261,7 +262,7 @@ def export_films(out: Path) -> dict:
             "x": _ids(r), "chips": reaction_chips(r),
         }
         # loaded on demand when the film is shown (web/lib/data.ts filmDetails)
-        detail = {"ov": r["overview"], "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:12],
+        detail = {"ov": r["overview"], "ovf": ((r["extra"] or {}).get("fr") or {}).get("ov"), "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:12],
                   "rent": sorted(provs[r["id"]]["rent"]), "nom": lab("nominated", 4), "jw": ex.get("watch_link")}
         details[r["id"] % DETAIL_SHARDS][r["id"]] = {k: v for k, v in detail.items() if v not in (None, [], {}, "")}
         if r["original_title"] and r["original_title"] != r["title"]:

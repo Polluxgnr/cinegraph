@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { detailHref } from "@/components/RecCard";
@@ -13,6 +15,7 @@ import { compact } from "@/lib/text";
  * Exact stream counts aren't published by any open API; Deezer's rank is the closest public signal.
  */
 export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
+  const T = useT();
   const [a, setA] = useState<DzArtist | null>(null);
   const [top, setTop] = useState<DzTrack[]>([]);
   const [albums, setAlbums] = useState<DzAlbum[]>([]);
@@ -44,7 +47,7 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
     el.play().then(() => setPlaying(t.id)).catch(() => {});
   };
 
-  if (err) return <p className="text-sm text-muted">Deezer didn&apos;t answer ({err}).</p>;
+  if (err) return <p className="text-sm text-muted">{T("Deezer didn't answer (")}{err}).</p>;
   if (!a) return <div className="card h-40 animate-pulse" />;
   const maxRank = Math.max(1, ...top.map((t) => t.rank));
   const albumsOnly = albums.filter((x) => x.record_type === "album");
@@ -59,12 +62,12 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
       </div>
 
       <section>
-        <h2 className="mb-3 font-display text-2xl">Most played songs</h2>
+        <h2 className="mb-3 font-display text-2xl">{T("Most played songs")}</h2>
         <ol className="space-y-1">
           {top.map((t, i) => (
             <li key={t.id} className="flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-panel">
               <span className="w-5 text-right text-xs tabular-nums text-muted">{i + 1}</span>
-              <button onClick={() => play(t)} disabled={!t.preview} aria-label={playing === t.id ? "Pause" : `Play ${t.title}`}
+              <button onClick={() => play(t)} disabled={!t.preview} aria-label={playing === t.id ? T("Pause") : `Play ${t.title}`}
                       className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-xs text-bg disabled:opacity-30">
                 {playing === t.id ? "❚❚" : "▶"}
               </button>
@@ -77,8 +80,8 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
                 </div>
               </div>
               <span className="text-xs tabular-nums text-muted">{Math.floor(t.duration / 60)}:{String(t.duration % 60).padStart(2, "0")}</span>
-              <a href={t.link} target="_blank" rel="noreferrer" className="text-xs text-muted hover:text-ink">Deezer ↗</a>
-              <a href={`https://open.spotify.com/search/${encodeURIComponent(`${a.name} ${t.title}`)}`} target="_blank" rel="noreferrer" className="hidden text-xs text-muted hover:text-ink sm:inline">Spotify ↗</a>
+              <a href={t.link} target="_blank" rel="noreferrer" className="text-xs text-muted hover:text-ink">{T("Deezer ↗")}</a>
+              <a href={`https://open.spotify.com/search/${encodeURIComponent(`${a.name} ${t.title}`)}`} target="_blank" rel="noreferrer" className="hidden text-xs text-muted hover:text-ink sm:inline">{T("Spotify ↗")}</a>
             </li>
           ))}
         </ol>
@@ -102,7 +105,7 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
 
       {related.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-2xl">Fans also listen to</h2>
+          <h2 className="mb-3 font-display text-2xl">{T("Fans also listen to")}</h2>
           <div className="flex flex-wrap gap-2">
             {related.map((r) => {
               const key = `music:${r.id}`;

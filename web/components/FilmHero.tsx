@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
@@ -15,12 +17,13 @@ import { fmtRuntime } from "@/lib/text";
  * film. The only orchestrated motion on the page: the image settles, then the title and actions arrive.
  */
 export default function FilmHero({ r, label }: { r: Rec; label: string }) {
+  const T = useT();
   const e = r.entity;
   const f = e.film!;
   const reduce = useReducedMotion();
   const listed = useStore((s) => !!s.lists[e.key]);
   const [play, setPlay] = useState(false);
-  const meta = [f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "Series") : fmtRuntime(f.rt), (f.g ?? []).slice(0, 2).join(", ")].filter(Boolean).join("  ·  ");
+  const meta = [f.y, f.k === "tv" ? (f.ns ? T(f.ns === 1 ? "{n} season" : "{n} seasons", { n: f.ns }) : T("Series")) : fmtRuntime(f.rt), (f.g ?? []).slice(0, 2).map((g) => T(g)).join(", ")].filter(Boolean).join("  ·  ");
   const rise = (delay: number) => (reduce ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.6, ease: [0.2, 0.7, 0.2, 1] as const } });
   return (
     <section className="relative -mx-4 -mt-4 overflow-hidden md:-mx-8 md:-mt-6">
@@ -41,14 +44,14 @@ export default function FilmHero({ r, label }: { r: Rec; label: string }) {
           <motion.p {...rise(0.5)} className="line-clamp-2 max-w-xl text-base text-ink/85">{r.why}</motion.p>
           <motion.div {...rise(0.6)} className="flex flex-wrap gap-2 pt-1">
             {f.tr ? (
-              <button className="btn px-5 py-2.5 text-sm" onClick={() => setPlay(true)}>▶ Trailer</button>
+              <button className="btn px-5 py-2.5 text-sm" onClick={() => setPlay(true)}>{T("▶ Trailer")}</button>
             ) : (
-              <a className="btn px-5 py-2.5 text-sm" href={trailerSearch(e)} target="_blank" rel="noreferrer">▶ Trailer</a>
+              <a className="btn px-5 py-2.5 text-sm" href={trailerSearch(e)} target="_blank" rel="noreferrer">{T("▶ Trailer")}</a>
             )}
             <button className="rounded-xl border border-ink/25 bg-bg/40 px-5 py-2.5 text-sm backdrop-blur hover:border-accent" onClick={() => setList(e.key, e.domain, listed ? null : "want")}>
-              {listed ? "✓ On my list" : "+ My list"}
+              {listed ? T("✓ On my list") : T("+ My list")}
             </button>
-            <Link href={detailHref(e.key)} className="rounded-xl px-4 py-2.5 text-sm text-ink/80 hover:text-ink">Details</Link>
+            <Link href={detailHref(e.key)} className="rounded-xl px-4 py-2.5 text-sm text-ink/80 hover:text-ink">{T("Details")}</Link>
           </motion.div>
         </div>
       </div>

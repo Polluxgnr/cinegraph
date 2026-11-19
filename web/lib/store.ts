@@ -94,6 +94,7 @@ export interface CustomItem {
 export interface Settings {
   space: string; // the area the whole app is currently about (films, music, recipes...)
   theme?: "dark" | "light"; // dark by default
+  uiLang?: "en" | "fr"; // interface language; unset = the browser's
   platforms: string[];
   lang: "fr" | "en";
   anthropicKey?: string;

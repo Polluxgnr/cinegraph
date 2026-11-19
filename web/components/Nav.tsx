@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,6 +58,7 @@ export default function Nav() {
   const [sheet, setSheet] = useState(false);
   const [more, setMore] = useState(false);
   const [moreSheet, setMoreSheet] = useState(false);
+  const tr = useT();
   const spaces = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
   const cfg = DOMAIN[space] ?? DOMAINS[0];
@@ -71,6 +74,9 @@ export default function Nav() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.lang = tr.lang;
+  }, [tr.lang]);
 
   return (
     <>
@@ -80,14 +86,14 @@ export default function Nav() {
           Cine<span className="text-accent">Graph</span>
         </Link>
         <ProfileSwitcher />
-        <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
+        <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">{tr("Spaces")}</p>
         <SpaceList spaces={spaces} space={space} counts={counts} path={path} />
         <div className="mt-auto space-y-0.5 border-t border-line/60 pt-3">
           <SyncBadge />
           {GLOBAL.filter((g) => g.href === "/settings/").map((g) => (
             <Link key={g.href} href={g.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active(g.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={g.icon} /></svg>
-              {g.label}
+              {tr(g.label)}
             </Link>
           ))}
         </div>
@@ -95,14 +101,14 @@ export default function Nav() {
 
       {/* desktop: tabs of the current space */}
       <header className="fixed left-64 right-0 top-0 z-20 hidden h-14 items-center gap-1 border-b border-line/60 bg-bg/85 px-6 backdrop-blur md:flex">
-        <span className="mr-3 text-sm text-muted">{cfg.emoji} {cfg.label}</span>
+        <span className="mr-3 text-sm text-muted">{cfg.emoji} {tr(cfg.label)}</span>
         {MAIN.map((t) => (
           <Link key={t.href} href={t.href} className={`rounded-lg px-3 py-1.5 text-sm transition ${active(t.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
-            {t.label}
+            {tr(t.label)}
           </Link>
         ))}
         <div className="relative">
-          <button onClick={() => setMore(!more)} aria-expanded={more} className={`rounded-lg px-3 py-1.5 text-sm transition ${more || moreActive ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>More ▾</button>
+          <button onClick={() => setMore(!more)} aria-expanded={more} className={`rounded-lg px-3 py-1.5 text-sm transition ${more || moreActive ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>{tr("More")} ▾</button>
           {more && (
             <div className="absolute left-0 top-full mt-2 w-60 rounded-2xl border border-line bg-bg/95 p-2 shadow-2xl backdrop-blur" onMouseLeave={() => setMore(false)}>
               <MoreLinks space={space} active={active} onPick={() => setMore(false)} />
@@ -115,9 +121,9 @@ export default function Nav() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line/60 bg-bg/90 px-4 py-2.5 backdrop-blur md:hidden">
         <Link href="/" className="font-display text-2xl">Cine<span className="text-accent">Graph</span></Link>
         <div className="flex items-center gap-2">
-          <button onClick={() => setSheet(true)} aria-label={`Profile: ${me.name}`} className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-lg">{me.emoji}</button>
+          <button onClick={() => setSheet(true)} aria-label={`${tr("Profile")}: ${me.name}`} className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-lg">{me.emoji}</button>
           <button onClick={() => setSheet(true)} className="flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-sm">
-            {cfg.emoji} {cfg.short} <span className="text-muted">▾</span>
+            {cfg.emoji} {tr(cfg.short)} <span className="text-muted">▾</span>
           </button>
         </div>
       </header>
@@ -126,7 +132,7 @@ export default function Nav() {
           <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-bg p-4" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3"><ProfileSwitcher compact /></div>
             <div className="mb-2"><SyncBadge /></div>
-            <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">Spaces</p>
+            <p className="mb-2 px-3 text-[11px] uppercase tracking-[0.18em] text-muted">{tr("Spaces")}</p>
             <SpaceList spaces={spaces} space={space} counts={counts} path={path} onPick={() => setSheet(false)} />
           </div>
         </div>
@@ -147,14 +153,14 @@ export default function Nav() {
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d={MOBILE_ICONS[i]} />
               </svg>
-              {t.label}
+              {tr(t.label)}
             </Link>
           ))}
           <button onClick={() => setMoreSheet(true)} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${moreActive ? "text-accent" : "text-muted"}`}>
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} />
             </svg>
-            More
+            {tr("More")}
           </button>
         </div>
       </nav>
@@ -164,19 +170,20 @@ export default function Nav() {
 
 /** "More": this space's tools, then app-wide pages. */
 function MoreLinks({ space, active, onPick }: { space: string; active: (href: string) => boolean; onPick: () => void }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div>
-        <p className="mb-1 px-2 text-[11px] uppercase tracking-[0.18em] text-muted">{DOMAIN[space]?.short ?? "Space"}</p>
-        {moreTabs(space).map((t) => (
-          <Link key={t.href} href={t.href} onClick={onPick} className={`block rounded-xl px-3 py-2 text-sm ${active(t.href) ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>{t.label}</Link>
+        <p className="mb-1 px-2 text-[11px] uppercase tracking-[0.18em] text-muted">{t(DOMAIN[space]?.short ?? "Space")}</p>
+        {moreTabs(space).map((l) => (
+          <Link key={l.href} href={l.href} onClick={onPick} className={`block rounded-xl px-3 py-2 text-sm ${active(l.href) ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>{t(l.label)}</Link>
         ))}
       </div>
       <div className="border-t border-line pt-2">
         {GLOBAL.map((g) => (
           <Link key={g.href} href={g.href} onClick={onPick} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active(g.href) ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={g.icon} /></svg>
-            {g.label}
+            {t(g.label)}
           </Link>
         ))}
       </div>
@@ -187,6 +194,7 @@ function MoreLinks({ space, active, onPick }: { space: string; active: (href: st
 function SpaceList({ spaces, space, counts, path, onPick }: {
   spaces: typeof DOMAINS; space: string; counts: Record<string, number>; path: string; onPick?: () => void;
 }) {
+  const t = useT();
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
   // stay on the same tab when switching space (Swipe stays Swipe), else go to the space home
   const target = (name: string) => {
@@ -210,7 +218,7 @@ function SpaceList({ spaces, space, counts, path, onPick }: {
             >
               <span className="text-lg">{d.emoji}</span>
               <span className="flex-1">
-                <span className="block leading-tight">{d.label}</span>
+                <span className="block leading-tight">{t(d.label)}</span>
                 <span className="mt-1 block h-1 overflow-hidden rounded-full bg-line/60">
                   <span className="block h-full rounded-full bg-[var(--space-accent)]" style={{ width: `${Math.min(100, Math.sqrt(n / 60) * 100)}%` }} />
                 </span>

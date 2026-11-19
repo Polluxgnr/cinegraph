@@ -1,5 +1,7 @@
 "use client";
 
+import { filmOverview, useT } from "@/lib/i18n";
+
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +29,7 @@ export default function SwipePage() {
 }
 
 function Deck({ domain }: { domain: string }) {
+  const T = useT();
   const { data: d, error } = useDomain(domain);
   const loaded = useLoaded();
   const version = useStore((s) => s.updatedAt);
@@ -94,18 +97,18 @@ function Deck({ domain }: { domain: string }) {
     if (last) setSkip(new Set());
   }
 
-  if (error) return <p className="card p-4 text-sm text-nope">Couldn&apos;t load {cfg?.label}: {error}</p>;
+  if (error) return <p className="card p-4 text-sm text-nope">{T("Couldn't load")}{" "}{T(cfg?.label ?? "")}: {error}</p>;
   const e = card?.rec.entity;
   return (
     <div className="flex flex-col items-center max-md:h-[calc(100dvh-9.5rem-env(safe-area-inset-bottom))]">
       <div className="mb-2 w-full md:mb-4">
         <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-xl md:text-3xl">{cfg?.emoji} {cfg?.label}</h1>
-          <span className="text-xs text-muted">{card ? `${card.info.labels} answer${card.info.labels === 1 ? "" : "s"}` : ""}</span>
+          <h1 className="font-display text-xl md:text-3xl">{cfg?.emoji} {T(cfg?.label ?? "")}</h1>
+          <span className="text-xs text-muted">{card ? T(card.info.labels === 1 ? "{n} answer" : "{n} answers", { n: card.info.labels }) : ""}</span>
         </div>
         <Progress className="mt-1.5 md:mt-2" value={cal} />
         <p className="mt-1 hidden text-[11px] text-muted md:block">
-          {cal < 0.5 ? "Learning the basics: cards cover very different things on purpose." : cal < 1 ? "Getting sharper: more cards it expects you to like." : "Calibrated. Keep going to refine, or check your recommendations."}
+          {cal < 0.5 ? T("Learning the basics: cards cover very different things on purpose.") : cal < 1 ? T("Getting sharper: more cards it expects you to like.") : T("Calibrated. Keep going to refine, or check your recommendations.")}
         </p>
       </div>
 
@@ -163,9 +166,9 @@ function Deck({ domain }: { domain: string }) {
           {unseenMode && cfg && !cfg.singleStep ? (
             <div className="grid grid-cols-3 gap-1.5 md:grid-cols-2 md:gap-2">
               {cfg.unseenActions.map(([a, l]) => (
-                <button key={a} className="rounded-xl border border-unseen/40 bg-panel py-2 text-[13px] text-unseen hover:bg-panel-2 md:py-2.5 md:text-sm" onClick={() => decide(a, {}, [0, 1])}>{l}</button>
+                <button key={a} className="rounded-xl border border-unseen/40 bg-panel py-2 text-[13px] text-unseen hover:bg-panel-2 md:py-2.5 md:text-sm" onClick={() => decide(a, {}, [0, 1])}>{T(l)}</button>
               ))}
-              <button className="col-span-2 text-xs text-muted" onClick={() => setUnseenMode(false)}>← back</button>
+              <button className="col-span-2 text-xs text-muted" onClick={() => setUnseenMode(false)}>{T("← back")}</button>
             </div>
           ) : (
             <AnswerPanel key={e.key} e={e} dense onAnswer={(a, extra) => decide(a, extra, a === "loved" || a === "fav" ? [0, -1] : ["disliked", "dropped", "never"].includes(a) ? [-1, 0] : [1, 0])} />
@@ -174,17 +177,17 @@ function Deck({ domain }: { domain: string }) {
       )}
 
       <div className="mt-2 flex w-full shrink-0 items-center justify-between text-xs text-muted md:mt-4">
-        <span className="hidden md:inline">{count} this session · ← → ↑ ↓ keys</span>
-        <span className="md:hidden">{count} this session</span>
+        <span className="hidden md:inline">{count} {T("this session · ← → ↑ ↓ keys")}</span>
+        <span className="md:hidden">{count} {T("this session")}</span>
         <div className="flex gap-3">
-          {e && <button onClick={() => setSkip((s) => new Set(s).add(e.key))} className="hover:text-ink">Skip</button>}
-          <button onClick={undo} className="hover:text-ink">↶ Undo</button>
-          {e && <Link href={detailHref(e.key)} className="hover:text-ink">Details</Link>}
+          {e && <button onClick={() => setSkip((s) => new Set(s).add(e.key))} className="hover:text-ink">{T("Skip")}</button>}
+          <button onClick={undo} className="hover:text-ink">{T("↶ Undo")}</button>
+          {e && <Link href={detailHref(e.key)} className="hover:text-ink">{T("Details")}</Link>}
         </div>
       </div>
       {card && (
         <p className="mt-3 hidden w-full text-[11px] leading-relaxed text-muted/70 md:block">
-          Why this card: uncertainty {card.info.uncertainty}, novelty {card.info.coverage}, likely known {Math.round(card.info.pSeen * 100)}%.
+          {T("Why this card: uncertainty")}{" "}{card.info.uncertainty}{T(", novelty")}{" "}{card.info.coverage}{T(", likely known")}{" "}{Math.round(card.info.pSeen * 100)}%.
         </p>
       )}
     </div>
@@ -192,24 +195,25 @@ function Deck({ domain }: { domain: string }) {
 }
 
 function CardMeta({ d, card }: { d: DomainData; card: Card }) {
+  const T = useT();
   const e = card.rec.entity;
   const f = e.film;
   useFilmDetails(f);
   if (f && isFilmData(d)) {
     const fd = d as FilmData;
     const names = (ids?: number[], n = 3) => (ids ?? []).slice(0, n).map((i) => fd.people[i]).join(", ");
-    const head = [f.k === "tv" ? "Series" : "Film", f.y, f.k === "tv" ? (f.ns ? `${f.ns} season${f.ns === 1 ? "" : "s"}` : "") : fmtRuntime(f.rt), f.lang ? `VO ${LANG_NAMES[f.lang] ?? f.lang}` : ""];
+    const head = [f.k === "tv" ? T("Series") : T("Film"), f.y, f.k === "tv" ? (f.ns ? T(f.ns === 1 ? "{n} season" : "{n} seasons", { n: f.ns }) : "") : fmtRuntime(f.rt), f.lang ? `${T("VO")} ${LANG_NAMES[f.lang] ?? f.lang}` : ""];
     return (
       <>
         <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{head.filter(Boolean).join(" · ")}</p>
         <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
         <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
         <p className="mt-1 line-clamp-1 text-xs text-white/70">
-          {(f.g ?? []).slice(0, 3).join(" / ")}
+          {(f.g ?? []).slice(0, 3).map((g) => T(g)).join(" / ")}
           {f.dir?.length ? ` · ${names(f.dir, 1)}` : f.cre?.length ? ` · ${names(f.cre, 1)}` : ""}
         </p>
         {f.cast?.length ? <p className="line-clamp-1 text-xs text-white/60">{names(f.cast, 3)}</p> : null}
-        {f.ov && <p className="mt-1 line-clamp-2 text-[13px] text-white/80 md:line-clamp-3">{f.ov}</p>}
+        {filmOverview(f) && <p className="mt-1 line-clamp-2 text-[13px] text-white/80 md:line-clamp-3">{filmOverview(f)}</p>}
       </>
     );
   }

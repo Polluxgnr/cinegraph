@@ -6,6 +6,7 @@
  * each time you answer, using the features the item had at that moment. Its probability is
  * the "match %" and the predicted stars on every card.
  */
+import { t } from "../i18n";
 import { isFilmData, type DomainData, type FilmData } from "../data";
 import type { Film } from "../types";
 import { sigmoid } from "./linalg";
@@ -129,19 +130,19 @@ export function graphScore(
 }
 
 export function explainPath(p: GraphPath): string {
-  const a = `${p.anchor.title}, ${p.anchor.label}`;
+  const a = `${p.anchor.title}, ${t(p.anchor.label)}`;
   switch (p.rel) {
-    case "saga": return `Same saga as ${a} (${p.via})`;
-    case "director": return `Directed by ${p.via}, like ${a}`;
-    case "creator": return `From ${p.via}, who created ${a}`;
-    case "writer": return `Written by ${p.via}, like ${a}`;
-    case "cast": return `With ${p.via}, also in ${a}`;
-    case "composer": return `Music by ${p.via}, as in ${a}`;
-    case "award": return `Won ${p.via}, like ${a}`;
-    case "source": return `Also adapted from ${p.via}, like ${a}`;
-    case "influence": return `Influenced by ${p.via}, like ${a}`;
-    case "location": return `Also set in ${p.via}, like ${a}`;
-    default: return `Shares ${p.via} with ${a}`;
+    case "saga": return t("Same saga as {a} ({via})", { a, via: p.via });
+    case "director": return t("Directed by {via}, like {a}", { a, via: p.via });
+    case "creator": return t("From {via}, who created {a}", { a, via: p.via });
+    case "writer": return t("Written by {via}, like {a}", { a, via: p.via });
+    case "cast": return t("With {via}, also in {a}", { a, via: p.via });
+    case "composer": return t("Music by {via}, as in {a}", { a, via: p.via });
+    case "award": return t("Won {via}, like {a}", { a, via: p.via });
+    case "source": return t("Also adapted from {via}, like {a}", { a, via: p.via });
+    case "influence": return t("Influenced by {via}, like {a}", { a, via: p.via });
+    case "location": return t("Also set in {via}, like {a}", { a, via: p.via });
+    default: return t("Shares {via} with {a}", { a, via: p.via });
   }
 }
 
@@ -399,33 +400,33 @@ export const stars = (p: number) => Math.round((0.5 + 4.5 * p) * 2) / 2;
 
 export function explain(s: Scored, c: Ctx, p: number): string {
   if (s.path && s.path.weight > 0.06) {
-    return s.path.rel === "related" ? `Close to ${s.path.via}, which you like` : explainPath(s.path);
+    return s.path.rel === "related" ? t("Close to {via}, which you like", { via: s.path.via }) : explainPath(s.path);
   }
   const x = s.x;
-  if (x[F.saga_next] > 0) return "Next in a saga you started";
-  if (x[F.cf] > 0.3 && s.nearest) return `People who loved ${s.nearest.title} rate this highly`;
+  if (x[F.saga_next] > 0) return t("Next in a saga you started");
+  if (x[F.cf] > 0.3 && s.nearest) return t("People who loved {title} rate this highly", { title: s.nearest.title });
   if (s.nearest && x[F.emb_max_pos] > 0.55) {
     const e = c.d.entities[s.row];
     const a = c.d.entities[s.nearest.row];
     const shared = e.tags.filter((t) => a.tags.includes(t) && !GENERIC.has(t.toLowerCase())).slice(0, 2);
-    return shared.length ? `Like ${a.title}: ${shared.join(", ")}` : `Close in tone to ${a.title}`;
+    return shared.length ? t("Like {title}: {tags}", { title: a.title, tags: shared.join(", ") }) : t("Close in tone to {title}", { title: a.title });
   }
   if (x[F.tag_aff] > 0.2) {
     const e = c.d.entities[s.row];
-    const t = e.tags.find((tg) => (c.p.tagAff.get(tg.toLowerCase()) ?? 0) > 0.2);
-    if (t) return `You tend to like ${t.toLowerCase()}`;
+    const tag = e.tags.find((tg) => (c.p.tagAff.get(tg.toLowerCase()) ?? 0) > 0.2);
+    if (tag) return t("You tend to like {tag}", { tag: tag.toLowerCase() });
   }
   const e = c.d.entities[s.row];
   if (c.p.n < 8) {
     const f = e.film;
     if (f?.va && (f.vc ?? 0) >= 200) {
       const votes = f.vc! >= 1000 ? `${Math.round(f.vc! / 1000)}k` : String(f.vc);
-      return f.va >= 7.5 ? `Acclaimed: ${f.va.toFixed(1)}/10 from ${votes} ratings` : `Rated ${f.va.toFixed(1)}/10 by ${votes} people`;
+      return f.va >= 7.5 ? t("Acclaimed: {va}/10 from {votes} ratings", { va: f.va.toFixed(1), votes }) : t("Rated {va}/10 by {votes} people", { va: f.va.toFixed(1), votes });
     }
-    if (e.item?.meta?.custom) return "You saved this";
-    return p > 0.6 ? "Popular in this space" : "Helps us learn your taste";
+    if (e.item?.meta?.custom) return t("You saved this");
+    return p > 0.6 ? t("Popular in this space") : t("Helps us learn your taste");
   }
-  return p > 0.65 ? "A strong fit for your profile" : "A good fit for your profile";
+  return p > 0.65 ? t("A strong fit for your profile") : t("A good fit for your profile");
 }
 
 const GENERIC = new Set(["drama", "film", "television series", "comedy", "thriller", "action", "fr", "en"]);

@@ -3,6 +3,7 @@
  * files gzipped and the service worker caches them, so repeat visits work offline.
  */
 import { tunePrior } from "./engine/score";
+import { currentLang, t } from "./i18n";
 import type { Collection, Entity, Film, Item, Manifest } from "./types";
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -152,11 +153,11 @@ export async function allFilmDetails(d: FilmData): Promise<void> {
 }
 
 export function filmEntity(f: Film): Entity {
-  const sub = [f.k === "tv" ? "Series" : "Film", f.y, f.g?.slice(0, 2).join(" / ")].filter(Boolean).join(" · ");
+  const sub = [t(f.k === "tv" ? "Series" : "Film"), f.y, f.g?.slice(0, 2).map((g) => t(g)).join(" / ")].filter(Boolean).join(" · ");
   return {
     key: `films:${f.id}`,
     domain: "films",
-    title: f.t,
+    title: currentLang() === "fr" && f.tf ? f.tf : f.t, // French title when the interface is French
     subtitle: sub,
     image: f.img,
     date: f.d ?? (f.y ? `${f.y}-01-01` : undefined),

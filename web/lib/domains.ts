@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import type { Action } from "./store";
 
 export interface DomainConfig {
@@ -178,5 +179,5 @@ export const DOMAIN = Object.fromEntries(DOMAINS.map((d) => [d.name, d])) as Rec
 
 export function actionLabel(domain: string, a: Action): string {
   const d = DOMAIN[domain];
-  return [...(d?.seenActions ?? []), ...(d?.unseenActions ?? [])].find(([x]) => x === a)?.[1] ?? a;
+  return t([...(d?.seenActions ?? []), ...(d?.unseenActions ?? [])].find(([x]) => x === a)?.[1] ?? a);
 }

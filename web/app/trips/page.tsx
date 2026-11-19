@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion } from "motion/react";
@@ -25,6 +27,7 @@ const gmaps = (s: TripSpot[]) => `https://www.google.com/maps/dir/${s.map((p) =>
 
 /** Trips: one per destination, planned day by day like a travel journal. */
 export default function Trips() {
+  const T = useT();
   const [id] = useQueryParam("id");
   const trips = useStore((s) => s.trips);
   const trip = trips.find((t) => t.id === id);
@@ -32,8 +35,8 @@ export default function Trips() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-4xl md:text-5xl">Trips</h1>
-        <p className="text-sm text-muted">Open a destination, add its best spots with “+ Trip”, then plan the days here: map, routes, notes.</p>
+        <h1 className="font-display text-4xl md:text-5xl">{T("Trips")}</h1>
+        <p className="text-sm text-muted">{T("Open a destination, add its best spots with “+ Trip”, then plan the days here: map, routes, notes.")}</p>
       </header>
       {trips.length ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -46,7 +49,7 @@ export default function Trips() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                   <div className="absolute bottom-3 left-3">
                     <p className="font-display text-3xl text-white">{t.title}</p>
-                    <p className="text-xs text-white/70">{t.days} days · {t.spots.length} spots{t.start ? ` · from ${new Date(t.start).toLocaleDateString("fr-FR")}` : ""}</p>
+                    <p className="text-xs text-white/70">{t.days} {T("days ·")}{" "}{t.spots.length} {T("spots")}{t.start ? ` · from ${new Date(t.start).toLocaleDateString("fr-FR")}` : ""}</p>
                   </div>
                 </div>
               </Link>
@@ -55,8 +58,8 @@ export default function Trips() {
         </div>
       ) : (
         <Link href="/discover/?d=places" className="card block p-6 text-center hover:border-accent">
-          <p className="font-display text-2xl">Start with a destination</p>
-          <p className="text-sm text-muted">Pick a place, open it, and add spots to your trip.</p>
+          <p className="font-display text-2xl">{T("Start with a destination")}</p>
+          <p className="text-sm text-muted">{T("Pick a place, open it, and add spots to your trip.")}</p>
         </Link>
       )}
     </div>
@@ -64,6 +67,7 @@ export default function Trips() {
 }
 
 function Planner({ trip }: { trip: Trip }) {
+  const T = useT();
   const { data: places } = useDomain("places");
   const place = places ? places.entities[places.index.get(trip.place) ?? -1] : undefined;
   const [best, setBest] = useState<Spot[]>([]);
@@ -105,28 +109,28 @@ function Planner({ trip }: { trip: Trip }) {
         {/* eslint-disable-next-line @next/next/no-img-element -- Wikimedia Commons */}
         {trip.image && <img src={trip.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />}
         <div className="relative space-y-3 bg-gradient-to-t from-bg via-bg/60 to-transparent p-5 pt-16 md:p-8 md:pt-24">
-          <Link href="/trips/" className="text-xs text-muted hover:text-ink">← All trips</Link>
+          <Link href="/trips/" className="text-xs text-muted hover:text-ink">{T("← All trips")}</Link>
           <h1 className="font-display text-5xl md:text-6xl">{trip.title}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="flex items-center gap-1 rounded-xl border border-line bg-panel/80 px-2 py-1">
               <button className="px-2" onClick={() => updateTrip(trip.id, (t) => void (t.days = Math.max(1, t.days - 1)))}>−</button>
-              <span className="tabular-nums">{trip.days} days</span>
+              <span className="tabular-nums">{trip.days} {T("days")}</span>
               <button className="px-2" onClick={() => updateTrip(trip.id, (t) => void (t.days = Math.min(21, t.days + 1)))}>+</button>
             </span>
             <label className="flex items-center gap-2 rounded-xl border border-line bg-panel/80 px-3 py-1">
-              <span className="text-muted">Start</span>
+              <span className="text-muted">{T("Start")}</span>
               <input type="date" value={trip.start ?? ""} onChange={(e) => updateTrip(trip.id, (t) => void (t.start = e.target.value || undefined))} className="bg-transparent outline-none" />
             </label>
-            <span className="text-muted">{trip.spots.length} spots · ≈ {total.toFixed(1)} km on foot</span>
-            <button className="btn px-3 py-1.5 text-sm" onClick={autoPlan} disabled={!trip.spots.length}>✨ Plan my days</button>
-            <Link href={detailHref(trip.place)} className="btn-ghost px-3 py-1.5 text-sm">+ Add spots</Link>
-            <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => downloadIcs(trip)} disabled={!trip.spots.some((s) => s.day != null)} title="One event per day, with stops and route">📅 Add to calendar</button>
+            <span className="text-muted">{trip.spots.length} {T("spots · ≈")}{" "}{total.toFixed(1)} {T("km on foot")}</span>
+            <button className="btn px-3 py-1.5 text-sm" onClick={autoPlan} disabled={!trip.spots.length}>{T("✨ Plan my days")}</button>
+            <Link href={detailHref(trip.place)} className="btn-ghost px-3 py-1.5 text-sm">{T("+ Add spots")}</Link>
+            <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => downloadIcs(trip)} disabled={!trip.spots.some((s) => s.day != null)} title={T("One event per day, with stops and route")}>{T("📅 Add to calendar")}</button>
           </div>
         </div>
       </header>
 
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> show every best spot on the map (faded)</label>
+        <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> {T("show every best spot on the map (faded)")}</label>
         <SpotMap points={points} routes={routes} className="h-80 md:h-[28rem]" />
       </div>
 
@@ -134,14 +138,14 @@ function Planner({ trip }: { trip: Trip }) {
         {byDay.days.map((d, di) => (
           <motion.section key={di} layout className="card space-y-2 p-4" style={{ borderColor: `${dayColor(di)}55` }}>
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="font-display text-2xl" style={{ color: dayColor(di) }}>Day {di + 1} <span className="text-sm text-muted">{dateOf(di)}</span></h2>
-              <span className="text-xs text-muted">{d.length ? `${d.length} stops · ${routeKm(d).toFixed(1)} km` : "free day"}</span>
+              <h2 className="font-display text-2xl" style={{ color: dayColor(di) }}>{T("Day")}{" "}{di + 1} <span className="text-sm text-muted">{dateOf(di)}</span></h2>
+              <span className="text-xs text-muted">{d.length ? `${d.length} stops · ${routeKm(d).toFixed(1)} km` : T("free day")}</span>
             </div>
             <ol className="space-y-1.5">
               {d.map((s, i) => <Stop key={s.q} s={s} n={i + 1} trip={trip} color={dayColor(di)} />)}
             </ol>
-            {d.length > 1 && <a href={gmaps(d)} target="_blank" rel="noreferrer" className="inline-block text-xs text-accent">Directions for the day in Google Maps ↗</a>}
-            <textarea defaultValue={trip.notes[di] ?? ""} placeholder="Notes, restaurant, booking, how it went…" rows={2}
+            {d.length > 1 && <a href={gmaps(d)} target="_blank" rel="noreferrer" className="inline-block text-xs text-accent">{T("Directions for the day in Google Maps ↗")}</a>}
+            <textarea defaultValue={trip.notes[di] ?? ""} placeholder={T("Notes, restaurant, booking, how it went…")} rows={2}
                       onBlur={(e) => updateTrip(trip.id, (t) => void (t.notes = { ...t.notes, [di]: e.target.value }))}
                       className="w-full resize-y rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
           </motion.section>
@@ -150,15 +154,15 @@ function Planner({ trip }: { trip: Trip }) {
 
       {byDay.loose.length > 0 && (
         <section className="card space-y-2 p-4">
-          <h2 className="font-display text-xl">Not planned yet</h2>
+          <h2 className="font-display text-xl">{T("Not planned yet")}</h2>
           <ol className="space-y-1.5">{byDay.loose.map((s) => <Stop key={s.q} s={s} trip={trip} color={dayColor(null)} />)}</ol>
-          <p className="text-xs text-muted">“Plan my days” groups spots that are close to each other and orders each day as a walk.</p>
+          <p className="text-xs text-muted">{T("“Plan my days” groups spots that are close to each other and orders each day as a walk.")}</p>
         </section>
       )}
 
       {suggestions.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-2xl">Worth adding</h2>
+          <h2 className="mb-3 font-display text-2xl">{T("Worth adding")}</h2>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
             {suggestions.map((b) => (
               <div key={b.q} className="card w-44 shrink-0 overflow-hidden">
@@ -167,7 +171,7 @@ function Planner({ trip }: { trip: Trip }) {
                 <div className="space-y-1 p-2">
                   <p className="line-clamp-2 text-sm leading-snug">{b.name}</p>
                   <p className="text-[11px] text-muted">{b.group}</p>
-                  <button className="btn-ghost w-full px-2 py-1 text-xs" onClick={() => toggleTripSpot(place4, { q: b.q, name: b.name, lat: b.lat, lon: b.lon, img: b.img, group: b.group })}>+ Trip</button>
+                  <button className="btn-ghost w-full px-2 py-1 text-xs" onClick={() => toggleTripSpot(place4, { q: b.q, name: b.name, lat: b.lat, lon: b.lon, img: b.img, group: b.group })}>{T("+ Trip")}</button>
                 </div>
               </div>
             ))}
@@ -175,12 +179,13 @@ function Planner({ trip }: { trip: Trip }) {
         </section>
       )}
 
-      <button className="text-xs text-nope" onClick={() => confirm(`Delete the ${trip.title} trip?`) && deleteTrip(trip.id)}>Delete this trip</button>
+      <button className="text-xs text-nope" onClick={() => confirm(`Delete the ${trip.title} trip?`) && deleteTrip(trip.id)}>{T("Delete this trip")}</button>
     </div>
   );
 }
 
 function Stop({ s, n, trip, color }: { s: TripSpot; n?: number; trip: Trip; color: string }) {
+  const T = useT();
   return (
     <li className={`flex items-center gap-2 rounded-xl p-1.5 hover:bg-panel-2 ${s.done ? "opacity-60" : ""}`}>
       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-bg" style={{ background: color }}>{n ?? "·"}</span>
@@ -193,15 +198,15 @@ function Stop({ s, n, trip, color }: { s: TripSpot; n?: number; trip: Trip; colo
       <select value={s.day ?? ""} onChange={(e) => updateTrip(trip.id, (t) => {
         const x = t.spots.find((y) => y.q === s.q);
         if (x) x.day = e.target.value === "" ? null : Number(e.target.value);
-      })} className="rounded-md border border-line bg-panel px-1 py-0.5 text-xs" aria-label="Day">
+      })} className="rounded-md border border-line bg-panel px-1 py-0.5 text-xs" aria-label={T("Day")}>
         <option value="">–</option>
-        {Array.from({ length: trip.days }, (_, i) => <option key={i} value={i}>Day {i + 1}</option>)}
+        {Array.from({ length: trip.days }, (_, i) => <option key={i} value={i}>{T("Day")}{" "}{i + 1}</option>)}
       </select>
-      <button title="Been there" className="px-1 text-sm" onClick={() => updateTrip(trip.id, (t) => {
+      <button title={T("Been there")} className="px-1 text-sm" onClick={() => updateTrip(trip.id, (t) => {
         const x = t.spots.find((y) => y.q === s.q);
         if (x) x.done = !x.done;
       })}>{s.done ? "✅" : "◻"}</button>
-      <button title="Remove" className="px-1 text-xs text-muted hover:text-nope" onClick={() => updateTrip(trip.id, (t) => void (t.spots = t.spots.filter((y) => y.q !== s.q)))}>✕</button>
+      <button title={T("Remove")} className="px-1 text-xs text-muted hover:text-nope" onClick={() => updateTrip(trip.id, (t) => void (t.spots = t.spots.filter((y) => y.q !== s.q)))}>✕</button>
     </li>
   );
 }

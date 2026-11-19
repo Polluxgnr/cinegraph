@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { detailHref } from "@/components/RecCard";
@@ -39,6 +41,7 @@ async function load(url: string): Promise<Playlist> {
  * playlist's artists' fans also play, weighted by your own taste), and the tracks that stick out.
  */
 export default function Playlists() {
+  const T = useT();
   const { data: d } = useDomain("music");
   const saved = useStore((s) => Object.entries(s.imports).filter(([k]) => k.startsWith("playlist:")));
   const [url, setUrl] = useState("");
@@ -79,28 +82,28 @@ export default function Playlists() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-4xl md:text-5xl">Playlists</h1>
-        <p className="text-sm text-muted">Paste a Deezer or Spotify playlist: see what it says about your taste, songs that would fit, and the ones that stick out.</p>
+        <h1 className="font-display text-4xl md:text-5xl">{T("Playlists")}</h1>
+        <p className="text-sm text-muted">{T("Paste a Deezer or Spotify playlist: see what it says about your taste, songs that would fit, and the ones that stick out.")}</p>
       </header>
       <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) open(url.trim()); }}>
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://open.spotify.com/playlist/… or https://www.deezer.com/playlist/…"
                className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 outline-none focus:border-accent" />
-        <button className="btn" disabled={busy}>{busy ? "Reading…" : "Open"}</button>
+        <button className="btn" disabled={busy}>{busy ? T("Reading…") : T("Open")}</button>
       </form>
       {err && (
         <p className="card p-3 text-sm">
           {err}
           {parse(url)?.source === "spotify" && !spotifyToken() && getState().settings.spotifyClientId && (
-            <button className="btn ml-3 px-3 py-1 text-xs" onClick={() => startLogin()}>Connect Spotify</button>
+            <button className="btn ml-3 px-3 py-1 text-xs" onClick={() => startLogin()}>{T("Connect Spotify")}</button>
           )}
           {parse(url)?.source === "spotify" && !getState().settings.spotifyClientId && (
-            <Link className="ml-2 text-accent" href="/import/#connect-spotify">Set up Spotify →</Link>
+            <Link className="ml-2 text-accent" href="/import/#connect-spotify">{T("Set up Spotify →")}</Link>
           )}
         </p>
       )}
       {saved.length > 0 && !pl && (
         <section>
-          <h2 className="mb-2 font-display text-2xl">My playlists</h2>
+          <h2 className="mb-2 font-display text-2xl">{T("My playlists")}</h2>
           <ul className="space-y-1">
             {saved.map(([k, v]) => (
               <li key={k}><button className="text-left text-sm hover:text-accent" onClick={() => { const u = v.channels?.[0]?.url ?? ""; setUrl(u); open(u); }}>▸ {v.summary}</button></li>
@@ -114,6 +117,7 @@ export default function Playlists() {
 }
 
 function Analysis({ pl, d }: { pl: Playlist; d: DomainData }) {
+  const T = useT();
   const [sugg, setSugg] = useState<Suggestion[] | null>(null);
   const [learned, setLearned] = useState<string | null>(null);
   const [playing, setPlaying] = useState<number | null>(null);
@@ -221,16 +225,16 @@ function Analysis({ pl, d }: { pl: Playlist; d: DomainData }) {
         {pl.image && <img src={pl.image} alt="" className="h-24 w-24 rounded-xl object-cover" />}
         <div className="flex-1">
           <a href={pl.url} target="_blank" rel="noreferrer" className="font-display text-3xl hover:text-accent">{pl.name}</a>
-          <p className="text-sm text-muted">{pl.tracks.length} tracks · {artists.length} artists · {pl.source === "spotify" ? "Spotify" : "Deezer"}</p>
+          <p className="text-sm text-muted">{pl.tracks.length} {T("tracks ·")}{" "}{artists.length} {T("artists ·")}{" "}{pl.source === "spotify" ? T("Spotify") : T("Deezer")}</p>
           {genres.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{genres.map(([g]) => <span key={g} className="chip text-xs">{g}</span>)}</div>}
         </div>
-        <button className="btn-ghost text-sm" onClick={learn}>{learned ?? "Learn my taste from it"}</button>
+        <button className="btn-ghost text-sm" onClick={learn}>{learned ?? T("Learn my taste from it")}</button>
       </section>
 
       <section>
-        <h2 className="mb-1 font-display text-2xl">Songs that would fit</h2>
-        <p className="mb-3 text-xs text-muted">From who the fans of this playlist&apos;s artists also play, weighted by your own taste. ▶ plays 30 s.</p>
-        {!sugg ? <div className="card h-40 animate-pulse" /> : !sugg.length ? <p className="text-sm text-muted">No suggestions found.</p> : (
+        <h2 className="mb-1 font-display text-2xl">{T("Songs that would fit")}</h2>
+        <p className="mb-3 text-xs text-muted">{T("From who the fans of this playlist's artists also play, weighted by your own taste. ▶ plays 30 s.")}</p>
+        {!sugg ? <div className="card h-40 animate-pulse" /> : !sugg.length ? <p className="text-sm text-muted">{T("No suggestions found.")}</p> : (
           <ol className="space-y-1">
             {sugg.map((s) => (
               <li key={s.track.id} className="flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-panel">
@@ -239,29 +243,29 @@ function Analysis({ pl, d }: { pl: Playlist; d: DomainData }) {
                 {s.track.album.cover_medium && <img src={s.track.album.cover_medium} alt="" className="h-10 w-10 rounded" loading="lazy" />}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{s.track.title} <span className="text-muted">· {s.key ? <Link href={detailHref(s.key)} className="hover:text-accent">{s.track.artist.name}</Link> : s.track.artist.name}</span></p>
-                  <p className="truncate text-[11px] text-muted">fans of {s.because.join(" & ")} play them</p>
+                  <p className="truncate text-[11px] text-muted">{T("fans of")}{" "}{s.because.join(" & ")} {T("play them")}</p>
                 </div>
-                <a className="text-xs text-muted hover:text-ink" href={s.track.link} target="_blank" rel="noreferrer">Deezer ↗</a>
-                <a className="text-xs text-muted hover:text-ink" href={`https://open.spotify.com/search/${encodeURIComponent(`${s.track.artist.name} ${s.track.title}`)}`} target="_blank" rel="noreferrer">Spotify ↗</a>
+                <a className="text-xs text-muted hover:text-ink" href={s.track.link} target="_blank" rel="noreferrer">{T("Deezer ↗")}</a>
+                <a className="text-xs text-muted hover:text-ink" href={`https://open.spotify.com/search/${encodeURIComponent(`${s.track.artist.name} ${s.track.title}`)}`} target="_blank" rel="noreferrer">{T("Spotify ↗")}</a>
               </li>
             ))}
           </ol>
         )}
         {sugg && sugg.length > 0 && (
-          <button className="btn-ghost mt-3 text-xs" onClick={() => navigator.clipboard.writeText(sugg.map((s) => `${s.track.artist.name} - ${s.track.title}`).join("\n"))}>Copy the list</button>
+          <button className="btn-ghost mt-3 text-xs" onClick={() => navigator.clipboard.writeText(sugg.map((s) => `${s.track.artist.name} - ${s.track.title}`).join("\n"))}>{T("Copy the list")}</button>
         )}
       </section>
 
       {misfits.length > 0 && (
         <section>
-          <h2 className="mb-2 font-display text-2xl">Tracks that stick out</h2>
-          <p className="mb-2 text-xs text-muted">By artists you said weren&apos;t for you.</p>
+          <h2 className="mb-2 font-display text-2xl">{T("Tracks that stick out")}</h2>
+          <p className="mb-2 text-xs text-muted">{T("By artists you said weren't for you.")}</p>
           <ul className="space-y-1 text-sm">{misfits.map((t, i) => <li key={i}>{t.title} <span className="text-muted">· {t.artist}</span></li>)}</ul>
         </section>
       )}
 
       <section>
-        <h2 className="mb-2 font-display text-2xl">Who&apos;s in it</h2>
+        <h2 className="mb-2 font-display text-2xl">{T("Who's in it")}</h2>
         <div className="flex flex-wrap gap-1.5">
           {artists.slice(0, 40).map((a) => {
             const e = byName.get(normTitle(a.name));

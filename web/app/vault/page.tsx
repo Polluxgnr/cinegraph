@@ -1,4 +1,6 @@
 "use client";
+
+import { useT } from "@/lib/i18n";
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +16,7 @@ const GUESS: [RegExp, string][] = [
 
 /** Your second brain inbox: links, ideas, notes. Share from your phone (PWA share target) or paste. */
 export default function Vault() {
+  const T = useT();
   const vault = useStore((s) => s.vault);
   const loaded = useLoaded();
   const [url, setUrl] = useState("");
@@ -69,30 +72,30 @@ export default function Vault() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl md:text-5xl">Second brain</h1>
-          <p className="text-sm text-muted">Links, ideas and things to keep, plus your whole taste profile ready for any AI. On your phone: Share → CineGraph.</p>
+          <h1 className="font-display text-4xl md:text-5xl">{T("Second brain")}</h1>
+          <p className="text-sm text-muted">{T("Links, ideas and things to keep, plus your whole taste profile ready for any AI. On your phone: Share → CineGraph.")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="btn text-sm" onClick={copyDossier}>{copied ?? "Copy my taste dossier for AI"}</button>
-          <button className="btn-ghost text-sm" onClick={async () => downloadBlob("my-taste-dossier.md", new Blob([await buildDossier()], { type: "text/markdown" }))}>Download .md</button>
-          <button className="btn-ghost text-sm" onClick={() => exportObsidian()}>Export to Obsidian</button>
+          <button className="btn text-sm" onClick={copyDossier}>{copied ?? T("Copy my taste dossier for AI")}</button>
+          <button className="btn-ghost text-sm" onClick={async () => downloadBlob("my-taste-dossier.md", new Blob([await buildDossier()], { type: "text/markdown" }))}>{T("Download .md")}</button>
+          <button className="btn-ghost text-sm" onClick={() => exportObsidian()}>{T("Export to Obsidian")}</button>
         </div>
       </header>
       <form className="card grid gap-2 p-4 md:grid-cols-[2fr_1.5fr_1fr_auto]" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://… (Marmiton recipe, Pinterest pin, video, article…)" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
-        <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags, comma, separated" className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
-        <button className="btn">Save</button>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Idea / note (Markdown welcome)" rows={2} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent md:col-span-4" />
-        {domainGuess && <p className="text-xs text-muted md:col-span-4">Filed under {DOMAINS.find((d) => d.name === domainGuess)?.label}</p>}
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Title")} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+        <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={T("tags, comma, separated")} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent" />
+        <button className="btn">{T("Save")}</button>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={T("Idea / note (Markdown welcome)")} rows={2} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-accent md:col-span-4" />
+        {domainGuess && <p className="text-xs text-muted md:col-span-4">{T("Filed under")}{" "}{DOMAINS.find((d) => d.name === domainGuess)?.label}</p>}
       </form>
       <div className="flex flex-wrap items-center gap-1.5">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="mr-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm outline-none focus:border-accent" />
-        <button className="chip" data-on={!filter} onClick={() => setFilter(null)}>All ({vault.length})</button>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={T("Search…")} className="mr-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm outline-none focus:border-accent" />
+        <button className="chip" data-on={!filter} onClick={() => setFilter(null)}>{T("All (")}{vault.length})</button>
         {DOMAINS.filter((d) => vault.some((v) => v.domain === d.name)).map((d) => <button key={d.name} className="chip" data-on={filter === d.name} onClick={() => setFilter(d.name)}>{d.emoji} {d.short}</button>)}
         {allTags.map((t) => <button key={t} className="chip text-xs" data-on={filter === t} onClick={() => setFilter(filter === t ? null : t)}>#{t}</button>)}
       </div>
-      {loaded && !vault.length && <p className="text-sm text-muted">Empty. Paste a link above, or use “Save to vault” on any card.</p>}
+      {loaded && !vault.length && <p className="text-sm text-muted">{T("Empty. Paste a link above, or use “Save to vault” on any card.")}</p>}
       <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {shown.map((v) => (
           <li key={v.id} className="card flex gap-3 p-3">
@@ -102,7 +105,7 @@ export default function Vault() {
               {v.note && <p className="mt-1 line-clamp-4 whitespace-pre-line text-sm text-ink/80">{v.note}</p>}
               <p className="mt-1 text-[11px] text-muted">{v.tags.map((t) => `#${t}`).join(" ")} · {new Date(v.created).toLocaleDateString("fr-FR")}</p>
             </div>
-            <button onClick={() => removeVault(v.id)} className="self-start text-xs text-muted hover:text-nope" aria-label="Delete">✕</button>
+            <button onClick={() => removeVault(v.id)} className="self-start text-xs text-muted hover:text-nope" aria-label={T("Delete")}>✕</button>
           </li>
         ))}
       </ul>

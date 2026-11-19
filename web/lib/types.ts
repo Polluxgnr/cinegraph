@@ -23,6 +23,8 @@ export interface Film {
   img?: string;
   bd?: string;
   tr?: string; // YouTube trailer key
+  tf?: string; // French title (TMDB fr-FR)
+  ovf?: string; // French synopsis (details)
   mlr?: number; // MovieLens mean rating /5 (individual ratings)
   mlc?: number; // MovieLens number of ratings
   cast?: number[];

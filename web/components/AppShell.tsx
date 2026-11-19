@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useEffect, useState } from "react";
 import { asset } from "@/lib/data";
 import { getState, loadState } from "@/lib/store";
@@ -12,6 +14,7 @@ import { acceptDeviceLink, flushSync, pullGist, pushGist, scheduleSync } from "@
 export default function AppShell() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const t = useT();
   useEffect(() => {
     const on = () => setOffline(!navigator.onLine);
     const t = setTimeout(on, 0);
@@ -71,7 +74,7 @@ export default function AppShell() {
   if (offline) {
     return (
       <div role="status" className="fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded-full border border-line bg-panel-2 px-4 py-1.5 text-xs text-ink shadow-xl md:top-4">
-        Offline · everything you do is saved and will sync when you&apos;re back
+        {t("Offline · everything you do is saved and will sync when you're back")}
       </div>
     );
   }

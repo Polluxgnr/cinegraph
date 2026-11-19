@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useEffect, useMemo, useState } from "react";
 import { Row } from "@/components/RecCard";
 import { type DomainData, loadExtra } from "@/lib/data";
@@ -31,6 +33,7 @@ export interface Extra {
  * then by freshness. "Keep" saves it to your list in that space.
  */
 export default function ExtraRow({ d, name, title, hint }: { d: DomainData; name: string; title: string; hint: string }) {
+  const T = useT();
   const [rows, setRows] = useState<Extra[] | null>(null);
   const [now, setNow] = useState(0);
   const version = useStore((s) => s.updatedAt);
@@ -84,7 +87,7 @@ export default function ExtraRow({ d, name, title, hint }: { d: DomainData; name
           <a href={r.url} target="_blank" rel="noreferrer" className="relative block aspect-square overflow-hidden bg-panel-2">
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, remote images */}
             {r.image && <img src={r.image} alt={r.title} loading="lazy" className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]" />}
-            {fit >= 0.7 && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">for you</span>}
+            {fit >= 0.7 && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">{T("for you")}</span>}
           </a>
           <div className="flex flex-1 flex-col gap-1 p-3">
             <a href={r.url} target="_blank" rel="noreferrer" className="line-clamp-2 text-sm font-semibold leading-snug hover:text-accent">{r.title}</a>
@@ -92,8 +95,8 @@ export default function ExtraRow({ d, name, title, hint }: { d: DomainData; name
               {[r.artist ?? r.brand, r.type && r.type !== "album" ? r.type.toUpperCase() : "", r.price ? fmtPrice(r.price) : "", r.date ? new Date(r.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""].filter(Boolean).join(" · ")}
             </p>
             <div className="mt-auto flex gap-1.5 pt-1">
-              <button className="btn-ghost flex-1 px-2 py-1 text-xs" disabled={kept.has(r.url)} onClick={() => keep(r)}>{kept.has(r.url) ? "✓ Kept" : "+ Keep"}</button>
-              {r.spotify && <a className="btn-ghost px-2 py-1 text-xs" href={r.spotify} target="_blank" rel="noreferrer" title="Open in Spotify">Spotify</a>}
+              <button className="btn-ghost flex-1 px-2 py-1 text-xs" disabled={kept.has(r.url)} onClick={() => keep(r)}>{kept.has(r.url) ? T("✓ Kept") : T("+ Keep")}</button>
+              {r.spotify && <a className="btn-ghost px-2 py-1 text-xs" href={r.spotify} target="_blank" rel="noreferrer" title={T("Open in Spotify")}>{T("Spotify")}</a>}
             </div>
           </div>
         </article>

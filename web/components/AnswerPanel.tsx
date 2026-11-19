@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 import { useState } from "react";
 import { DOMAIN } from "@/lib/domains";
 import type { Action } from "@/lib/store";
@@ -42,6 +44,7 @@ export default function AnswerPanel({
   /** swipe deck: on phones, small buttons with short labels so card + answers fit one screen */
   dense?: boolean;
 }) {
+  const T = useT();
   const cfg = DOMAIN[e.domain];
   const [step, setStep] = useState<"ask" | "seen" | "unseen">(cfg?.singleStep ? "seen" : "ask");
   const [chips, setChips] = useState<string[]>([]);
@@ -60,10 +63,10 @@ export default function AnswerPanel({
     >
       {dense && label.length > 11 ? (
         <>
-          <span className="md:hidden">{SHORT[a] ?? label}</span>
-          <span className="hidden md:inline">{label}</span>
+          <span className="md:hidden">{T(SHORT[a] ?? label)}</span>
+          <span className="hidden md:inline">{T(label)}</span>
         </>
-      ) : label}
+      ) : T(label)}
     </button>
   );
 
@@ -72,10 +75,10 @@ export default function AnswerPanel({
     return (
       <div className={`grid grid-cols-2 gap-2 ${compact ? "" : "text-base"}`}>
         <button onClick={() => setStep("seen")} className={`rounded-xl border border-like/40 bg-panel font-semibold text-like hover:bg-panel-2 active:scale-95 ${dense ? "py-2.5 md:py-3" : "py-3"}`}>
-          {cfg.seen}
+          {T(cfg.seen)}
         </button>
         <button onClick={() => setStep("unseen")} className={`rounded-xl border border-unseen/40 bg-panel font-semibold text-unseen hover:bg-panel-2 active:scale-95 ${dense ? "py-2.5 md:py-3" : "py-3"}`}>
-          {cfg.unseen}
+          {T(cfg.unseen)}
         </button>
       </div>
     );
@@ -100,8 +103,7 @@ export default function AnswerPanel({
       <div className={`grid ${dense ? "gap-1.5 md:gap-2" : "gap-2"} ${actions.length > 4 ? (dense ? "grid-cols-4 md:grid-cols-3" : "grid-cols-3") : actions.length === 4 && dense ? "grid-cols-4 md:grid-cols-2" : "grid-cols-2"}`}>{actions.map(([a, l], i) => btn(a, l, i + 1))}</div>
       {!cfg.singleStep && (
         <button className="text-xs text-muted hover:text-ink" onClick={() => setStep("ask")}>
-          ← back
-        </button>
+          {T("← back")}</button>
       )}
     </div>
   );
