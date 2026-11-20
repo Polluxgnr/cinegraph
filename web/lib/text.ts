@@ -125,3 +125,11 @@ export function exploreLinks(e: { domain: string; title: string; subtitle: strin
       return {};
   }
 }
+
+/** The crowd's rating out of 10: IMDb (official dataset, by far the most votes) when it has enough votes, else TMDB. */
+export function crowdRating(f?: { ir?: number; ic?: number; va?: number; vc?: number }): { v: number; n: number; src: "IMDb" | "TMDB" } | null {
+  if (!f) return null;
+  if (f.ir && (f.ic ?? 0) >= 50) return { v: f.ir, n: f.ic!, src: "IMDb" };
+  if (f.va && (f.vc ?? 0) >= 20) return { v: f.va, n: f.vc!, src: "TMDB" };
+  return null;
+}

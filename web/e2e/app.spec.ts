@@ -121,3 +121,16 @@ test.describe("French browser", () => {
     await expect(page.locator(isMobile ? "nav.fixed" : "header.fixed").getByText("Ma liste")).toBeVisible();
   });
 });
+
+test("swipe filters narrow the deck and persist", async ({ page }) => {
+  await open(page, "/swipe/?d=films");
+  await expect(page.getByTestId("swipe-card")).toBeVisible();
+  await page.getByTestId("swipe-filters").click();
+  await page.getByRole("button", { name: "Series", exact: true }).click();
+  await page.getByRole("button", { name: "8+", exact: true }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByTestId("swipe-filters")).toHaveText(/Filters · 2/);
+  await expect(page.getByTestId("swipe-card").getByText(/^Series ·/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("swipe-filters")).toHaveText(/Filters · 2/);
+});

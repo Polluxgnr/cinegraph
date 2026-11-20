@@ -38,7 +38,7 @@ export default function FilmHero({ r, label }: { r: Rec; label: string }) {
           <motion.p {...rise(0.25)} className="text-sm text-ink/70">{label}</motion.p>
           <motion.h1 {...rise(0.35)} className="font-display text-5xl leading-[0.95] md:text-7xl">{e.title}</motion.h1>
           <motion.div {...rise(0.45)} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink/80">
-            <Match p={r.p} stars={r.stars} />
+            <Match p={r.p} film={r.entity.film} />
             <span>{meta}</span>
           </motion.div>
           <motion.p {...rise(0.5)} className="line-clamp-2 max-w-xl text-base text-ink/85">{r.why}</motion.p>

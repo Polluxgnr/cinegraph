@@ -14,6 +14,27 @@ import { sparql } from "@/lib/wikidata";
  */
 interface Score { source: string; method?: string; value: string; pct: number | null; date?: string; url?: string }
 
+/** Every score shown out of 10 with one decimal so sources compare at a glance; a Tomatometer-style
+ * "% of positive reviews" is a share, not a grade, so it stays a percentage. */
+export function display(v: string, method = ""): { value: string; pct: number | null } {
+  const pct = toPct(v);
+  if (pct == null) return { value: v, pct };
+  if (/%\s*$/.test(v) || /tomatometer|popcorn|audience score|positive/i.test(method)) return { value: `${pct}%`, pct };
+  return { value: `${(pct / 10).toFixed(1)}/10`, pct };
+}
+
+/** Wikidata method labels (English) -> short, translatable names. */
+const METHOD: [RegExp, string][] = [
+  [/tomatometer/i, "critics · % positive reviews"],
+  [/popcorn|audience score/i, "audience · % positive"],
+  [/rotten tomatoes average|average rating/i, "critics' average rating"],
+  [/metascore/i, "critics · Metascore"],
+  [/user score/i, "users"],
+  [/imdb|weighted average/i, "users · weighted average"],
+];
+const methodName = (m?: string) => (m ? METHOD.find(([re]) => re.test(m))?.[1] ?? m : undefined);
+const ORDER = ["IMDb", "Rotten Tomatoes", "Metacritic", "TMDB", "MovieLens", "AlloCiné"];
+
 const SITE_URL: Record<string, (id: string) => string> = {
   "Rotten Tomatoes": (id) => `https://www.rottentomatoes.com/${id}`,
   Metacritic: (id) => `https://www.metacritic.com/${id}`,
@@ -33,7 +54,7 @@ async function wikidataScores(qid: string): Promise<{ scores: Score[]; ids: Reco
   const q = `SELECT ?score ?byLabel ?methodLabel ?date ?rt ?mc ?imdb ?ac WHERE {
     OPTIONAL { wd:${qid} p:P444 ?st . ?st ps:P444 ?score . OPTIONAL { ?st pq:P447 ?by } OPTIONAL { ?st pq:P459 ?method } OPTIONAL { ?st pq:P585 ?date } }
     OPTIONAL { wd:${qid} wdt:P1258 ?rt } OPTIONAL { wd:${qid} wdt:P1712 ?mc } OPTIONAL { wd:${qid} wdt:P345 ?imdb } OPTIONAL { wd:${qid} wdt:P1265 ?ac }
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". } }`;
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr". } }`;
   const rows = (await sparql(q, 30_000)) as Record<string, { value: string }>[];
   const ids: Record<string, string> = {};
   const first = rows[0] ?? {};
@@ -50,7 +71,7 @@ async function wikidataScores(qid: string): Promise<{ scores: Score[]; ids: Reco
     const k = `${source}|${b.methodLabel?.value ?? ""}`;
     const cur = best.get(k);
     if (cur && (cur.date ?? "") >= (b.date?.value ?? "")) continue;
-    best.set(k, { source, method: b.methodLabel?.value, value: b.score.value, pct: toPct(b.score.value), date: b.date?.value?.slice(0, 10), url: ids[source] ? SITE_URL[source]?.(ids[source]) : undefined });
+    best.set(k, { source, method: methodName(b.methodLabel?.value), ...display(b.score.value, b.methodLabel?.value), date: b.date?.value?.slice(0, 10), url: ids[source] ? SITE_URL[source]?.(ids[source]) : undefined });
   }
   return { scores: [...best.values()].filter((s) => s.pct != null), ids };
 }
@@ -81,10 +102,12 @@ export default function FilmSources({ f }: { f: Film }) {
   }, [qid, f.links?.wikipedia]);
 
   const all: Score[] = [
-    ...(f.va && f.vc ? [{ source: "TMDB", method: T("audience · {n} votes", { n: f.vc.toLocaleString("fr-FR") }), value: `${f.va.toFixed(1)}/10`, pct: Math.round(f.va * 10), url: f.links?.tmdb }] : []),
-    ...(f.mlr && f.mlc ? [{ source: "MovieLens", method: T("{n} individual ratings", { n: f.mlc.toLocaleString("fr-FR") }), value: `${f.mlr.toFixed(2)}/5`, pct: Math.round(f.mlr * 20), url: undefined }] : []),
-    ...(scores ?? []),
-  ];
+    // IMDb from its official dataset (refreshed with each weekly build) beats Wikidata's dated copy
+    ...(f.ir && f.ic ? [{ source: "IMDb", method: T("users · {n} votes", { n: f.ic.toLocaleString() }), value: `${f.ir.toFixed(1)}/10`, pct: Math.round(f.ir * 10), url: f.links?.imdb }] : []),
+    ...(f.va && f.vc ? [{ source: "TMDB", method: T("audience · {n} votes", { n: f.vc.toLocaleString() }), value: `${f.va.toFixed(1)}/10`, pct: Math.round(f.va * 10), url: f.links?.tmdb }] : []),
+    ...(f.mlr && f.mlc ? [{ source: "MovieLens", method: T("{n} individual ratings", { n: f.mlc.toLocaleString() }), value: `${(f.mlr * 2).toFixed(1)}/10`, pct: Math.round(f.mlr * 20), url: undefined }] : []),
+    ...(scores ?? []).filter((x) => !(f.ir && x.source === "IMDb")),
+  ].sort((a, b) => (ORDER.indexOf(a.source) + 1 || 99) - (ORDER.indexOf(b.source) + 1 || 99));
   const reviews: [string, string | undefined][] = [
     ["SensCritique", f.links?.senscritique], ["AlloCiné", f.links?.allocine], ["Letterboxd", f.links?.letterboxd], ["IMDb", f.links?.imdb],
   ];
@@ -105,7 +128,7 @@ export default function FilmSources({ f }: { f: Film }) {
               <motion.div className="h-full rounded-full" style={{ background: (s.pct ?? 0) >= 70 ? "var(--like)" : (s.pct ?? 0) >= 50 ? "var(--accent)" : "var(--nope)" }}
                           initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 0.8, delay: 0.1 + i * 0.05, ease: "easeOut" }} />
             </div>
-            <p className="mt-1 text-[11px] text-muted">{[s.method, s.date ? T("as of {date}", { date: s.date }) : ""].filter(Boolean).join(" · ")}{s.url ? " ↗" : ""}</p>
+            <p className="mt-1 text-[11px] text-muted">{[s.method ? T(s.method) : "", s.date ? T("as of {date}", { date: s.date }) : ""].filter(Boolean).join(" · ")}{s.url ? " ↗" : ""}</p>
           </motion.a>
         ))}
         {scores === null && <div className="card h-20 animate-pulse" />}
@@ -123,7 +146,7 @@ export default function FilmSources({ f }: { f: Film }) {
         </div>
       )}
       <p className="text-[11px] text-muted/80">
-        {T("Scores: Wikidata (as recorded from each site), TMDB, MovieLens (GroupLens). Summary: Wikipedia, CC BY-SA. No site is scraped.")}</p>
+        {T("Scores: IMDb (official dataset), Wikidata (as recorded from each site, with its date), TMDB, MovieLens (GroupLens). Letterboxd and SensCritique publish no open ratings, so they are linked, not scored. Summary: Wikipedia, CC BY-SA. No site is scraped.")}</p>
     </section>
   );
 }

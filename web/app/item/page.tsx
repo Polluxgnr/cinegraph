@@ -15,7 +15,7 @@ import { answer } from "@/lib/engine/learn";
 import { recommend, scoreOne } from "@/lib/engine/recommend";
 import { useDomain, useQueryParam } from "@/lib/hooks";
 import { addVault, getState, isDone, setList, setProgress, useLoaded, useStore } from "@/lib/store";
-import { exploreLinks, fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
+import { crowdRating, exploreLinks, fmtRuntime, itemFacts, LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import ArtistPanel from "@/components/ArtistPanel";
 import { useFilmDetails } from "@/lib/useFilmDetails";
@@ -92,7 +92,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
           </div>
           {rec && (
             <div className="space-y-1">
-              <Match p={rec.p} stars={rec.stars} />
+              <Match p={rec.p} film={rec.entity.film} />
               <p className="text-sm text-ink/85">{rec.why}</p>
             </div>
           )}
@@ -181,7 +181,7 @@ function FilmFacts({ d, row }: { d: FilmData; row: number }) {
     ["Based on", (f.src ?? []).join(", ")],
     ["Influenced by", (f.inf ?? []).join(", ")],
     ["Set in", (f.loc ?? []).join(", ")],
-    ["Community rating", f.va ? `${f.va.toFixed(1)}/10 (${f.vc} votes, TMDB)` : ""],
+    ["Community rating", (() => { const cr = crowdRating(f); return cr ? `${cr.v.toFixed(1)}/10 (${cr.n.toLocaleString()} votes, ${cr.src})` : ""; })()],
   ];
   const watch = watchOptions(f, platforms);
   return (

@@ -7,7 +7,7 @@ import RecCard from "@/components/RecCard";
 import WebLookup from "@/components/WebLookup";
 import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
-import { minutesOf, normTitle } from "@/lib/text";
+import { crowdRating, minutesOf, normTitle } from "@/lib/text";
 import type { Rec } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
@@ -64,7 +64,7 @@ export default function Discover() {
     return true;
   };
   const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, words.join(" ")].join("|");
-  const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9 }, key);
+  const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9, noCaps: words.length > 0 }, key);
   const sorted = useMemo(() => {
     if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort);
     // relevance first (where the words hit, whole words over prefixes), then how much you'd like it
@@ -144,7 +144,7 @@ function sortRecs(recs: Rec[], sort: Sort): Rec[] {
   switch (sort) {
     case "date": return by((r) => (r.entity.date ? Date.parse(r.entity.date) : 0));
     case "popular": return by((r) => r.entity.pop);
-    case "rating": return by((r) => r.entity.film?.va ?? 0);
+    case "rating": return by((r) => crowdRating(r.entity.film)?.v ?? 0);
     case "length": return by((r) => -(minutesOf(r.entity) || 999));
     case "liked": return by((r) => meta(r, "likes") / Math.max(1000, meta(r, "views")) + meta(r, "likes") / 1e7);
     case "price-up": return by((r) => -(meta(r, "price") || 1e12));

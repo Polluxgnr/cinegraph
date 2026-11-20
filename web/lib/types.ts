@@ -27,6 +27,8 @@ export interface Film {
   ovf?: string; // French synopsis (details)
   mlr?: number; // MovieLens mean rating /5 (individual ratings)
   mlc?: number; // MovieLens number of ratings
+  ir?: number; // IMDb rating /10 (official dataset)
+  ic?: number; // IMDb votes
   cast?: number[];
   dir?: number[];
   wri?: number[];

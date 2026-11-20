@@ -107,6 +107,7 @@ export interface Settings {
   gistId?: string;
   hideBlocked: boolean; // honour hard filters (romance / musicals / laugh-track sitcoms)
   blocked: string[]; // which hard filters are on
+  swipeFilters?: import("./engine/swipeFilter").SwipeFilters; // films & series deck filters
 }
 
 export interface Learned {

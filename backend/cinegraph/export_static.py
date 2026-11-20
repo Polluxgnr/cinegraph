@@ -163,7 +163,7 @@ FILM_KEYS = {
     "d": "release / first air date", "rt": "runtime (min, per episode for series)", "ns": "seasons",
     "ne": "episodes", "lang": "original language (VO)", "ov": "overview", "g": "genres", "kw": "keywords",
     "c": "countries", "pop": "popularity", "va": "vote average /10", "vc": "vote count", "img": "poster: TMDB path (/x.jpg, w342) or full url", "x": "link ids (tm imdb wd ac sc lb wp)",
-    "bd": "backdrop TMDB path (w780)", "tr": "YouTube trailer key", "tf": "French title (TMDB fr-FR, when different)", "mlr": "MovieLens mean rating /5", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
+    "bd": "backdrop TMDB path (w780)", "tr": "YouTube trailer key", "tf": "French title (TMDB fr-FR, when different)", "mlr": "MovieLens mean rating /5", "ir": "IMDb rating /10 (official dataset)", "ic": "IMDb votes", "mlc": "MovieLens ratings count", "cast": "person idx (billing order)", "dir": "directors", "wri": "writers",
     "cre": "creators", "mus": "composers", "coll": "collection key", "aw": "awards", "nom": "nominations",
     "src": "based on", "inf": "influenced by", "loc": "narrative locations", "sub": "main subjects",
     "prov": "FR streaming (subscription / free)", "rent": "FR rent / buy", "details/<id % 64>.json": "ov kw cast rent nom jw, loaded on demand",
@@ -191,8 +191,36 @@ def movielens_stats(min_count: int = 20) -> dict[int, tuple[float, int]]:
     return {int(i): (round(float(tot[i] / n[i]), 2), int(n[i])) for i in ids}
 
 
+def imdb_ratings() -> dict[str, tuple[float, int]]:
+    """imdb id -> (IMDb rating /10, number of votes) from IMDb's official non-commercial dataset
+    (https://developer.imdb.com/non-commercial-datasets/, refreshed daily; personal, non-commercial use).
+    Downloaded once a day into the data dir; an unreachable dataset only means no IMDb scores this run."""
+    import gzip
+    import time
+    import urllib.request
+
+    from .config import get_settings
+
+    path = get_settings().data_dir / "imdb" / "title.ratings.tsv.gz"
+    try:
+        if not path.exists() or time.time() - path.stat().st_mtime > 86_400:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve("https://datasets.imdbws.com/title.ratings.tsv.gz", path)
+        out = {}
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            next(f)
+            for line in f:
+                tconst, rating, votes = line.rstrip("\n").split("\t")
+                out[tconst] = (float(rating), int(votes))
+        return out
+    except Exception as e:  # noqa: BLE001 - optional source
+        print(f"IMDb ratings unavailable: {e}")
+        return {}
+
+
 def export_films(out: Path) -> dict:
     ml = movielens_stats()
+    imdb = imdb_ratings()
     rows = db.fetchall("""
         SELECT t.*, e.embedding FROM titles t JOIN title_embeddings e ON e.title_id = t.id
         ORDER BY t.id""")
@@ -254,6 +282,7 @@ def export_films(out: Path) -> dict:
             "tr": (r["extra"] or {}).get("trailer"),
             "tf": ((r["extra"] or {}).get("fr") or {}).get("t") if ((r["extra"] or {}).get("fr") or {}).get("t") != r["title"] else None,
             "mlr": ml.get(r["id"], (None, None))[0], "mlc": ml.get(r["id"], (None, None))[1],
+            "ir": imdb.get(r["imdb_id"] or "", (None, None))[0], "ic": imdb.get(r["imdb_id"] or "", (None, None))[1],
             "cast": cr.get("cast", [])[:CORE_CAST], "dir": cr.get("director", []), "wri": cr.get("writer", [])[:4],
             "cre": cr.get("creator", []), "mus": cr.get("composer", [])[:2],
             "coll": coll_of.get(r["id"]), "aw": lab("award"), "src": lab("based_on", 3),

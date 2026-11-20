@@ -10,6 +10,7 @@ import { t } from "../i18n";
 import { isFilmData, type DomainData, type FilmData } from "../data";
 import type { Film } from "../types";
 import { sigmoid } from "./linalg";
+import { compact, crowdRating } from "../text";
 import type { Anchor, Profile } from "./profile";
 
 export const FEATURES = [
@@ -235,7 +236,8 @@ export function features(c: Ctx, row: number): Scored {
       const tooLong = (p.chipPenalty?.get("Too long") ?? 0) > 0 && f.rt >= 140 ? 0.6 : 0;
       x[F.runtime_fit] = -Math.min(over * over, 3) * 0.3 - tooLong;
     }
-    if (f.va && (f.vc ?? 0) >= 20) x[F.quality] = (f.va - 6.5) / 1.5;
+    const cr = crowdRating(f);
+    if (cr) x[F.quality] = (cr.v - 6.5) / 1.5;
     if (p.genre && f.g?.length) {
       let ga = 0;
       let gn = 0;
@@ -362,13 +364,14 @@ export function prior(d: DomainData, row: number): number {
   const e = d.entities[row];
   if (e.item?.meta?.custom) return 1.2;
   const f = e.film;
-  if ((f?.va && f.vc) || (f?.mlr && f.mlc)) {
-    // TMDB audience and MovieLens individual ratings (/5, mapped to TMDB's scale), pooled by vote count
+  if ((f?.va && f.vc) || (f?.mlr && f.mlc) || (f?.ir && f.ic)) {
+    // IMDb, TMDB audience and MovieLens individual ratings (/5, mapped to /10), pooled by vote count
     // and shrunk towards the mean: a 8.4 from 40 votes is not a 8.4
     const k = 300;
     const tv = f.va && f.vc ? f.vc : 0;
     const mv = f.mlr && f.mlc ? f.mlc : 0;
-    const shrunk = ((f.va ?? 0) * tv + (mv ? f.mlr! * 2 - 0.55 : 0) * mv + 6.5 * k) / (tv + mv + k);
+    const iv = f.ir && f.ic ? f.ic : 0;
+    const shrunk = ((f.va ?? 0) * tv + (mv ? f.mlr! * 2 - 0.55 : 0) * mv + (f.ir ?? 0) * iv + 6.5 * k) / (tv + mv + iv + k);
     // calibrated so TMDB 8.4 -> ~4.3★, 7.0 -> ~3.4★, 6.0 -> ~2.6★ (TMDB averages run high)
     return Math.max(-2.2, Math.min(2.2, (shrunk - 6.15) * 0.75));
   }
@@ -419,9 +422,10 @@ export function explain(s: Scored, c: Ctx, p: number): string {
   const e = c.d.entities[s.row];
   if (c.p.n < 8) {
     const f = e.film;
-    if (f?.va && (f.vc ?? 0) >= 200) {
-      const votes = f.vc! >= 1000 ? `${Math.round(f.vc! / 1000)}k` : String(f.vc);
-      return f.va >= 7.5 ? t("Acclaimed: {va}/10 from {votes} ratings", { va: f.va.toFixed(1), votes }) : t("Rated {va}/10 by {votes} people", { va: f.va.toFixed(1), votes });
+    const cr = crowdRating(f);
+    if (cr && cr.n >= 200) {
+      const votes = compact(cr.n);
+      return cr.v >= 7.5 ? t("Acclaimed: {va}/10 on {src} from {votes} ratings", { va: cr.v.toFixed(1), votes, src: cr.src }) : t("Rated {va}/10 on {src} by {votes} people", { va: cr.v.toFixed(1), votes, src: cr.src });
     }
     if (e.item?.meta?.custom) return t("You saved this");
     return p > 0.6 ? t("Popular in this space") : t("Helps us learn your taste");

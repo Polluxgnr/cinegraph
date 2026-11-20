@@ -64,7 +64,7 @@ export interface Card {
   info: { uncertainty: number; coverage: number; pSeen: number; labels: number };
 }
 
-export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(), rnd = Math.random): Card | null {
+export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(), rnd = Math.random, accept?: (e: Entity) => boolean): Card | null {
   const red = reduced(d);
   if (!red) return null;
   const { Z } = red;
@@ -102,12 +102,17 @@ export function nextCard(d: DomainData, s: State, skip: Set<string> = new Set(),
   }
 
   // candidate pool: the 1500 most popular unanswered (fast, and these are the ones you can judge)
-  const rows: number[] = [];
+  let rows: number[] = [];
   for (let i = 0; i < d.entities.length; i++) {
     const e = d.entities[i];
     if (profile.answered.has(e.key) || skip.has(e.key) || blocked(e, s)) continue;
-    if (kindWanted && e.film && e.film.k !== kindWanted) continue;
+    if (accept && !accept(e)) continue; // your swipe filters
     rows.push(i);
+  }
+  if (kindWanted) {
+    // the balance never empties a deck your filters already narrowed
+    const balanced = rows.filter((i) => d.entities[i].film?.k === kindWanted);
+    if (balanced.length >= 30) rows = balanced;
   }
   rows.sort((a, b) => votesPct(d, b) - votesPct(d, a)); // the titles people have actually seen
   const pool = rows.slice(0, 1500);

@@ -110,7 +110,7 @@ export default function Lists() {
               <p className="truncate text-xs text-muted">
                 {e.film ? [e.film.k === "tv" ? T("Series") : T("Film"), e.film.y, e.film.k === "tv" ? (e.film.ns ? T(e.film.ns === 1 ? "{n} season" : "{n} seasons", { n: e.film.ns }) : "") : fmtRuntime(e.film.rt)].filter(Boolean).join(" · ") : e.subtitle}
               </p>
-              {rec && <Match p={rec.p} stars={rec.stars} compact />}
+              {rec && <Match p={rec.p} film={rec.entity.film} compact />}
               <p className="mt-auto pt-1 text-[11px] text-muted">
                 {"action" in r ? actionLabel(r.domain, r.action) : r.status === "watching" ? T("In progress") : T("On my list")} · {new Date(at).toLocaleDateString("fr-FR")}
               </p>

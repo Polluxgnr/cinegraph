@@ -14,9 +14,11 @@ import type { DomainData, FilmData } from "@/lib/data";
 import { isFilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
 import { calibration, type Card, nextCard } from "@/lib/engine/active";
+import { swipeMatcher } from "@/lib/engine/swipeFilter";
+import SwipeFiltersBar from "@/components/SwipeFilters";
 import { answer } from "@/lib/engine/learn";
 import { useDomain, useSpace } from "@/lib/hooks";
-import { type Action, getState, undoLast, useLoaded, useStore } from "@/lib/store";
+import { type Action, getState, setSettings, undoLast, useLoaded, useStore } from "@/lib/store";
 import { fmtRuntime, LANG_NAMES } from "@/lib/text";
 import { useFilmDetails } from "@/lib/useFilmDetails";
 
@@ -45,10 +47,13 @@ function Deck({ domain }: { domain: string }) {
   const unseenO = useTransform(y, [20, THRESHOLD], [0, 1]);
   const [unseenMode, setUnseenMode] = useState(false);
 
+  const swipeFilters = useStore((s) => s.settings.swipeFilters);
+  const platforms = useStore((s) => s.settings.platforms);
+  const accept = useMemo(() => (d && isFilmData(d) ? swipeMatcher(swipeFilters, platforms) : undefined), [d, swipeFilters, platforms]);
   const card: Card | null = useMemo(
-    () => (d && loaded ? nextCard(d, getState(), skip) : null),
+    () => (d && loaded ? nextCard(d, getState(), skip, Math.random, accept) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [d, loaded, version, skip],
+    [d, loaded, version, skip, accept],
   );
   const cal = useMemo(() => (d ? calibration(d, getState()) : 0), [d, version]); // eslint-disable-line react-hooks/exhaustive-deps
   const cfg = DOMAIN[domain];
@@ -101,9 +106,10 @@ function Deck({ domain }: { domain: string }) {
   const e = card?.rec.entity;
   return (
     <div className="flex flex-col items-center max-md:h-[calc(100dvh-9.5rem-env(safe-area-inset-bottom))]">
-      <div className="mb-2 w-full md:mb-4">
-        <div className="flex items-baseline justify-between">
+      <div className="relative z-30 mb-2 w-full md:mb-4">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="font-display text-xl md:text-3xl">{cfg?.emoji} {T(cfg?.label ?? "")}</h1>
+          {d && isFilmData(d) && <SwipeFiltersBar d={d} />}
           <span className="text-xs text-muted">{card ? T(card.info.labels === 1 ? "{n} answer" : "{n} answers", { n: card.info.labels }) : ""}</span>
         </div>
         <Progress className="mt-1.5 md:mt-2" value={cal} />
@@ -155,6 +161,11 @@ function Deck({ domain }: { domain: string }) {
             <Stamp o={loveO} text="LOVED" color="var(--love)" className="left-1/2 top-1/3 -translate-x-1/2" />
             <Stamp o={unseenO} text={cfg?.unseen?.toUpperCase() || "SKIP"} color="var(--unseen)" className="left-1/2 top-10 -translate-x-1/2" />
           </motion.div>
+        ) : d && accept ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl border border-line bg-panel p-6 text-center">
+            <p className="text-sm text-muted">{T("Nothing matches these filters.")}</p>
+            <button className="btn px-3 py-1.5 text-sm" onClick={() => setSettings({ swipeFilters: {} })}>{T("Reset filters")}</button>
+          </div>
         ) : (
           <div className="absolute inset-0 animate-pulse rounded-3xl bg-panel-2" />
         )}
@@ -207,7 +218,7 @@ function CardMeta({ d, card }: { d: DomainData; card: Card }) {
       <>
         <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{head.filter(Boolean).join(" · ")}</p>
         <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
-        <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
+        <div className="mt-1"><Match p={card.rec.p} film={card.rec.entity.film} /></div>
         <p className="mt-1 line-clamp-1 text-xs text-white/70">
           {(f.g ?? []).slice(0, 3).map((g) => T(g)).join(" / ")}
           {f.dir?.length ? ` · ${names(f.dir, 1)}` : f.cre?.length ? ` · ${names(f.cre, 1)}` : ""}
@@ -221,7 +232,7 @@ function CardMeta({ d, card }: { d: DomainData; card: Card }) {
     <>
       <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{e.subtitle}</p>
       <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
-      <div className="mt-1"><Match p={card.rec.p} stars={card.rec.stars} /></div>
+      <div className="mt-1"><Match p={card.rec.p} film={card.rec.entity.film} /></div>
       <p className="mt-1 line-clamp-3 text-[13px] text-white/75">{String(e.item?.meta?.description ?? e.tags.slice(0, 5).join(" · "))}</p>
     </>
   );

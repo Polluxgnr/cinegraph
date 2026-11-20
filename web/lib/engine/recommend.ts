@@ -30,6 +30,7 @@ export interface RecOptions {
   diversity?: number; // MMR lambda (1 = none)
   boost?: Map<string, number>; // extra score (NL queries)
   auteurCap?: boolean; // at most two titles per director / creator (default on)
+  noCaps?: boolean; // searches: show every match, no saga or director cap
 }
 
 /** Next unwatched entry of every saga you've started. */
@@ -119,7 +120,7 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
   };
   const pool = scored.slice(0, Math.max(6 * n, 100)).filter(({ row }) => {
     const f = d.entities[row].film;
-    if (!f) return true;
+    if (!f || o.noCaps) return true;
     if (f.coll && capped(`c:${f.coll}`)) return false;
     const auteur = o.auteurCap === false ? undefined : f.dir?.[0] ?? f.cre?.[0];
     return auteur == null || !capped(`p:${auteur}`);
