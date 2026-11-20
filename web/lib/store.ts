@@ -432,12 +432,24 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+function flush() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  writeState(profiles.active, state)
+    .then(() => window.dispatchEvent(new CustomEvent("cinegraph:saved")))
+    .catch(() => {});
+}
+
 function persist() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    writeState(profiles.active, state).catch(() => {});
-    window.dispatchEvent(new CustomEvent("cinegraph:saved"));
-  }, 300);
+  saveTimer = setTimeout(flush, 300);
+}
+
+// a change made just before closing or reloading the tab is written right away
+if (typeof window !== "undefined") {
+  const now = () => saveTimer && flush();
+  window.addEventListener("pagehide", now);
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && now());
 }
 
 export function getState(): State {

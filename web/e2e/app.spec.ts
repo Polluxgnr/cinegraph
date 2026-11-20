@@ -127,9 +127,16 @@ test("swipe filters narrow the deck and persist", async ({ page }) => {
   await expect(page.getByTestId("swipe-card")).toBeVisible();
   await page.getByTestId("swipe-filters").click();
   await page.getByRole("button", { name: "Series", exact: true }).click();
+  await page.evaluate(() => {
+    const w = window as unknown as { __saved: number };
+    w.__saved = 0;
+    window.addEventListener("cinegraph:saved", () => w.__saved++);
+  });
   await page.getByRole("button", { name: "8+", exact: true }).click();
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByTestId("swipe-filters")).toHaveText(/Filters · 2/);
+  // the last change is written to this browser's storage (debounced, then sealed)
+  await page.waitForFunction(() => (window as unknown as { __saved: number }).__saved > 0);
   await expect(page.getByTestId("swipe-card").getByText(/^Series ·/)).toBeVisible();
   await page.reload();
   await expect(page.getByTestId("swipe-filters")).toHaveText(/Filters · 2/);
