@@ -13,7 +13,8 @@ everything across devices. No server: it runs entirely in your browser, on GitHu
 
 **One app, seven spaces.** Pick a space in the sidebar (Films & series, Videos & docs, Music, Recipes,
 Destinations, Dream garage, Style) and the whole app becomes about it: its own home, swipe deck,
-discovery, list, taste profile and colour.
+search, list, taste profile and colour. In English or French (Settings → Appearance and language, or your
+browser's language), dark by default with a light option.
 
 | | |
 |---|---|
@@ -23,7 +24,8 @@ discovery, list, taste profile and colour.
 | **Hear it, watch it**: swipe cards play a 30 s preview of the artist's most played song (Deezer) or open the film's trailer; artist pages list the most played songs with previews, fans, albums, singles and who their fans also play. | **Playlists, improved**: paste a Deezer or Spotify playlist; it maps the artists, suggests songs that fit (from who the playlist's artists' fans also play, weighted by your taste, with previews) and flags tracks by artists you rejected. |
 | **Places worth the trip, and the trip itself**: each destination shows its best spots on a map, live from Wikidata (museums, landmarks, nature, food…), filming locations of films you loved first. Add spots to a trip, set the days, and *Plan my days* groups nearby spots per day and orders each day as a walk, with routes, distances, Google Maps directions, notes and a "been there" check. | **Style, piece by piece**: every brand page groups its pieces by category, links each category on the brand's own site, Vinted and Grailed, and lets you add pieces with a price. Searching a label that isn't in the catalogue (Mertra, Jacker...) finds its site and adds it. |
 | **Where every number comes from**: film pages show each source's score (TMDB audience, MovieLens individual ratings, Rotten Tomatoes, Metacritic, IMDb as recorded on Wikidata, with dates and links), the Wikipedia summary, the trailer, and *Why 85%*: how much each signal (your taste, people like you, cast & crew, critics…) pushed the score, and how much still comes from the crowd. | **Connections**: Settings lists every source with its status, what it brings and when it last ran: your accounts (GitHub sync, Spotify, YouTube, Netflix, Letterboxd, Pinterest, Instagram packs, Claude) and the open sources behind the catalogue. |
-| **Profiles & Pick together**: several people on one device, each with their own memory (no login). *Pick together* ranks what two profiles will both like (by the weaker of the two matches) and has a swipe-to-agree mode: two yeses put it on both lists. | **Search everywhere**: Discover has a search bar over titles, directors, cast and themes, ranked by where the words hit, then by your predicted match. |
+| **Profiles & Pick together**: several people on one device, each with their own memory (no login). *Pick together* ranks what two profiles will both like (by the weaker of the two matches) and has a swipe-to-agree mode: two yeses put it on both lists. | **Search everywhere**: titles (also by their French title), directors, cast and themes, ranked by where the words hit, then by your predicted match; search *People*, *Directors* or *Actors* only. Videos filter by theme (nature, geopolitics, history, science…); recipes by cuisine, main ingredient, 🌱 vegetarian / 🌿 vegan, or any ingredient you type. |
+| **People**: every title page shows the cast & crew with photos and characters; each person has a page with their biography (Wikipedia), what of theirs is in the catalogue ranked for you, and their whole career (Wikidata). **Follow** an actor or director and their films count like two you loved (avoid: two you disliked). | **Ratings you can compare**: every score out of 10 with one decimal (IMDb from its official dataset, TMDB, MovieLens, Metacritic, Rotten Tomatoes' average; the Tomatometer stays a %). Videos get a viewer score /10 (likes per view against the other videos, damped for small audiences). The swipe deck has filters: type, decade, length, minimum rating, original language, genres, your services. |
 | **Continue**: series in progress (season/episode tracker) and **sagas** (Harry Potter, Star Wars…) with progress bars; **Tonight** by mood × your streaming services in France, with legal watch links. | **Second brain**: links and ideas (share from your phone into the app), an **AI-ready taste dossier** (one Markdown document of your whole taste to paste into any assistant), and an **Obsidian** export. |
 
 ## Why it's built this way
@@ -66,13 +68,14 @@ flowchart LR
   filtering and the hybrid. The result is in the badge above and on the Taste page, and it sets the ranker's
   starting weights.
 
-Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Details, maths and trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Navigation map: [docs/NAVIGATION.md](docs/NAVIGATION.md).
+Latest audit and what to build next: [docs/AUDIT.md](docs/AUDIT.md).
 
 ## Engineering
 
 | | |
 |---|---|
-| **Tests** | `backend`: pytest (ingestion, matching, ranking, evaluation protocol, export formats, a Postgres end-to-end pipeline). `web`: Vitest (engine maths, sync merges incl. deletions, trip planning, calendar export) and **Playwright** end-to-end tests on the static build, desktop and phone (swipe fits the screen, search, film sources, profiles, trip planning, no CSP violations). All run in CI on every push. |
+| **Tests** | `backend`: pytest (ingestion, matching, ranking, evaluation protocol, export formats, a Postgres end-to-end pipeline). `web`: Vitest (engine maths, sync merges incl. deletions, trip planning, calendar export, swipe filters, ratings, recipe diets and variations, video scores) and **Playwright** end-to-end tests on the static build, desktop and phone (navigation, swipe fits the screen and its filters persist, search and people pages, film sources, French interface, profiles, trip planning, recipes, no CSP violations). All run in CI on every push. |
 | **Security** | No server and no account: memory lives in your browser and, optionally, a private Gist. Tokens are AES-GCM encrypted at rest with a non-extractable browser key; a Content-Security-Policy limits where the page can send data; new devices pair by QR code (expires in 2 minutes). Secrets are never synced or exported. |
 | **Performance** | Film catalogue in a compact format (link ids instead of URLs, poster paths) with details in 64 shards loaded on demand, 192-d PCA embeddings: about 6 MB on a first visit, cached by the service worker afterwards. Recommendations are computed on-device in milliseconds. |
 | **Sync** | Read-merge-write rounds per profile; deletions are recorded (tombstones) so they propagate; the latest answer wins per item. |
@@ -107,11 +110,11 @@ sync, each browser keeps its own memory; the sidebar always says which.
 
 | Area | Source | Notes |
 |---|---|---|
-| Films & series | TMDB API (needs a free key, see below; also official trailers), Wikidata, Wikipedia images, MovieLens 32M (32 million ratings from 200,000 people: the collaborative-filtering signal) | Links to SensCritique, AlloCiné, Letterboxd, IMDb via Wikidata ids; no scraping |
+| Films & series | TMDB API (needs a free key, see below; also official trailers, French titles and synopses, cast photos), Wikidata, Wikipedia images and biographies, MovieLens 32M (32 million ratings from 200,000 people: the collaborative-filtering signal), IMDb ratings from IMDb's [non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/) | Links to SensCritique, AlloCiné, Letterboxd, IMDb via Wikidata ids; Letterboxd and SensCritique publish no open ratings, so they are linked, not scored; no scraping |
 | Where to watch | TMDB watch providers (JustWatch data), France | Subscriptions + free (arte.tv, france.tv); never piracy sites |
 | Videos & docs | Official YouTube RSS of ARTE, France 5, franceinfo, Ushuaïa TV, Kurzgesagt, Veritasium, DW… (views, likes) + optional YouTube Data API key (`YOUTUBE_API_KEY` secret: length, comments) + **Connect YouTube** in the browser (your Google OAuth client: liked videos, subscriptions, playlists) | Curated in `backend/cinegraph/config/youtube_channels.yaml` |
-| Music | Deezer public API (artists, genres, related artists; in the browser: top songs, 30 s previews, fans, albums, playlists via JSONP) + your Spotify (PKCE, in-browser: top artists, liked songs, playlists) | Exact stream counts aren't published by any open API; Deezer's popularity rank and fan counts are shown instead |
-| Recipes | TheMealDB | Marmiton has no API: search links + save Marmiton pages to the vault |
+| Music | Deezer public API (artists, genres, related artists; in the browser: top songs, 30 s previews, fans, albums, playlists, and *New from your artists*: releases of the last 90 days by your Spotify top artists) + your Spotify (PKCE, in-browser: top artists, liked songs, playlists, each playlist analysed in one tap) | Exact stream counts aren't published by any open API; Deezer's popularity rank and fan counts are shown instead. Spotify's own recommendation endpoints are closed to new apps, so suggestions come from Deezer's related artists weighted by your taste |
+| Recipes | TheMealDB (cuisine, category, ingredients, steps) | Vegetarian / vegan and main ingredient are read from the ingredient list; *Variations* = the same dish elsewhere and recipes sharing most ingredients. Marmiton has no API: search links + save Marmiton pages to the vault |
 | Travel, dream garage | Wikidata + Wikimedia Commons photos; best spots per place queried live from the Wikidata SPARQL endpoint; maps from OpenStreetMap (Leaflet) | Cars are a curated dream list (makes, models, classes), not every car on the road; approximate prices in `config/car_prices.yaml` |
 | Style | Curated design, underground and streetwear brands (`config/style_brands.yaml`) with their site's own preview image, and iconic pieces with approximate retail prices (`config/style_pieces.yaml`) linked to their brand | Links to shopping search, Pinterest, Instagram and Vinted; add yours or import Pinterest boards. Shop product feeds are not used: most stores block automated clients |
 | Pinterest | Public board RSS (latest ~25 pins per board, re-sync for new ones) | Public boards only; no login, no scraping |

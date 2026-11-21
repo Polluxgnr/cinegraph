@@ -3,6 +3,7 @@
  * files gzipped and the service worker caches them, so repeat visits work offline.
  */
 import { tunePrior } from "./engine/score";
+import { videoScore } from "./facets";
 import { currentLang, t } from "./i18n";
 import type { Collection, Entity, Film, Item, Manifest } from "./types";
 
@@ -58,7 +59,7 @@ async function versioned(path: string): Promise<string> {
   return `${asset(path)}${v ? `?v=${encodeURIComponent(v)}` : ""}`;
 }
 
-async function json<T>(path: string): Promise<T> {
+export async function json<T>(path: string): Promise<T> {
   const r = await fetch(await versioned(path));
   if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
   return r.json();
@@ -241,6 +242,13 @@ export function loadDomain(name: string): Promise<DomainData> {
         const m = await manifest();
         const [items, emb] = await Promise.all([json<Item[]>(`/data/${name}/items.json`), qmatrix(`/data/${name}/emb`)]);
         const entities = items.map((it) => itemEntity(name, it));
+        if (name === "youtube") {
+          // viewer score /10 (likes per view against the other videos), shown on cards and used to sort
+          for (const e of entities) {
+            const sc = videoScore(e, entities);
+            if (sc != null && e.item) e.item.meta = { ...e.item.meta, score: sc };
+          }
+        }
         return {
           name,
           label: m.domains[name]?.label ?? name,

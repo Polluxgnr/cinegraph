@@ -88,7 +88,7 @@ test("trip planner splits spots into days", async ({ page }) => {
 test("navigation: four destinations, the rest under More", async ({ page, isMobile }) => {
   await open(page, "/");
   const bar = isMobile ? page.locator("nav.fixed") : page.locator("header.fixed");
-  for (const name of ["Home", "Swipe", "Discover", "My list"]) await expect(bar.getByRole("link", { name, exact: true })).toBeVisible();
+  for (const name of ["Home", "Swipe", "Search", "My list"]) await expect(bar.getByRole("link", { name, exact: true })).toBeVisible();
   await expect(bar.getByRole("link", { name: "Taste", exact: true })).toHaveCount(0);
   await bar.getByRole("button", { name: /More/ }).click();
   await expect(page.getByRole("link", { name: "My taste" })).toBeVisible();
@@ -140,4 +140,25 @@ test("swipe filters narrow the deck and persist", async ({ page }) => {
   await expect(page.getByTestId("swipe-card").getByText(/^Series ·/)).toBeVisible();
   await page.reload();
   await expect(page.getByTestId("swipe-filters")).toHaveText(/Filters · 2/);
+});
+
+test("search finds people; a person's page lists their films and can be followed", async ({ page }) => {
+  await page.route("https://query.wikidata.org/**", (r) => r.fulfill({ json: { results: { bindings: [] } } }));
+  await open(page, "/discover/?d=films");
+  await page.getByRole("searchbox").fill("villeneuve");
+  const people = page.getByTestId("people-results");
+  await expect(people.getByText("Denis Villeneuve")).toBeVisible();
+  await people.getByText("Denis Villeneuve").click();
+  await expect(page.locator("h1")).toHaveText("Denis Villeneuve");
+  await expect(page.locator("main img[alt='Arrival'], main img[alt='Dune'], main img[alt='Prisoners']").first()).toBeVisible();
+  await page.getByTestId("follow").click();
+  await expect(page.getByTestId("follow")).toHaveText(/Following/);
+});
+
+test("recipes: vegetarian filter and ingredient search", async ({ page }) => {
+  await open(page, "/discover/?d=recipes");
+  await page.getByRole("button", { name: "🌱 Vegetarian" }).click();
+  await expect(page.locator("main article").first()).toBeVisible();
+  await page.getByRole("searchbox").fill("lentils");
+  await expect(page.locator("main article").first()).toBeVisible();
 });

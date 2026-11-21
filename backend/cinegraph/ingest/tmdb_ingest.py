@@ -132,7 +132,7 @@ def parse_details(kind: str, d: dict, region: str = "FR") -> dict[str, Any]:
     people: list[dict] = []
     if is_movie:
         cr = d.get("credits") or {}
-        for c in cr.get("cast", [])[:15]:
+        for c in cr.get("cast", [])[:30]:
             people.append({"tmdb_person_id": c["id"], "name": c["name"], "profile_path": c.get("profile_path"),
                            "role": "cast", "character": c.get("character"), "ord": c.get("order", 99)})
         for c in cr.get("crew", []):
@@ -146,7 +146,7 @@ def parse_details(kind: str, d: dict, region: str = "FR") -> dict[str, Any]:
             people.append({"tmdb_person_id": c["id"], "name": c["name"], "profile_path": c.get("profile_path"),
                            "role": "creator", "character": None, "ord": 0})
         ac = d.get("aggregate_credits") or {}
-        for c in ac.get("cast", [])[:15]:
+        for c in ac.get("cast", [])[:30]:
             roles = c.get("roles") or [{}]
             people.append({"tmdb_person_id": c["id"], "name": c["name"], "profile_path": c.get("profile_path"),
                            "role": "cast", "character": roles[0].get("character"), "ord": c.get("order", 99)})

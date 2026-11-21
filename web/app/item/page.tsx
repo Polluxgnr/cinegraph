@@ -9,7 +9,7 @@ import EntityImage from "@/components/EntityImage";
 import Match from "@/components/Match";
 import RecCard, { detailHref, Progress, Row } from "@/components/RecCard";
 import Stars from "@/components/Stars";
-import type { DomainData, FilmData } from "@/lib/data";
+import { type DomainData, type FilmData, isFilmData } from "@/lib/data";
 import { actionLabel, DOMAIN } from "@/lib/domains";
 import { answer } from "@/lib/engine/learn";
 import { recommend, scoreOne } from "@/lib/engine/recommend";
@@ -20,6 +20,9 @@ import type { Entity } from "@/lib/types";
 import ArtistPanel from "@/components/ArtistPanel";
 import { useFilmDetails } from "@/lib/useFilmDetails";
 import FilmSources from "@/components/FilmSources";
+import CastStrip from "@/components/CastStrip";
+import Poster3D from "@/components/Poster3D";
+import { cuisineOf, dietOf, mainsOf, variations } from "@/lib/facets";
 import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
 import { trailerSearch } from "@/components/MediaPreview";
@@ -66,6 +69,13 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
     return recommend(d, getState(), { n: 12, explore: 0, includeListed: true, filter: (x) => keep.has(x.key) });
   }, [d, row, loaded, version]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const variants = useMemo(() => {
+    if (!loaded || e.domain !== "recipes") return [];
+    const keep = new Set(variations(e, d.entities, 12).map((x) => x.key));
+    return keep.size ? recommend(d, getState(), { n: 12, explore: 0, includeListed: true, includeAnswered: true, noCaps: true, filter: (x) => keep.has(x.key) }) : [];
+  }, [d, e, loaded, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recipeBadges = e.domain === "recipes" ? [cuisineOf(e), ...mainsOf(e), dietOf(e) === "vegan" ? "🌿 Vegan" : dietOf(e) === "vegetarian" ? "🌱 Vegetarian" : undefined].filter(Boolean) as string[] : [];
+
   const f = e.film;
   const backdrop = f?.bd;
   return (
@@ -79,9 +89,9 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
         </div>
       )}
       <div className={`relative grid gap-6 md:grid-cols-[280px_1fr] ${backdrop ? "pt-[22vh] md:pt-[28vh]" : ""}`}>
-        <div className="mx-auto w-52 self-start overflow-hidden rounded-2xl shadow-2xl shadow-black/60 ring-1 ring-line md:w-full">
+        <Poster3D className="mx-auto w-52 self-start md:w-full">
           <EntityImage e={e} aspect={cfg?.aspect ?? "2/3"} big />
-        </div>
+        </Poster3D>
         <div className="space-y-4">
           <div>
             {!f && <p className="text-xs uppercase tracking-[0.2em] text-muted">{cfg?.emoji} {cfg?.label}</p>}
@@ -117,6 +127,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
           {f?.k === "tv" && <SeriesTracker k={e.key} seasons={f.ns ?? 0} />}
         </div>
       </div>
+      {f && isFilmData(d) && <CastStrip d={d} f={f} />}
       {rec && <MatchBreakdown d={d} rec={rec} s={getState()} />}
       {f && <Trailer e={e} />}
       {f && <FilmSources f={f} />}
@@ -124,6 +135,8 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
       {e.domain === "places" && <PlaceSpots e={e} />}
       {e.domain === "brands" && <BrandPieces d={d} e={e} />}
       {f && <Saga d={d as FilmData} row={row} />}
+      {recipeBadges.length > 0 && <div className="flex flex-wrap gap-1.5">{recipeBadges.map((b) => <span key={b} className="chip text-xs">{T(b)}</span>)}</div>}
+      {variants.length > 0 && <Row title={T("Variations")} hint={T("Other takes on the same dish, and recipes sharing most of its ingredients")}>{variants.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
       {similar.length > 0 && <Row title={T("Similar")}>{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
     </div>
   );

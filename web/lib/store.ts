@@ -108,6 +108,8 @@ export interface Settings {
   hideBlocked: boolean; // honour hard filters (romance / musicals / laugh-track sitcoms)
   blocked: string[]; // which hard filters are on
   swipeFilters?: import("./engine/swipeFilter").SwipeFilters; // films & series deck filters
+  following?: Record<string, 1 | -1>; // actors & directors you follow (1) or avoid (-1), by name
+  tasteAt?: number; // last change to the settings that follow you across devices (following, swipeFilters)
 }
 
 export interface Learned {
@@ -545,9 +547,13 @@ export function setList(key: string, domain: string, status: ListEntry["status"]
   });
 }
 
+/** Settings that are part of your taste and sync across devices; everything else stays with the device. */
+export const SYNCED_SETTINGS = ["following", "swipeFilters"] as const;
+
 export function setSettings(patch: Partial<Settings>) {
   update((s) => {
-    s.settings = { ...s.settings, ...patch };
+    const taste = SYNCED_SETTINGS.some((k) => k in patch);
+    s.settings = { ...s.settings, ...patch, ...(taste ? { tasteAt: Date.now() } : {}) };
   });
 }
 

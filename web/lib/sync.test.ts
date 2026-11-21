@@ -111,3 +111,17 @@ describe("trip calendar export", () => {
     expect(ics).toContain("Book the ryokan");
   });
 });
+
+describe("taste settings travel, device settings don't", () => {
+  it("takes follows and swipe filters from the side that changed them last", async () => {
+    const { mergeSettings } = await import("./sync");
+    const local = { space: "films", platforms: [], lang: "fr", hideBlocked: true, blocked: [], theme: "light", following: { "Denis Villeneuve": 1 }, tasteAt: 100 } as never;
+    const remote = { space: "music", platforms: [], lang: "fr", hideBlocked: true, blocked: [], theme: "dark", following: { "Greta Gerwig": 1 }, swipeFilters: { kind: "tv" }, tasteAt: 200 } as never;
+    const m = mergeSettings(local, remote) as unknown as Record<string, unknown>;
+    expect(m.following).toEqual({ "Greta Gerwig": 1 });
+    expect(m.swipeFilters).toEqual({ kind: "tv" });
+    expect(m.theme).toBe("light"); // device setting stays
+    expect(m.space).toBe("films");
+    expect(mergeSettings(remote, local)).toBe(remote); // older remote changes nothing
+  });
+});

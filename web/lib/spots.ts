@@ -4,6 +4,7 @@
  * with photo, kind and coordinates, plus filming locations of the films you loved. Cached per place for the visit.
  */
 import { loadFilms } from "./data";
+import { currentLang } from "./i18n";
 import { getState } from "./store";
 import type { Entity } from "./types";
 import { sparql } from "./wikidata";
@@ -20,7 +21,7 @@ export const GROUPS: [string, RegExp, string][] = [
 ];
 export const GROUP_COLOR = Object.fromEntries([...GROUPS.map(([n, , c]) => [n, c]), ["Other places", "#a1a1aa"], ["Filming locations", "#f97316"]]) as Record<string, string>;
 /** Infrastructure and events aren't spots to visit. */
-const NOT_A_SPOT = /\b(university|college|school|metro|subway|railway|railway station|train station|station|line|airport|hospital|company|business|road|highway|tram|bus|rapid transit|transit|event|attack|arson|murder|massacre|disaster|incident|fire|earthquake|battle|war|siege|election|treaty)\b/i;
+const NOT_A_SPOT = /\b(university|college|school|metro|subway|railway|railway station|train station|station|line|airport|hospital|company|business|road|highway|tram|bus|rapid transit|transit|event|attack|arson|murder|massacre|disaster|incident|fire|earthquake|battle|war|siege|election|treaty|organization|organisation|intergovernmental|newspaper|magazine|broadcaster|broadcasting|television network|television channel|radio station|club|sports team|team|olympic games|games|multi-sport event|federation|association|political party|record label|publisher|musical group|band|brand|enterprise|conglomerate|borough|london borough|legislative|lower house|upper house|parliamentary chamber|contest|world's fair|exposition|edition|meridian)\b/i;
 const ABSTRACT = /\b(country|empire|state|city|comune|capital|region|province|civilization|period|metropolitan|municipality|diocese|archdiocese|commune|county|prefecture|ward|district of|historical country|polity|sovereign)\b/i;
 
 const groupOf = (type?: string, desc?: string) =>
@@ -37,18 +38,21 @@ export function coordOf(e: Entity): { lon: number; lat: number } | null {
 export const radiusOf = (e: Entity) => (e.tags.includes("city") ? 12 : 25);
 
 const cache = new Map<string, Promise<Spot[]>>();
+/** Names and descriptions in the interface language first. */
+const LABEL_LANGS = () => (currentLang() === "fr" ? "fr,en" : "en,fr");
 
 export function fetchSpots(e: Entity): Promise<Spot[]> {
   const c = coordOf(e);
   if (!c) return Promise.resolve([]);
-  if (!cache.has(e.key)) {
+  const k = `${e.key}|${currentLang()}`;
+  if (!cache.has(k)) {
     const p = load(e, c).catch((x) => {
-      cache.delete(e.key);
+      cache.delete(k);
       throw x;
     });
-    cache.set(e.key, p);
+    cache.set(k, p);
   }
-  return cache.get(e.key)!;
+  return cache.get(k)!;
 }
 
 async function load(e: Entity, { lon, lat }: { lon: number; lat: number }): Promise<Spot[]> {
@@ -57,7 +61,7 @@ async function load(e: Entity, { lon, lat }: { lon: number; lat: number }): Prom
   const rows = await sparql(`SELECT ?a ?aLabel ?aDescription ?sl ?dist ?loc WHERE {
     ${around}
     ?a wikibase:sitelinks ?sl . FILTER(?sl >= 6)
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "${LABEL_LANGS()}". }
   } ORDER BY DESC(?sl) LIMIT 90`);
   const self = e.key.split(":")[1];
   let list = rows
@@ -86,7 +90,7 @@ async function load(e: Entity, { lon, lat }: { lon: number; lat: number }): Prom
       const hits = await sparql(`SELECT ?a ?aLabel ?filmLabel ?loc ?dist WHERE {
         VALUES ?film { ${qids.map((q) => `wd:${q}`).join(" ")} }
         ?film wdt:P915 ?a . ${around}
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "${LABEL_LANGS()}". }
       } LIMIT 30`).catch(() => []);
       for (const h of hits) {
         const q = (h.a?.value ?? "").split("/").pop()!;

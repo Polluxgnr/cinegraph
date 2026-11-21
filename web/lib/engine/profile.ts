@@ -5,6 +5,7 @@
 import { isFilmData, type DomainData, type FilmData } from "../data";
 import { ACTION_VALUE, SNOOZE_MS, type State } from "../store";
 import type { Film } from "../types";
+import { personIndex } from "../people";
 import { solveSPD } from "./linalg";
 
 export interface Anchor {
@@ -26,6 +27,7 @@ export interface Profile {
   n: number; // number of informative answers
   // films only
   people?: Map<number, number>;
+  followed?: Map<number, 1 | -1>; // people you follow / avoid (person index)
   lang?: Map<string, number>;
   genre?: Map<string, number>;
   kind?: Map<string, number>;
@@ -116,6 +118,14 @@ export function buildProfile(d: DomainData, s: State): Profile {
 
 function filmPreferences(d: FilmData, s: State, anchors: Anchor[]) {
   const people = new Map<number, number[]>();
+  // people you follow count like two loved titles with them in it (avoid: two disliked)
+  const followed = new Map<number, 1 | -1>();
+  for (const [name, v] of Object.entries(s.settings.following ?? {})) {
+    const idx = personIndex(d, name);
+    if (idx == null) continue;
+    followed.set(idx, v);
+    people.set(idx, [v, v]);
+  }
   const lang = new Map<string, number[]>();
   const decade = new Map<number, number[]>();
   const genre = new Map<string, number[]>();
@@ -145,6 +155,7 @@ function filmPreferences(d: FilmData, s: State, anchors: Anchor[]) {
   const sd = liked.length > 2 ? Math.sqrt(liked.reduce((x, y) => x + (y - mean) ** 2, 0) / liked.length) : 30;
   return {
     people: shrunkMean(people, 1) as Map<number, number>,
+    followed,
     lang: shrunkMean(lang, 3) as Map<string, number>,
     decade: shrunkMean(decade, 3) as Map<number, number>,
     genre: shrunkMean(genre, 2) as Map<string, number>,

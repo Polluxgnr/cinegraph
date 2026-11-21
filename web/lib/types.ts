@@ -30,6 +30,7 @@ export interface Film {
   ir?: number; // IMDb rating /10 (official dataset)
   ic?: number; // IMDb votes
   cast?: number[];
+  chr?: string[]; // character per cast member (details)
   dir?: number[];
   wri?: number[];
   cre?: number[];

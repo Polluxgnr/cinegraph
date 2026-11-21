@@ -10,6 +10,7 @@ import { dzPlaylist, dzRelated, dzSearchArtist, dzTop, type DzTrack } from "@/li
 import { context, scoreOne } from "@/lib/engine/recommend";
 import { useDomain } from "@/lib/hooks";
 import { spotifyPlaylist, spotifyToken, startLogin } from "@/lib/spotify";
+import FreshReleases from "@/components/FreshReleases";
 import { getState, recordFeedback, update, useStore } from "@/lib/store";
 import { normTitle } from "@/lib/text";
 
@@ -44,6 +45,7 @@ export default function Playlists() {
   const T = useT();
   const { data: d } = useDomain("music");
   const saved = useStore((s) => Object.entries(s.imports).filter(([k]) => k.startsWith("playlist:")));
+  const mine = useStore((s) => s.spotify?.playlists ?? []);
   const [url, setUrl] = useState("");
   const [pl, setPl] = useState<Playlist | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -111,7 +113,26 @@ export default function Playlists() {
           </ul>
         </section>
       )}
+      {mine.length > 0 && !pl && (
+        <section className="space-y-3">
+          <h2 className="font-display text-2xl">{T("Your Spotify playlists")}</h2>
+          <p className="text-xs text-muted">{T("One tap: what it says about your taste, songs that would fit, and the ones that stick out.")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+            {mine.filter((p) => p.url).map((p) => (
+              <button key={p.url} className="group card overflow-hidden text-left" onClick={() => { setUrl(p.url!); open(p.url!); }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- Spotify cover */}
+                {p.image ? <img src={p.image} alt="" className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="aspect-square bg-panel-2" />}
+                <div className="p-2.5">
+                  <p className="line-clamp-1 text-sm font-medium group-hover:text-accent">{p.name}</p>
+                  <p className="text-xs text-muted">{T("{n} tracks", { n: p.tracks })}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {pl && d && <Analysis pl={pl} d={d} />}
+      {!pl && <FreshReleases />}
     </div>
   );
 }

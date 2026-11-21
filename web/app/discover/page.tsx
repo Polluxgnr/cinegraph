@@ -5,6 +5,8 @@ import { useT } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
 import WebLookup from "@/components/WebLookup";
+import PeopleRow from "@/components/PeopleRow";
+import { cuisineOf, dietOf, type Diet, ingredientText, MAINS, mainsOf, VIDEO_THEMES, videoScore, videoThemes } from "@/lib/facets";
 import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
 import { crowdRating, minutesOf, normTitle } from "@/lib/text";
@@ -28,10 +30,15 @@ export default function Discover() {
   const [sort, setSort] = useState<Sort>("match");
   const [showAnswered, setShowAnswered] = useState(false);
   const [q, setQ] = useState("");
+  const [scope, setScope] = useState<"all" | "people" | "directors" | "actors">("all");
+  const [theme, setTheme] = useState<string | null>(null); // videos
+  const [cuisine, setCuisine] = useState<string | null>(null); // recipes
+  const [main, setMain] = useState<string | null>(null);
+  const [diet, setDiet] = useState<Diet | null>(null);
   const words = useMemo(() => normTitle(q).split(" ").filter((w) => w.length > 1), [q]);
 
   const facets = useMemo(() => {
-    if (!d) return { tags: [] as string[], langs: [] as string[] };
+    if (!d) return { tags: [] as string[], langs: [] as string[], cuisines: [] as string[] };
     const tc = new Map<string, number>();
     const lc = new Map<string, number>();
     for (const e of d.entities) {
@@ -39,18 +46,22 @@ export default function Discover() {
       if (e.film?.lang) lc.set(e.film.lang, (lc.get(e.film.lang) ?? 0) + 1);
     }
     const top = (mp: Map<string, number>, n: number) => [...mp.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
-    return { tags: top(tc, 24), langs: top(lc, 12) };
+    const cc = new Map<string, number>();
+    if (d.name === "recipes") for (const e of d.entities) { const c = cuisineOf(e); if (c) cc.set(c, (cc.get(c) ?? 0) + 1); }
+    return { tags: top(tc, 24), langs: top(lc, 12), cuisines: [...cc.keys()].sort() };
   }, [d]);
 
   // search fields, strongest first: a hit in the title beats one in the director, the cast, then the tags
   const fields = (e: Entity): string[] => {
     const f = e.film;
     const names = (ids?: number[]) => (f && d && "people" in d ? (ids ?? []).map((i) => (d as FilmData).people[i]).join(" ") : "");
-    return [`${e.title} ${f?.t ?? ""} ${f?.tf ?? ""} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, e.tags.join(" ")].map(normTitle);
+    return [`${e.title} ${f?.t ?? ""} ${f?.tf ?? ""} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, `${e.tags.join(" ")} ${e.domain === "recipes" ? ingredientText(e) : ""}`].map(normTitle);
   };
   const filter = (e: Entity) => {
     if (words.length) {
-      const h = fields(e).join(" ");
+      const fs = fields(e);
+      // directors & creators live in field 1, cast in field 2
+      const h = scope === "directors" ? fs[1] : scope === "actors" ? fs[2] : scope === "people" ? `${fs[1]} ${fs[2]}` : fs.join(" ");
       if (!words.every((w) => h.includes(w))) return false;
     }
     const f = e.film;
@@ -61,12 +72,16 @@ export default function Discover() {
       if (maxRt && f.rt && f.rt > maxRt) return false;
       if (tag && !(f.g ?? []).includes(tag)) return false;
     } else if (tag && !e.tags.includes(tag)) return false;
+    if (theme && !videoThemes(e).includes(theme)) return false;
+    if (cuisine && cuisineOf(e) !== cuisine) return false;
+    if (main && !mainsOf(e).includes(main)) return false;
+    if (diet && !(dietOf(e) === diet || (diet === "vegetarian" && dietOf(e) === "vegan"))) return false;
     return true;
   };
-  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, words.join(" ")].join("|");
+  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, scope, theme, cuisine, main, diet, words.join(" ")].join("|");
   const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9, noCaps: words.length > 0 }, key);
   const sorted = useMemo(() => {
-    if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort);
+    if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort, d?.entities ?? []);
     // relevance first (where the words hit, whole words over prefixes), then how much you'd like it
     const rel = (e: Entity) => {
       const fs = fields(e);
@@ -84,7 +99,10 @@ export default function Discover() {
   return (
     <div key={domain} className="rise space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-4xl md:text-5xl">{DOMAIN[domain]?.label}</h1>
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted">{T(DOMAIN[domain]?.label ?? "")}</p>
+          <h1 className="font-display text-4xl md:text-5xl">{T("Search")}</h1>
+        </div>
         <label className="flex items-center gap-2 text-sm text-muted">
           {T("Sort")}<select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="rounded-lg border border-line bg-panel px-2 py-1 text-ink">
             <option value="match">{T("Best match")}</option>
@@ -92,15 +110,25 @@ export default function Discover() {
             <option value="popular">{T("Most popular")}</option>
             {isFilm && <option value="rating">{T("Community rating")}</option>}
             {(isFilm || domain === "youtube") && <option value="length">{T("Shortest first")}</option>}
-            {domain === "youtube" && <option value="liked">{T("Most liked")}</option>}
+            {domain === "youtube" && <option value="liked">{T("Best rated by viewers")}</option>}
             {(domain === "cars" || domain === "brands") && <option value="price-up">{T("Price: low to high")}</option>}
             {(domain === "cars" || domain === "brands") && <option value="price-down">{T("Price: high to low")}</option>}
           </select>
         </label>
       </header>
       <input value={q} onChange={(e) => setQ(e.target.value)} type="search" autoFocus
-             placeholder={domain === "films" ? T("Search a title, a director, an actor, a theme…") : `Search ${DOMAIN[domain]?.label.toLowerCase()}…`}
+             placeholder={domain === "films" ? T("Search a title, a director, an actor, a theme…") : domain === "recipes" ? T("A dish, an ingredient (chicken, lentils…), a cuisine…") : T("Search…")}
              className="w-full rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" />
+      {isFilm && (
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={T("Search in")}>
+          {(["all", "people", "directors", "actors"] as const).map((s) => (
+            <button key={s} className="chip text-xs" data-on={scope === s} onClick={() => setScope(s)}>
+              {T(s === "all" ? "Everything" : s === "people" ? "People" : s === "directors" ? "Directors" : "Actors")}
+            </button>
+          ))}
+        </div>
+      )}
+      {isFilm && words.length > 0 && d ? <PeopleRow d={d as FilmData} q={q} only={scope === "directors" ? "Director" : scope === "actors" ? "Actor" : undefined} /> : null}
       <div className="space-y-2">
         {isFilm && (
           <div className="flex flex-wrap gap-1.5">
@@ -118,9 +146,28 @@ export default function Discover() {
             </select>
           </div>
         )}
+        {domain === "youtube" && (
+          <div className="flex flex-wrap gap-1.5" aria-label={T("Themes")}>
+            <button className="chip" data-on={!theme} onClick={() => setTheme(null)}>{T("All themes")}</button>
+            {VIDEO_THEMES.map(([n]) => <button key={n} className="chip" data-on={theme === n} onClick={() => setTheme(theme === n ? null : n)}>{T(n)}</button>)}
+          </div>
+        )}
+        {domain === "recipes" && (
+          <div className="flex flex-wrap gap-1.5">
+            <button className="chip" data-on={!main && !diet} onClick={() => { setMain(null); setDiet(null); }}>{T("Anything")}</button>
+            {MAINS.map(([n]) => <button key={n} className="chip" data-on={main === n} onClick={() => { setMain(main === n ? null : n); setDiet(null); }}>{T(n)}</button>)}
+            <span className="mx-1 w-px bg-line" />
+            {(["vegetarian", "vegan"] as const).map((x) => <button key={x} className="chip" data-on={diet === x} onClick={() => { setDiet(diet === x ? null : x); setMain(null); }}>{x === "vegetarian" ? T("🌱 Vegetarian") : T("🌿 Vegan")}</button>)}
+            <span className="mx-1 w-px bg-line" />
+            <select value={cuisine ?? ""} onChange={(e) => setCuisine(e.target.value || null)} className="chip bg-transparent" aria-label={T("Cuisine")}>
+              <option value="">{T("Every cuisine")}</option>
+              {facets.cuisines.map((c) => <option key={c} value={c}>{T(c)}</option>)}
+            </select>
+          </div>
+        )}
         <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
           <button className="chip shrink-0" data-on={!tag} onClick={() => setTag(null)}>{T("All")}</button>
-          {facets.tags.map((t) => <button key={t} className="chip shrink-0" data-on={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
+          {facets.tags.map((t) => <button key={t} className="chip shrink-0" data-on={tag === t} onClick={() => setTag(tag === t ? null : t)}>{T(t)}</button>)}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted">
           <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> {T("include things I already answered")}</label>
@@ -139,14 +186,14 @@ const meta = (r: Rec, k: string) => {
   return typeof v === "number" ? v : 0;
 };
 
-function sortRecs(recs: Rec[], sort: Sort): Rec[] {
+function sortRecs(recs: Rec[], sort: Sort, all: Entity[]): Rec[] {
   const by = (fn: (r: Rec) => number) => [...recs].sort((a, b) => fn(b) - fn(a));
   switch (sort) {
     case "date": return by((r) => (r.entity.date ? Date.parse(r.entity.date) : 0));
     case "popular": return by((r) => r.entity.pop);
     case "rating": return by((r) => crowdRating(r.entity.film)?.v ?? 0);
     case "length": return by((r) => -(minutesOf(r.entity) || 999));
-    case "liked": return by((r) => meta(r, "likes") / Math.max(1000, meta(r, "views")) + meta(r, "likes") / 1e7);
+    case "liked": return by((r) => videoScore(r.entity, all) ?? 0);
     case "price-up": return by((r) => -(meta(r, "price") || 1e12));
     case "price-down": return by((r) => meta(r, "price"));
     default: return recs;

@@ -227,12 +227,18 @@ def export_films(out: Path) -> dict:
     credits = defaultdict(lambda: defaultdict(list))
     people: dict[int, int] = {}
     names: list[str] = []
-    for r in db.fetchall("""SELECT c.title_id, c.role, c.person_id, p.name FROM credits c
+    pmeta: list[list] = []  # idx -> [tmdb person id, profile path, wikidata id]
+    chars: dict[int, list[str]] = defaultdict(list)  # title -> character per cast member (billing order)
+    for r in db.fetchall("""SELECT c.title_id, c.role, c.person_id, c.character, p.name, p.tmdb_person_id,
+                                   p.profile_path, p.wikidata_id FROM credits c
                              JOIN people p ON p.id = c.person_id ORDER BY c.title_id, c.role, c.ord"""):
         if r["person_id"] not in people:
             people[r["person_id"]] = len(names)
             names.append(r["name"])
+            pmeta.append([r["tmdb_person_id"], r["profile_path"], r["wikidata_id"]])
         credits[r["title_id"]][r["role"]].append(people[r["person_id"]])
+        if r["role"] == "cast":
+            chars[r["title_id"]].append(r["character"] or "")
     facts = defaultdict(lambda: defaultdict(list))
     for r in db.fetchall("SELECT title_id, prop, object_qid, object_label FROM wikidata_facts"):
         facts[r["title_id"]][r["prop"]].append((r["object_qid"], r["object_label"]))
@@ -291,7 +297,7 @@ def export_films(out: Path) -> dict:
             "x": _ids(r), "chips": reaction_chips(r),
         }
         # loaded on demand when the film is shown (web/lib/data.ts filmDetails)
-        detail = {"ov": r["overview"], "ovf": ((r["extra"] or {}).get("fr") or {}).get("ov"), "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:12],
+        detail = {"ov": r["overview"], "ovf": ((r["extra"] or {}).get("fr") or {}).get("ov"), "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:30], "chr": chars[r["id"]][:30] if any(chars[r["id"]][:30]) else None,
                   "rent": sorted(provs[r["id"]]["rent"]), "nom": lab("nominated", 4), "jw": ex.get("watch_link")}
         details[r["id"] % DETAIL_SHARDS][r["id"]] = {k: v for k, v in detail.items() if v not in (None, [], {}, "")}
         if r["original_title"] and r["original_title"] != r["title"]:
@@ -310,6 +316,14 @@ def export_films(out: Path) -> dict:
     fd.mkdir(parents=True, exist_ok=True)
     size = write_json(fd / "catalog.json", catalog)
     write_json(fd / "people.json", names)
+    # photos and ids per person, sharded like the details (loaded when a cast list or person page is shown)
+    (fd / "people").mkdir(exist_ok=True)
+    pshards: list[dict[int, list]] = [{} for _ in range(DETAIL_SHARDS)]
+    for i, m in enumerate(pmeta):
+        if any(m):
+            pshards[i % DETAIL_SHARDS][i] = m
+    for i, shard in enumerate(pshards):
+        write_json(fd / "people" / f"{i}.json", shard)
     write_json(fd / "collections.json", collections)
     (fd / "details").mkdir(exist_ok=True)
     for i, shard in enumerate(details):

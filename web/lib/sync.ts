@@ -4,7 +4,7 @@
  * Every profile is a file in that Gist; each sync round merges both sides (nothing answered anywhere is lost).
  */
 import { asset } from "./data";
-import { getProfiles, getState, mergeProfiles, migrate, readProfileState, replaceState, saveProfileState, setSettings, type State } from "./store";
+import { getProfiles, getState, mergeProfiles, migrate, readProfileState, replaceState, saveProfileState, setSettings, type Settings, type State, SYNCED_SETTINGS } from "./store";
 
 const PROFILES_FILE = "cinegraph-profiles.json";
 
@@ -12,6 +12,14 @@ const API = "https://api.github.com";
 
 function headers(token: string) {
   return { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" };
+}
+
+/** Device settings from `local`; the taste settings (follows, swipe filters) from whichever side changed them last. */
+export function mergeSettings(local: Settings, remote?: Settings): Settings {
+  if (!remote || (remote.tasteAt ?? 0) <= (local.tasteAt ?? 0)) return local;
+  const out: Settings = { ...local, tasteAt: remote.tasteAt };
+  for (const k of SYNCED_SETTINGS) (out as unknown as Record<string, unknown>)[k] = remote[k];
+  return out;
 }
 
 export function merge(a: State, b: State): State {
@@ -40,7 +48,7 @@ export function merge(a: State, b: State): State {
   const custom = [...a.custom, ...b.custom].filter((c) => !gone(`custom:${c.id}`, c.created) && !customIds.has(c.id) && customIds.add(c.id));
   const trips = new Map<string, State["trips"][number]>();
   for (const t of [...(a.trips ?? []), ...(b.trips ?? [])]) if (!gone(`trip:${t.id}`, t.updated) && (!trips.has(t.id) || trips.get(t.id)!.updated < t.updated)) trips.set(t.id, t);
-  return migrate({ ...newer, history, feedback, vault, custom, deleted, trips: [...trips.values()], lists, settings: a.settings });
+  return migrate({ ...newer, history, feedback, vault, custom, deleted, trips: [...trips.values()], lists, settings: mergeSettings(a.settings, b.settings) });
 }
 
 const fileFor = (id: string) => (id === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${id}.json`);
@@ -50,7 +58,8 @@ const gained = (local: State, merged: State) =>
   merged.history.length !== local.history.length || merged.vault.length !== local.vault.length ||
   JSON.stringify(merged.trips) !== JSON.stringify(local.trips) ||
   Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.custom.length !== local.custom.length ||
-  Object.keys(merged.deleted ?? {}).length !== Object.keys(local.deleted ?? {}).length || merged.updatedAt > local.updatedAt;
+  Object.keys(merged.deleted ?? {}).length !== Object.keys(local.deleted ?? {}).length || merged.updatedAt > local.updatedAt ||
+  (merged.settings.tasteAt ?? 0) > (local.settings.tasteAt ?? 0);
 
 let running: Promise<{ id: string; changed: boolean }> | null = null;
 
@@ -95,7 +104,8 @@ export function syncNow(): Promise<{ id: string; changed: boolean }> {
         let merged = local;
         if (text) {
           merged = merge(local, migrate(JSON.parse(text)));
-          merged.settings = local.settings; // device settings stay with the device
+          // device settings stay with the device; follows and swipe filters travel
+          merged.settings = mergeSettings(local.settings, migrate(JSON.parse(text)).settings);
           if (gained(local, merged)) {
             changed = true;
             if (active) replaceState(merged);

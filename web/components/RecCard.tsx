@@ -79,7 +79,7 @@ export default function RecCard({ r, showWhy = true }: { r: Rec; showWhy?: boole
           {e.title}
         </Link>
         <p className="line-clamp-2 text-xs text-muted">{meta.filter(Boolean).join(" · ")}</p>
-        <Match p={r.p} film={r.entity.film} compact />
+        <Match p={r.p} film={r.entity.film} score={typeof e.item?.meta?.score === "number" ? e.item.meta.score : undefined} compact />
         {showWhy && <p className="line-clamp-3 text-[13px] leading-snug text-ink/85">{r.why}</p>}
         <div className="mt-auto flex gap-2 pt-1">
           <button

@@ -18,7 +18,7 @@ type NavLink = { href: string; label: string };
 export const MAIN: NavLink[] = [
   { href: "/", label: "Home" },
   { href: "/swipe/", label: "Swipe" },
-  { href: "/discover/", label: "Discover" },
+  { href: "/discover/", label: "Search" },
   { href: "/lists/", label: "My list" },
 ];
 

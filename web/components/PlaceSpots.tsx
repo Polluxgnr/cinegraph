@@ -20,6 +20,7 @@ export default function PlaceSpots({ e }: { e: Entity }) {
   const T = useT();
   const [spots, setSpots] = useState<Spot[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [group, setGroup] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const starred = useStore((s) => s.custom.filter((c) => c.domain === "places" && c.tags.includes("spot")));
@@ -32,7 +33,7 @@ export default function PlaceSpots({ e }: { e: Entity }) {
     return () => {
       live = false;
     };
-  }, [e]);
+  }, [e, attempt]);
 
   const pref = useMemo(() => {
     const m = new Map<string, number>();
@@ -53,8 +54,21 @@ export default function PlaceSpots({ e }: { e: Entity }) {
   }, [focus]);
 
   if (!coord) return null;
-  if (err) return <p className="text-sm text-muted">{T("Couldn't load the best spots (")}{err}).</p>;
-  if (!spots) return <div className="card h-48 animate-pulse" />;
+  if (err) return (
+    <div className="card flex flex-wrap items-center justify-between gap-2 p-4 text-sm text-muted">
+      <span>{T("Couldn't load the best spots (")}{err}).</span>
+      <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => { setErr(null); setAttempt((n) => n + 1); }}>{T("Try again")}</button>
+    </div>
+  );
+  if (!spots) return (
+    <section className="space-y-3" aria-busy>
+      <h2 className="font-display text-2xl">{T("Best spots around")}{" "}{e.title}</h2>
+      <p className="text-xs text-muted">{T("Asking Wikidata for the places worth a visit… this can take up to a minute.")}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }, (_, i) => <div key={i} className="card aspect-[4/5] animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />)}
+      </div>
+    </section>
+  );
   const groups = [...new Set(ranked.map((x) => x.group))];
   const isStarred = (q: string) => starred.find((c) => c.url?.endsWith(`/${q}`));
   const place = { key: e.key, title: e.title, image: e.image };
@@ -72,7 +86,7 @@ export default function PlaceSpots({ e }: { e: Entity }) {
         <button className="chip" data-on={!group} onClick={() => setGroup(null)}>{T("All")}</button>
         {groups.map((g) => (
           <button key={g} className="chip" data-on={group === g} onClick={() => setGroup(group === g ? null : g)}>
-            <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: GROUP_COLOR[g] }} />{g}{pref.get(g) ? " ★" : ""}
+            <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: GROUP_COLOR[g] }} />{T(g)}{pref.get(g) ? " ★" : ""}
           </button>
         ))}
       </div>
@@ -83,27 +97,27 @@ export default function PlaceSpots({ e }: { e: Entity }) {
           const added = inTrip.has(s.q);
           return (
             <motion.article id={`spot-${s.q}`} key={s.q} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.03 }}
-                            className={`card flex flex-col overflow-hidden ${s.film ? "border-accent" : ""} ${focus === s.q ? "ring-2 ring-accent" : ""}`}>
-              <a href={`https://www.wikidata.org/wiki/${s.q}`} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] bg-panel-2">
+                            className={`card group flex flex-col overflow-hidden ${s.film ? "border-accent" : ""} ${focus === s.q ? "ring-2 ring-accent" : ""}`}>
+              <a href={`https://www.wikidata.org/wiki/${s.q}`} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] shrink-0 overflow-hidden bg-panel-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- Wikimedia Commons */}
-                {s.img && <img src={s.img} alt={s.name} loading="lazy" className="h-full w-full object-cover" />}
+                {s.img && <img src={s.img} alt={s.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
                 <span className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-black/60" style={{ background: GROUP_COLOR[s.group] }} />
                 {s.film && <span className="absolute bottom-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-accent">🎬 {s.film}</span>}
               </a>
               <div className="flex flex-1 flex-col gap-1 p-2.5">
                 <p className="line-clamp-2 text-sm font-medium leading-snug">{s.name}</p>
-                <p className="line-clamp-2 text-[11px] text-muted">{[s.group, s.dist ? `${s.dist.toFixed(1)} km` : "", s.desc].filter(Boolean).join(" · ")}</p>
+                <p className="line-clamp-2 text-[11px] text-muted">{[T(s.group), s.dist ? `${s.dist.toFixed(1)} km` : "", s.desc].filter(Boolean).join(" · ")}</p>
                 <div className="mt-auto flex gap-1.5 pt-1">
-                  <button className="btn-ghost px-2 py-1 text-xs" title={T("I'd go: teaches your taste")} onClick={() => {
+                  <button className="btn-ghost shrink-0 px-2 py-1 text-xs" title={T("I'd go: teaches your taste")} aria-label={T("I'd go: teaches your taste")} onClick={() => {
                     if (star) return removeCustom(star.id);
                     const [id] = addCustom([{ domain: "places", title: s.name, subtitle: `${e.title} · ${s.group}`, url: `https://www.wikidata.org/wiki/${s.q}`, image: s.img, tags: ["spot", s.group, e.title.toLowerCase()], source: "spots" }]);
                     recordFeedback({ key: id, domain: "places", action: "want", source: "spots" });
                   }}>{star ? "★" : "☆"}</button>
-                  <button className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium transition ${added ? "bg-accent text-bg" : "btn-ghost"}`}
+                  <button className={`min-w-0 flex-1 truncate whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium transition ${added ? "bg-accent text-bg" : "btn-ghost"}`}
                           onClick={() => toggleTripSpot(place, { q: s.q, name: s.name, lat: s.lat, lon: s.lon, img: s.img, group: s.group })}>
                     {added ? T("✓ In trip") : T("+ Trip")}
                   </button>
-                  {(s.lat || s.lon) ? <a className="btn-ghost px-2 py-1 text-xs" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`}>{T("Map")}</a> : null}
+                  {(s.lat || s.lon) ? <a className="btn-ghost shrink-0 px-2 py-1 text-xs" target="_blank" rel="noreferrer" title={T("Map")} aria-label={T("Map")} href={`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`}>📍</a> : null}
                 </div>
               </div>
             </motion.article>

@@ -406,6 +406,12 @@ export function explain(s: Scored, c: Ctx, p: number): string {
     return s.path.rel === "related" ? t("Close to {via}, which you like", { via: s.path.via }) : explainPath(s.path);
   }
   const x = s.x;
+  const fo = c.p.followed;
+  const f0 = c.d.entities[s.row].film;
+  if (fo?.size && f0 && isFilmData(c.d)) {
+    const who = [...(f0.dir ?? []), ...(f0.cre ?? []), ...(f0.cast ?? []).slice(0, 8)].find((i) => fo.get(i) === 1);
+    if (who != null) return t("With {name}, whom you follow", { name: c.d.people[who] });
+  }
   if (x[F.saga_next] > 0) return t("Next in a saga you started");
   if (x[F.cf] > 0.3 && s.nearest) return t("People who loved {title} rate this highly", { title: s.nearest.title });
   if (s.nearest && x[F.emb_max_pos] > 0.55) {
