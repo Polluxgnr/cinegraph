@@ -155,8 +155,56 @@ def cars() -> list[Item]:
             meta={"maker": maker, "description": d.get("itemDescription")},
         ))
     priced = apply_car_prices(items)
-    log.info("cars (dream garage): %d (%d with a price)", len(items), priced)
+    specced = apply_car_specs(items)
+    log.info("cars (dream garage): %d (%d with a price, %d with specs)", len(items), priced, specced)
     return items
+
+
+def _wiki_image(page: str) -> str | None:
+    """Lead image of an English Wikipedia page (REST summary; open data, one call per spec'd car)."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(page)}",
+                                     headers={"User-Agent": "CineGraph/1.0 (weekly catalogue build)"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            j = json.load(r)
+        return (j.get("originalimage") or j.get("thumbnail") or {}).get("source")
+    except Exception:  # noqa: BLE001 - a missing photo is fine
+        return None
+
+
+def apply_car_specs(items: list[Item]) -> int:
+    """config/car_specs.yaml: engine, power, seats... on the matching car, and the cars Wikidata lacks added."""
+    from importlib import resources
+
+    import yaml
+
+    cfg = yaml.safe_load(resources.files("cinegraph").joinpath("config/car_specs.yaml").read_text("utf-8"))
+    by_title = {_fold(it.title): it for it in items}
+    n = 0
+    for title, sp in (cfg.get("cars") or {}).items():
+        it = by_title.get(_fold(title))
+        if it is None:
+            slug = _fold(title).replace(" ", "-").replace("(", "").replace(")", "").replace("/", "-")
+            wiki = sp.get("wiki")
+            it = Item(id=f"cars:spec-{slug}", title=title, subtitle=" · ".join(str(x) for x in (sp.get("maker"), sp.get("year")) if x),
+                      image=_wiki_image(wiki) if wiki else None,
+                      url=f"https://en.wikipedia.org/wiki/{wiki}" if wiki else None,
+                      tags=[t for t in (sp.get("body"), sp.get("maker")) if t],
+                      date=f"{sp['year']}-01-01" if sp.get("year") else None, pop=30.0,
+                      links={"pinterest": f"https://www.pinterest.com/search/pins/?q={title.replace(' ', '%20')}"},
+                      meta={"maker": sp.get("maker"), "description": sp.get("body")})
+            items.append(it)
+        specs = {k: sp[k] for k in ("engine", "cyl", "litres", "hp", "nm", "seats", "drive", "gearbox", "zero100", "vmax", "body") if sp.get(k) is not None}
+        it.meta.update(specs)
+        if sp.get("price"):
+            it.meta.update(price=int(sp["price"][0]), price_approx=True, price_kind=sp["price"][1])
+        it.text = f"{it.text} {sp.get('engine', '')} {sp.get('hp', '')} hp {sp.get('body', '')} {sp.get('drive', '')}".strip()
+        n += 1
+    return n
 
 
 def _fold(s: str) -> str:

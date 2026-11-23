@@ -33,6 +33,20 @@ export function useDomain(name: string): Loadable<DomainData> {
 export const useFilms = () => useLoad<FilmData>(() => loadFilms(), "films");
 export const useManifest = () => useLoad<Manifest>(() => manifest(), "manifest");
 
+// Client-side navigation (next/link) changes the URL with history.pushState, which fires no event: announce it,
+// so pages that read the query string (/item/?k=…, /person/?p=…) follow a link to the same page.
+const URL_EVENT = "cg:urlchange";
+if (typeof window !== "undefined" && !(window.history as History & { __cg?: boolean }).__cg) {
+  (window.history as History & { __cg?: boolean }).__cg = true;
+  for (const m of ["pushState", "replaceState"] as const) {
+    const orig = window.history[m].bind(window.history);
+    window.history[m] = (...args: Parameters<History["pushState"]>) => {
+      orig(...args);
+      window.dispatchEvent(new Event(URL_EVENT));
+    };
+  }
+}
+
 /** Read a query-string parameter on static pages (no server-side params with `output: export`). */
 export function useQueryParam(name: string): [string | null, (v: string | null) => void] {
   const [value, setValue] = useState<string | null>(null);
@@ -40,7 +54,11 @@ export function useQueryParam(name: string): [string | null, (v: string | null) 
     const read = () => setValue(new URLSearchParams(window.location.search).get(name));
     read();
     window.addEventListener("popstate", read);
-    return () => window.removeEventListener("popstate", read);
+    window.addEventListener(URL_EVENT, read);
+    return () => {
+      window.removeEventListener("popstate", read);
+      window.removeEventListener(URL_EVENT, read);
+    };
   }, [name]);
   const set = (v: string | null) => {
     const p = new URLSearchParams(window.location.search);

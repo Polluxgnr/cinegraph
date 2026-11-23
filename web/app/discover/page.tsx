@@ -6,7 +6,8 @@ import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
 import WebLookup from "@/components/WebLookup";
 import PeopleRow from "@/components/PeopleRow";
-import { cuisineOf, dietOf, type Diet, ingredientText, MAINS, mainsOf, VIDEO_THEMES, videoScore, videoThemes } from "@/lib/facets";
+import { GROUPS, groupTest, isAnimation, isAnime, subgenres } from "@/lib/groups";
+import { cuisineOf, dietOf, type Diet, driveOf, engineOf, ENGINES, hpOf, ingredientText, MAINS, mainsOf, POWER, seatsOf, VIDEO_THEMES, videoScore, videoThemes } from "@/lib/facets";
 import type { FilmData } from "@/lib/data";
 import { DOMAIN } from "@/lib/domains";
 import { crowdRating, minutesOf, normTitle } from "@/lib/text";
@@ -35,6 +36,13 @@ export default function Discover() {
   const [cuisine, setCuisine] = useState<string | null>(null); // recipes
   const [main, setMain] = useState<string | null>(null);
   const [diet, setDiet] = useState<Diet | null>(null);
+  const [group, setGroup] = useState<string | null>(null); // films: studio / auteur / new releases
+  const [anim, setAnim] = useState<"no-anime" | "none" | "only" | null>(null);
+  const [sub, setSub] = useState<string | null>(null); // subgenre (keyword) within the chosen genre
+  const [engine, setEngine] = useState<string | null>(null); // dream garage
+  const [power, setPower] = useState<string | null>(null);
+  const [seats, setSeats] = useState<number | null>(null);
+  const [drive, setDrive] = useState<string | null>(null);
   const words = useMemo(() => normTitle(q).split(" ").filter((w) => w.length > 1), [q]);
 
   const facets = useMemo(() => {
@@ -57,6 +65,8 @@ export default function Discover() {
     const names = (ids?: number[]) => (f && d && "people" in d ? (ids ?? []).map((i) => (d as FilmData).people[i]).join(" ") : "");
     return [`${e.title} ${f?.t ?? ""} ${f?.tf ?? ""} ${f?.ot ?? ""}`, `${names(f?.dir)} ${names(f?.cre)}`, `${names(f?.cast?.slice(0, 8))} ${e.subtitle}`, `${e.tags.join(" ")} ${e.domain === "recipes" ? ingredientText(e) : ""}`].map(normTitle);
   };
+  const inGroup = group && d && "films" in d ? groupTest(d as FilmData, group) : null;
+  const subs = useMemo(() => (tag && d && "films" in d ? subgenres(d as FilmData, tag) : []), [tag, d]);
   const filter = (e: Entity) => {
     if (words.length) {
       const fs = fields(e);
@@ -71,14 +81,27 @@ export default function Discover() {
       if (decade && (!f.y || Math.floor(f.y / 10) * 10 !== decade)) return false;
       if (maxRt && f.rt && f.rt > maxRt) return false;
       if (tag && !(f.g ?? []).includes(tag)) return false;
+      if (sub && !(f.kw ?? []).includes(sub)) return false;
+      if (anim === "none" && isAnimation(f)) return false;
+      if (anim === "no-anime" && isAnime(f)) return false;
+      if (anim === "only" && !isAnimation(f)) return false;
+      if (inGroup && !inGroup(f)) return false;
     } else if (tag && !e.tags.includes(tag)) return false;
     if (theme && !videoThemes(e).includes(theme)) return false;
+    if (engine && !engineOf(e).includes(engine)) return false;
+    if (power) {
+      const [, lo, hi] = POWER.find(([n]) => n === power)!;
+      const hp = hpOf(e);
+      if (hp == null || hp < lo || hp >= hi) return false;
+    }
+    if (seats && (seatsOf(e) ?? 0) < seats) return false;
+    if (drive && !(driveOf(e) ?? "").includes(drive)) return false;
     if (cuisine && cuisineOf(e) !== cuisine) return false;
     if (main && !mainsOf(e).includes(main)) return false;
     if (diet && !(dietOf(e) === diet || (diet === "vegetarian" && dietOf(e) === "vegan"))) return false;
     return true;
   };
-  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, scope, theme, cuisine, main, diet, words.join(" ")].join("|");
+  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, scope, theme, cuisine, main, diet, group, anim, sub, engine, power, seats, drive, words.join(" ")].join("|");
   const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9, noCaps: words.length > 0 }, key);
   const sorted = useMemo(() => {
     if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort, d?.entities ?? []);
@@ -152,6 +175,22 @@ export default function Discover() {
             {VIDEO_THEMES.map(([n]) => <button key={n} className="chip" data-on={theme === n} onClick={() => setTheme(theme === n ? null : n)}>{T(n)}</button>)}
           </div>
         )}
+        {domain === "cars" && (
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-muted">{T("Specs are known for the cars in the spec sheet; filtering by them shows only those.")}</p>
+            <div className="flex flex-wrap gap-1.5" aria-label={T("Engine")}>
+              <button className="chip text-xs" data-on={!engine} onClick={() => setEngine(null)}>{T("Any engine")}</button>
+              {ENGINES.map(([n]) => <button key={n} className="chip text-xs" data-on={engine === n} onClick={() => setEngine(engine === n ? null : n)}>{T(n)}</button>)}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {POWER.map(([n]) => <button key={n} className="chip text-xs" data-on={power === n} onClick={() => setPower(power === n ? null : n)}>{n}</button>)}
+              <span className="mx-1 w-px bg-line" />
+              {[2, 4, 5].map((n) => <button key={n} className="chip text-xs" data-on={seats === n} onClick={() => setSeats(seats === n ? null : n)}>{n === 2 ? T("2 seats +") : T("{n} seats +", { n })}</button>)}
+              <span className="mx-1 w-px bg-line" />
+              {["RWD", "AWD", "4WD"].map((x) => <button key={x} className="chip text-xs" data-on={drive === x} onClick={() => setDrive(drive === x ? null : x)}>{x}</button>)}
+            </div>
+          </div>
+        )}
         {domain === "recipes" && (
           <div className="flex flex-wrap gap-1.5">
             <button className="chip" data-on={!main && !diet} onClick={() => { setMain(null); setDiet(null); }}>{T("Anything")}</button>
@@ -166,9 +205,24 @@ export default function Discover() {
           </div>
         )}
         <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-          <button className="chip shrink-0" data-on={!tag} onClick={() => setTag(null)}>{T("All")}</button>
-          {facets.tags.map((t) => <button key={t} className="chip shrink-0" data-on={tag === t} onClick={() => setTag(tag === t ? null : t)}>{T(t)}</button>)}
+          <button className="chip shrink-0" data-on={!tag} onClick={() => { setTag(null); setSub(null); }}>{T("All")}</button>
+          {facets.tags.map((t) => <button key={t} className="chip shrink-0" data-on={tag === t} onClick={() => { setTag(tag === t ? null : t); setSub(null); }}>{T(t)}</button>)}
         </div>
+        {subs.length > 0 && (
+          <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4" aria-label={T("Subgenres")}>
+            <span className="shrink-0 self-center pr-1 text-[11px] uppercase tracking-[0.14em] text-muted">{T(tag ?? "")} ›</span>
+            {subs.map((k) => <button key={k} className="chip shrink-0 text-xs" data-on={sub === k} onClick={() => setSub(sub === k ? null : k)}>{T(k)}</button>)}
+          </div>
+        )}
+        {isFilm && (
+          <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4" aria-label={T("Groups")}>
+            {GROUPS.map((g) => <button key={g.id} className="chip shrink-0 text-xs" data-on={group === g.id} onClick={() => setGroup(group === g.id ? null : g.id)}>{g.id === "new" ? "✨ " : ""}{T(g.label)}</button>)}
+            <span className="mx-1 w-px shrink-0 bg-line" />
+            {([["no-anime", "No anime / manga"], ["none", "No animation"], ["only", "Animation only"]] as const).map(([v, l]) => (
+              <button key={v} className="chip shrink-0 text-xs" data-on={anim === v} onClick={() => setAnim(anim === v ? null : v)}>{T(l)}</button>
+            ))}
+          </div>
+        )}
         <label className="flex items-center gap-2 text-xs text-muted">
           <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> {T("include things I already answered")}</label>
       </div>

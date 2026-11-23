@@ -49,7 +49,7 @@ function Deck({ domain }: { domain: string }) {
 
   const swipeFilters = useStore((s) => s.settings.swipeFilters);
   const platforms = useStore((s) => s.settings.platforms);
-  const accept = useMemo(() => (d && isFilmData(d) ? swipeMatcher(swipeFilters, platforms) : undefined), [d, swipeFilters, platforms]);
+  const accept = useMemo(() => (d && isFilmData(d) ? swipeMatcher(swipeFilters, platforms, d) : undefined), [d, swipeFilters, platforms]);
   const card: Card | null = useMemo(
     () => (d && loaded ? nextCard(d, getState(), skip, Math.random, accept) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps

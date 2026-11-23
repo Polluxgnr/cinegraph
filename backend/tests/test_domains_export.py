@@ -100,3 +100,35 @@ def test_reduce_dims_keeps_neighbours():
     assert z.shape == (400, 64) and kept > 0.99
     near = lambda x: np.argsort(-(x @ x[0]))[1:6]  # noqa: E731
     assert set(near(m)) == set(near(z))
+
+
+def test_car_specs_enrich_and_add(monkeypatch):
+    from cinegraph.domains import wikidata_domains as wd
+    from cinegraph.domains.base import Item
+
+    monkeypatch.setattr(wd, "_wiki_image", lambda page: f"https://img/{page}.jpg")
+    items = [Item(id="cars:Q1", title="Ferrari F40", meta={"maker": "Ferrari"})]
+    n = wd.apply_car_specs(items)
+    f40 = items[0]
+    assert f40.meta["hp"] == 478 and f40.meta["cyl"] == 8 and f40.meta["seats"] == 2
+    supra = next(i for i in items if i.title == "Toyota Supra (A80) TRD")
+    assert supra.id.startswith("cars:spec-") and supra.image == "https://img/Toyota_Supra.jpg"
+    assert supra.meta["engine"].startswith("Inline-6") and supra.meta["price"] == 120000
+    assert n == len(items)  # every spec'd car is in the catalogue once
+
+
+def test_shop_pieces_categories_and_items(monkeypatch):
+    from cinegraph.domains import style
+    from cinegraph.domains.base import Item
+
+    assert style._category("Hoodies", "Logo hoodie") == "tops"
+    assert style._category("", "Cargo pant") == "pants"
+    assert style._category("Footwear", "Runner") == "sneakers"
+    monkeypatch.setattr(style.time if hasattr(style, "time") else __import__("time"), "sleep", lambda s: None)
+    monkeypatch.setattr(style, "shop_products", lambda url, limit=40: [
+        {"handle": "zip-hoodie", "title": "Zip Hoodie Black", "type": "Hoodies", "tags": ["fw26"], "price": 89.0,
+         "currency": "EUR", "image": "https://cdn/x.jpg", "url": "https://scuffers.com/products/zip-hoodie", "date": "2026-11-01"}])
+    brand = Item(id="brands:scuffers", title="Scuffers")
+    out = style.shop_pieces([{"name": "Scuffers", "url": "https://scuffers.com", "tags": ["streetwear"]}], {"Scuffers": brand})
+    assert out[0].title == "Scuffers Zip Hoodie Black" and out[0].meta["category"] == "tops" and out[0].meta["price"] == 89.0
+    assert out[0].related == ["brands:scuffers"]

@@ -122,3 +122,46 @@ export function variations(e: Entity, all: Entity[], n = 10): Entity[] {
 const STOP = new Set(["with", "and", "the", "style", "easy", "quick", "homemade", "classic", "recipe", "sauce", "avec"]);
 /** "2 tablespoons chopped Coriander" -> "coriander" */
 const core = (s: string) => s.toLowerCase().replace(/[\d/½¼¾.,()-]+/g, " ").replace(/\b(g|kg|ml|l|tbsp|tsp|tablespoons?|teaspoons?|cups?|clove|cloves|pinch|large|small|medium|chopped|sliced|diced|finely|fresh|freshly|ground|grated|minced|to taste|of|for|frying|juice|zest|handful|bunch|can|tin|pieces?|whole|beaten|softened|melted|optional|a|an)\b/g, " ").replace(/\s+/g, " ").trim();
+
+// ------------------------------------------------------------------ dream garage
+const num = (e: Entity, k: string) => {
+  const v = Number(e.item?.meta?.[k]);
+  return Number.isFinite(v) && v > 0 ? v : undefined;
+};
+
+export const ENGINES: [string, RegExp][] = [
+  ["Electric", /electric/i],
+  ["Hybrid", /hybrid/i],
+  ["Rotary", /rotor|wankel|rotary/i],
+  ["V12+", /\b(V12|W16|V16)\b/i],
+  ["V10", /\bV10\b/i],
+  ["V8", /\bV8\b/i],
+  ["V6", /\bV6\b/i],
+  ["Flat-6", /flat-6|boxer/i],
+  ["Inline-6", /inline-6|straight-6/i],
+  ["4 cylinders or less", /inline-4|inline-5|twin-cylinder|flat-4|inline-3/i],
+];
+/** Engine families of a car (a hybrid V12 is both "Hybrid" and "V12+"). */
+export const engineOf = (e: Entity): string[] => {
+  const s = String(e.item?.meta?.engine ?? "");
+  return s ? ENGINES.filter(([, re]) => re.test(s)).map(([n]) => n) : [];
+};
+
+export const POWER: [string, number, number][] = [["< 300 hp", 0, 300], ["300–500 hp", 300, 500], ["500–700 hp", 500, 700], ["700–1,000 hp", 700, 1000], ["1,000 hp +", 1000, 1e9]];
+export const hpOf = (e: Entity) => num(e, "hp");
+export const seatsOf = (e: Entity) => num(e, "seats");
+export const driveOf = (e: Entity) => (e.item?.meta?.drive as string | undefined) ?? undefined;
+
+/** The spec line shown on a car's card and page. */
+export function carSpecs(e: Entity): [string, string][] {
+  const m = e.item?.meta ?? {};
+  const out: [string, string][] = [];
+  if (m.engine) out.push(["Engine", `${m.engine}${m.litres ? ` · ${m.litres} L` : ""}`]);
+  if (m.hp) out.push(["Power", `${m.hp} hp${m.nm ? ` · ${m.nm} Nm` : ""}`]);
+  if (m.zero100) out.push(["0–100 km/h", `${m.zero100} s`]);
+  if (m.vmax) out.push(["Top speed", `${m.vmax} km/h`]);
+  if (m.seats) out.push(["Seats", String(m.seats)]);
+  if (m.drive) out.push(["Drive", `${m.drive}${m.gearbox ? ` · ${m.gearbox}` : ""}`]);
+  if (m.body) out.push(["Body", String(m.body)]);
+  return out;
+}

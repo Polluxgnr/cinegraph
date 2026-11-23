@@ -162,3 +162,53 @@ test("recipes: vegetarian filter and ingredient search", async ({ page }) => {
   await page.getByRole("searchbox").fill("lentils");
   await expect(page.locator("main article").first()).toBeVisible();
 });
+
+test("a card on a title page opens that title (same-page navigation)", async ({ page }) => {
+  await page.route("https://query.wikidata.org/**", (r) => r.fulfill({ json: { results: { bindings: [] } } }));
+  await open(page, "/item/?k=films%3A3472");
+  await expect(page.locator("h1")).toHaveText("Interstellar");
+  const card = page.locator("main section").filter({ hasText: /Similar/ }).locator("article a").first();
+  await card.scrollIntoViewIfNeeded();
+  const target = (await card.textContent())?.trim();
+  await card.click();
+  await expect(page.locator("h1")).not.toHaveText("Interstellar");
+  if (target) await expect(page.locator("h1")).toContainText(target.slice(0, 6));
+});
+
+test("sports: results, standings and following a team", async ({ page }) => {
+  const match = { id: "1", name: "PSG at OM", date: new Date(Date.now() - 864e5).toISOString(), competitions: [{ id: "1", date: new Date(Date.now() - 864e5).toISOString(),
+    status: { type: { state: "post", shortDetail: "FT" } }, venue: { fullName: "Vélodrome" },
+    competitors: [{ homeAway: "home", winner: false, score: "1", team: { displayName: "Marseille" } }, { homeAway: "away", winner: true, score: "3", team: { displayName: "Paris Saint-Germain" } }] }] };
+  await page.route("https://site.api.espn.com/apis/site/v2/**/scoreboard*", (r) => r.fulfill({ json: { events: [match] } }));
+  await page.route("https://site.api.espn.com/apis/v2/**/standings", (r) => r.fulfill({ json: { children: [{ name: "Ligue 1", standings: { entries: [
+    { team: { displayName: "Paris Saint-Germain" }, stats: [{ name: "rank", displayValue: "1" }, { name: "points", displayValue: "26" }] }] } }] } }));
+  await open(page, "/sports/");
+  await expect(page.getByText("Paris Saint-Germain").first()).toBeVisible();
+  await expect(page.getByText("Vélodrome")).toBeVisible();
+  await page.getByRole("button", { name: "Follow" }).nth(1).click();
+  await expect(page.getByText("★ Paris Saint-Germain")).toBeVisible();
+  await page.getByRole("button", { name: "Standings" }).click();
+  await expect(page.locator("table")).toContainText("26");
+});
+
+test("instagram saves: import a library, filter and search", async ({ page }) => {
+  await open(page, "/saves/");
+  const lib = { cats: [{ id: "claude", name: "Claude Code", group: "ai", n: 1 }, { id: "places", name: "Places", group: "life", n: 1 }], recs: [], tool_urls: { "Claude Code": "https://claude.com/claude-code" },
+    posts: [{ i: 1, order: 1, new: "False", cat: "claude", title: "Setup tips", what: "Skills and MCPs", tools: "['Claude Code']", user: "dev", url: "https://instagram.com/p/1", posted: "2026-08-05", video: "True", place: null },
+            { i: 2, order: 2, new: "True", cat: "places", title: "Rooftop bar", what: "Sunset view", tools: "[]", user: "trip", url: "https://instagram.com/p/2", posted: "2026-07-01", video: "False", place: { name: "Paris", lat: 48.85, lng: 2.35 } }] };
+  await page.locator("input[type=file]").first().setInputFiles({ name: "data.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(lib)) });
+  await expect(page.getByRole("link", { name: /Setup tips/ })).toBeVisible();
+  await expect(page.getByText("🧰 Claude Code ↗")).toBeVisible();
+  await page.getByPlaceholder(/Search a tool/).fill("rooftop");
+  await expect(page.getByRole("link", { name: /Setup tips/ })).toHaveCount(0);
+  await expect(page.getByText("Rooftop bar")).toBeVisible();
+});
+
+test("search: groups and animation filters", async ({ page }) => {
+  await open(page, "/discover/?d=films");
+  await page.getByRole("button", { name: "Nolan", exact: true }).click();
+  await expect(page.locator("main img[alt='Interstellar'], main img[alt='Inception']").first()).toBeVisible();
+  await page.getByRole("button", { name: "Nolan", exact: true }).click();
+  await page.getByRole("button", { name: "Animation only" }).click();
+  await expect(page.locator("main article").first()).toBeVisible();
+});

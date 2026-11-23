@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useMemo, useState } from "react";
 import type { FilmData } from "@/lib/data";
 import { activeFilters, DECADES, type SwipeFilters } from "@/lib/engine/swipeFilter";
+import { GROUPS } from "@/lib/groups";
 import { useT } from "@/lib/i18n";
 import { setSettings, useStore } from "@/lib/store";
 
@@ -64,6 +65,15 @@ export default function SwipeFiltersBar({ d }: { d: FilmData }) {
                 <Chip on={!f.kind} onClick={() => set({ kind: undefined })}>{T("All")}</Chip>
                 <Chip on={f.kind === "movie"} onClick={() => set({ kind: "movie" })}>{T("Films")}</Chip>
                 <Chip on={f.kind === "tv"} onClick={() => set({ kind: "tv" })}>{T("Series")}</Chip>
+              </Row>
+              <Row label={T("Animation")}>
+                {([[undefined, "Show all"], ["no-anime", "No anime / manga"], ["none", "No animation"], ["only", "Animation only"]] as [SwipeFilters["animation"], string][]).map(([v, l]) => (
+                  <Chip key={String(v)} on={f.animation === v} onClick={() => set({ animation: v })}>{T(l)}</Chip>
+                ))}
+              </Row>
+              <Row label={T("Groups")}>
+                <Chip on={!f.group} onClick={() => set({ group: undefined })}>{T("Any")}</Chip>
+                {GROUPS.map((g) => <Chip key={g.id} on={f.group === g.id} onClick={() => set({ group: f.group === g.id ? undefined : g.id })}>{T(g.label)}</Chip>)}
               </Row>
               <Row label={T("Decades")}>
                 {DECADES.map((y) => (

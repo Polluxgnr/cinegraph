@@ -10,8 +10,10 @@ const CONNECT = [
   "https://api.spotify.com", "https://accounts.spotify.com", // Spotify (your app)
   "https://www.googleapis.com", "https://accounts.google.com", // YouTube (your OAuth client)
   "https://query.wikidata.org", "https://*.wikipedia.org", // scores, spots, summaries
+  "https://site.api.espn.com", // sports: results, fixtures, tables, news, injuries
   "https://noembed.com", "https://api.microlink.io", "https://api.rss2json.com", // link previews, Pinterest RSS
   "https://api.anthropic.com", // optional AI
+  "http://127.0.0.1:8765", "http://localhost:8765", // Agora, your review reader, when it runs on your PC
 ];
 
 export const CSP = [

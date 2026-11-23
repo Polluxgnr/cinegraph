@@ -66,6 +66,8 @@ export function itemFacts(e: { domain: string; item?: { meta?: Record<string, un
   if (num(m.views)) out.push(`${compact(num(m.views))} views`);
   if (num(m.likes)) out.push(`${compact(num(m.likes))} 👍`);
   if (num(m.comments)) out.push(`${compact(num(m.comments))} 💬`);
+  if (typeof m.engine === "string") out.push(m.engine.replace(/ (petrol|diesel)$/i, ""));
+  if (num(m.hp)) out.push(`${num(m.hp)} hp`);
   if (num(m.price)) {
     const p = fmtPrice(num(m.price), m.price_approx === true);
     out.push(m.kind === "brand" ? `pieces around ${p}` : m.price_kind === "from" ? `from ${p}` : m.price_kind === "market" ? `${p} (market)` : m.price_kind === "new" ? `${p} new` : p);

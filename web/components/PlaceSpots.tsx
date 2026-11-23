@@ -10,6 +10,11 @@ import { addCustom, recordFeedback, removeCustom, toggleTripSpot, useStore } fro
 import { coordOf, fetchSpots, GROUP_COLOR, radiusOf, rankSpots, type Spot } from "@/lib/spots";
 import type { Entity } from "@/lib/types";
 
+const GROUP_ICON: Record<string, string> = {
+  "Museums & art": "🏛️", "Sacred places": "🕌", "Nature & views": "🌿", "Landmarks & history": "🏰",
+  "Food, markets & nights": "🍽️", "Culture & shows": "🎭", "Filming locations": "🎬", "Other places": "📍",
+};
+
 const SpotMap = dynamic(() => import("@/components/SpotMap"), { ssr: false, loading: () => <div className="h-80 animate-pulse rounded-2xl bg-panel" /> });
 
 /**
@@ -99,8 +104,14 @@ export default function PlaceSpots({ e }: { e: Entity }) {
             <motion.article id={`spot-${s.q}`} key={s.q} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.03 }}
                             className={`card group flex flex-col overflow-hidden ${s.film ? "border-accent" : ""} ${focus === s.q ? "ring-2 ring-accent" : ""}`}>
               <a href={`https://www.wikidata.org/wiki/${s.q}`} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] shrink-0 overflow-hidden bg-panel-2">
+                {/* under the photo: a tinted card with the kind of place, shown when Commons has no photo (or it fails) */}
+                <span aria-hidden className="absolute inset-0 grid place-items-center"
+                      style={{ background: `radial-gradient(circle at 30% 20%, ${GROUP_COLOR[s.group] ?? "#a1a1aa"}55, transparent 60%), linear-gradient(160deg, var(--panel-2), var(--panel))` }}>
+                  <span className="text-4xl opacity-70">{GROUP_ICON[s.group] ?? "📍"}</span>
+                </span>
                 {/* eslint-disable-next-line @next/next/no-img-element -- Wikimedia Commons */}
-                {s.img && <img src={s.img} alt={s.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
+                {s.img && <img src={s.img} alt={s.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                               onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = "none"; }} />}
                 <span className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-black/60" style={{ background: GROUP_COLOR[s.group] }} />
                 {s.film && <span className="absolute bottom-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] text-accent">🎬 {s.film}</span>}
               </a>

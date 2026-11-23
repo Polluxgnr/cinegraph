@@ -109,6 +109,8 @@ export interface Settings {
   blocked: string[]; // which hard filters are on
   swipeFilters?: import("./engine/swipeFilter").SwipeFilters; // films & series deck filters
   following?: Record<string, 1 | -1>; // actors & directors you follow (1) or avoid (-1), by name
+  sportsTeams?: string[]; // teams and players you follow in Sports
+  agoraUrl?: string; // your local Agora (multi-platform review reader), default http://127.0.0.1:8765
   tasteAt?: number; // last change to the settings that follow you across devices (following, swipeFilters)
 }
 
@@ -152,6 +154,8 @@ export interface State {
   custom: CustomItem[];
   /** what each import found, for the Import page (counts, followed channels, playlists...) */
   imports: Record<string, { at: number; summary: string; channels?: { name: string; url?: string; count: number }[] }>;
+  /** Your analysed Instagram saves (insta-saved library: categories, summaries, tools), imported as a file. */
+  saves?: import("./saves").SavesLibrary;
   learned: Learned;
   settings: Settings;
   /** trips you're planning: spots per day, like a travel journal */
@@ -548,7 +552,7 @@ export function setList(key: string, domain: string, status: ListEntry["status"]
 }
 
 /** Settings that are part of your taste and sync across devices; everything else stays with the device. */
-export const SYNCED_SETTINGS = ["following", "swipeFilters"] as const;
+export const SYNCED_SETTINGS = ["following", "swipeFilters", "sportsTeams"] as const;
 
 export function setSettings(patch: Partial<Settings>) {
   update((s) => {

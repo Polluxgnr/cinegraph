@@ -22,7 +22,8 @@ import { useFilmDetails } from "@/lib/useFilmDetails";
 import FilmSources from "@/components/FilmSources";
 import CastStrip from "@/components/CastStrip";
 import Poster3D from "@/components/Poster3D";
-import { cuisineOf, dietOf, mainsOf, variations } from "@/lib/facets";
+import AskPeople from "@/components/AskPeople";
+import { carSpecs, cuisineOf, dietOf, mainsOf, variations } from "@/lib/facets";
 import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
 import { trailerSearch } from "@/components/MediaPreview";
@@ -46,7 +47,7 @@ export default function ItemPage() {
   if (!d) return <div className="card h-96 animate-pulse" />;
   const row = d.index.get(k);
   if (row == null) return <p className="card p-4">{T("Not found in the catalogue.")}</p>;
-  return <Detail d={d} row={row} />;
+  return <Detail key={k} d={d} row={row} />;
 }
 
 function Detail({ d, row }: { d: DomainData; row: number }) {
@@ -135,8 +136,17 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
       {e.domain === "places" && <PlaceSpots e={e} />}
       {e.domain === "brands" && <BrandPieces d={d} e={e} />}
       {f && <Saga d={d as FilmData} row={row} />}
+      {carSpecs(e).length > 0 && (
+        <section className="card grid gap-x-8 gap-y-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          {carSpecs(e).map(([k, v]) => (
+            <div key={k}><p className="text-[11px] uppercase tracking-[0.14em] text-muted">{T(k)}</p><p className="font-display text-xl">{v}</p></div>
+          ))}
+          <p className="text-[11px] text-muted sm:col-span-2 lg:col-span-4">{T("Approximate figures from the manufacturer, rounded (config/car_specs.yaml).")}</p>
+        </section>
+      )}
       {recipeBadges.length > 0 && <div className="flex flex-wrap gap-1.5">{recipeBadges.map((b) => <span key={b} className="chip text-xs">{T(b)}</span>)}</div>}
       {variants.length > 0 && <Row title={T("Variations")} hint={T("Other takes on the same dish, and recipes sharing most of its ingredients")}>{variants.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
+      <AskPeople key={e.key} suggestions={askFor(e, T)} />
       {similar.length > 0 && <Row title={T("Similar")}>{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
     </div>
   );
@@ -324,4 +334,18 @@ function SeriesTracker({ k, seasons }: { k: string; seasons: number }) {
       {seasons > 0 && <Progress className="w-full" value={Math.min(1, (season - 1) / seasons)} label={`${season - 1} of ${seasons} seasons done`} />}
     </div>
   );
+}
+
+/** Questions worth asking real people about this, by space. */
+function askFor(e: Entity, T: (s: string, v?: Record<string, string | number>) => string): string[] {
+  const t = e.title;
+  switch (e.domain) {
+    case "films": return [T("Is {t} worth watching? (no spoilers)", { t }), T("What fans loved and hated about {t}", { t }), T("Films like {t} people recommend", { t })];
+    case "places": return [T("Best hidden spots in {t} according to locals", { t }), T("Where locals eat in {t}", { t }), T("Tourist traps to avoid in {t}", { t })];
+    case "brands": return [T("{t} sizing and quality: what buyers say", { t }), T("Is {t} worth the price?", { t })];
+    case "cars": return [T("{t}: reliability and running costs from owners", { t }), T("What owners love and regret about the {t}", { t })];
+    case "recipes": return [T("Tips to nail {t}", { t }), T("Best variations of {t}", { t })];
+    case "music": return [T("Where to start with {t}", { t }), T("Best {t} live performances", { t })];
+    default: return [T("What people think of {t}", { t })];
+  }
 }

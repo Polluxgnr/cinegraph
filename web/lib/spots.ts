@@ -22,7 +22,7 @@ export const GROUPS: [string, RegExp, string][] = [
 export const GROUP_COLOR = Object.fromEntries([...GROUPS.map(([n, , c]) => [n, c]), ["Other places", "#a1a1aa"], ["Filming locations", "#f97316"]]) as Record<string, string>;
 /** Infrastructure and events aren't spots to visit. */
 const NOT_A_SPOT = /\b(university|college|school|metro|subway|railway|railway station|train station|station|line|airport|hospital|company|business|road|highway|tram|bus|rapid transit|transit|event|attack|arson|murder|massacre|disaster|incident|fire|earthquake|battle|war|siege|election|treaty|organization|organisation|intergovernmental|newspaper|magazine|broadcaster|broadcasting|television network|television channel|radio station|club|sports team|team|olympic games|games|multi-sport event|federation|association|political party|record label|publisher|musical group|band|brand|enterprise|conglomerate|borough|london borough|legislative|lower house|upper house|parliamentary chamber|contest|world's fair|exposition|edition|meridian)\b/i;
-const ABSTRACT = /\b(country|empire|state|city|comune|capital|region|province|civilization|period|metropolitan|municipality|diocese|archdiocese|commune|county|prefecture|ward|district of|historical country|polity|sovereign)\b/i;
+const ABSTRACT = /\b(country|empire|state|city|comune|capital|region|province|civilization|period|metropolitan|municipality|diocese|archdiocese|commune|county|prefecture|ward|district of|historical country|polity|sovereign|vilayet|eyalet|sanjak|pashalik|beylik|kaza|conquest|campaign|treaty|historical region|historical province)\b/i;
 
 const groupOf = (type?: string, desc?: string) =>
   GROUPS.find(([, re]) => re.test(type ?? ""))?.[0] ?? GROUPS.find(([, re]) => re.test(desc ?? ""))?.[0] ?? "Other places";

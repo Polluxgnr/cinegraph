@@ -36,6 +36,8 @@ export const spaceTabs = (space: string): NavLink[] => [...MAIN, ...moreTabs(spa
 
 const GLOBAL = [
   { href: "/together/", label: "Pick together", icon: "M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20a6 6 0 0112 0M10 20a6 6 0 0112 0" },
+  { href: "/sports/", label: "Sports", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18M3 12h18M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8" },
+  { href: "/saves/", label: "Instagram saves", icon: "M5 3h14a1 1 0 011 1v17l-8-4-8 4V4a1 1 0 011-1z" },
   { href: "/vault/", label: "Second brain", icon: "M9 3a3 3 0 00-3 3v.5A3.5 3.5 0 004 13a3 3 0 002 5.2V18a3 3 0 006 0V5a2 2 0 00-3-2zm6 0a3 3 0 013 3v.5a3.5 3.5 0 012 6.5 3 3 0 01-2 5.2V18a3 3 0 01-6 0" },
   { href: "/import/", label: "Import & connect", icon: "M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" },
   { href: "/settings/", label: "Settings", icon: "M12 15a3 3 0 100-6 3 3 0 000 6zm7.4-3a7.4 7.4 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 00-2-1.2L14.5 3h-5l-.4 2.6a7.5 7.5 0 00-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 000 2.4l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 002 1.2l.4 2.6h5l.4-2.6a7.5 7.5 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" },

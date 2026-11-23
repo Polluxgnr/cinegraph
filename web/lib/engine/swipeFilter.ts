@@ -4,6 +4,8 @@
  */
 import { crowdRating } from "../text";
 import type { Entity } from "../types";
+import type { FilmData } from "../data";
+import { groupTest, isAnimation, isAnime } from "../groups";
 import { platformOf } from "../watch";
 
 export interface SwipeFilters {
@@ -14,22 +16,29 @@ export interface SwipeFilters {
   lang?: "en" | "fr" | "other";
   genres?: string[]; // any of these
   mine?: boolean; // on my streaming services (or free)
+  animation?: "no-anime" | "none" | "only"; // hide anime, hide all animation, or animation only
+  group?: string; // a studio / auteur group or "new" (lib/groups.ts)
 }
 
 export const DECADES = [1970, 1980, 1990, 2000, 2010, 2020];
 
 export function activeFilters(f?: SwipeFilters): number {
   if (!f) return 0;
-  return [f.kind, f.decades?.length, f.maxRt, f.minRating, f.lang, f.genres?.length, f.mine].filter(Boolean).length;
+  return [f.kind, f.decades?.length, f.maxRt, f.minRating, f.lang, f.genres?.length, f.mine, f.animation, f.group].filter(Boolean).length;
 }
 
 /** A predicate for the deck, or undefined when nothing is filtered. Non-film entities always pass. */
-export function swipeMatcher(f: SwipeFilters | undefined, platforms: string[]): ((e: Entity) => boolean) | undefined {
+export function swipeMatcher(f: SwipeFilters | undefined, platforms: string[], d?: FilmData): ((e: Entity) => boolean) | undefined {
   if (!activeFilters(f)) return undefined;
   const F = f!;
+  const inGroup = F.group && d ? groupTest(d, F.group) : undefined;
   return (e) => {
     const x = e.film;
     if (!x) return true;
+    if (F.animation === "none" && isAnimation(x)) return false;
+    if (F.animation === "no-anime" && isAnime(x)) return false;
+    if (F.animation === "only" && !isAnimation(x)) return false;
+    if (inGroup && !inGroup(x)) return false;
     if (F.kind && x.k !== F.kind) return false;
     if (F.decades?.length) {
       if (!x.y) return false;
