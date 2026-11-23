@@ -212,3 +212,17 @@ test("search: groups and animation filters", async ({ page }) => {
   await page.getByRole("button", { name: "Animation only" }).click();
   await expect(page.locator("main article").first()).toBeVisible();
 });
+
+test("style: save a piece from a shop link", async ({ page }) => {
+  await page.route("https://api.microlink.io/**", (r) => r.fulfill({ json: { status: "success", data: {
+    title: "Scuffers - Zip Hoodie Black | Scuffers", description: "Heavy cotton", image: { url: "https://cdn.example/hoodie.jpg" }, publisher: "Scuffers", price: "89.00", currency: "EUR" } } }));
+  await page.route("https://cdn.example/**", (r) => r.fulfill({ status: 200, contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg'/>" }));
+  await open(page, "/discover/?d=brands");
+  const form = page.getByTestId("piece-from-link");
+  await form.getByPlaceholder(/Paste a product link/).fill("https://scuffers.com/products/zip-hoodie");
+  await form.getByRole("button", { name: "Read" }).click();
+  await expect(form.getByLabel("Piece")).toHaveValue("Zip Hoodie Black");
+  await expect(form.getByLabel("Price (€)")).toHaveValue("89");
+  await form.getByRole("button", { name: "+ Save to my style" }).click();
+  await expect(form.getByText(/Scuffers Zip Hoodie Black saved to your list/)).toBeVisible();
+});

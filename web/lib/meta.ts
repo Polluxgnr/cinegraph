@@ -46,3 +46,34 @@ export function guessSpace(url: string): string | null {
   if (/porsche|ferrari|bmw|mercedes|renault|peugeot|tesla|autoplus|caradisiac|carwow/.test(u)) return "cars";
   return null;
 }
+
+export interface PieceMeta extends LinkMeta { price?: number; currency?: string }
+
+/**
+ * A product page's preview plus its price, when the shop publishes one in its page metadata
+ * (Open Graph product:price, or schema.org Product). Only for links you paste.
+ */
+export async function pieceMeta(url: string): Promise<PieceMeta> {
+  const rules: [string, string, string][] = [
+    ["price", 'meta[property="product:price:amount"],meta[property="og:price:amount"],meta[itemprop="price"]', "content"],
+    ["currency", 'meta[property="product:price:currency"],meta[property="og:price:currency"],meta[itemprop="priceCurrency"]', "content"],
+  ];
+  const q = new URLSearchParams({ url });
+  for (const [k, sel, attr] of rules) {
+    q.set(`data.${k}.selector`, sel);
+    q.set(`data.${k}.attr`, attr);
+  }
+  try {
+    const r = await fetch(`https://api.microlink.io/?${q}`, { signal: AbortSignal.timeout(20_000) });
+    const j = await r.json();
+    if (j.status === "success") {
+      const d = j.data;
+      const price = Number(String(d.price ?? "").replace(",", ".").replace(/[^\d.]/g, ""));
+      const img = d.image?.url && !/\.svg($|\?)/i.test(d.image.url) ? d.image.url : undefined;
+      return { title: d.title, description: d.description, image: img, provider: d.publisher, price: price > 0 ? price : undefined, currency: d.currency || undefined };
+    }
+  } catch {
+    /* no preview: the form stays editable */
+  }
+  return {};
+}

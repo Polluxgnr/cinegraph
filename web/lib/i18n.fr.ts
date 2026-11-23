@@ -1,6 +1,21 @@
 // French interface. Keys are the English strings used in the code (see lib/i18n.ts); `node scripts/i18n-keys.mjs`
 // lists any string still missing. Proper names (TMDB, Spotify, Netflix…) are left as they are.
 export const FR: Record<string, string> = {
+ "Save a piece from any shop": "Enregistrer une pièce de n'importe quelle boutique",
+ "Save a {b} piece from its link": "Enregistrer une pièce {b} depuis son lien",
+ "Paste a product link (any shop)": "Collez le lien d'un produit (n'importe quelle boutique)",
+ "Read": "Lire",
+ "Piece": "Pièce",
+ "Brand": "Marque",
+ "Category": "Catégorie",
+ "Price": "Prix",
+ "optional": "facultatif",
+ "+ Save to my style": "+ Ajouter à mon style",
+ "Already saved": "Déjà enregistrée",
+ "{t} saved to your list": "{t} ajoutée à votre liste",
+ "This shop doesn't share a preview: type the name and price yourself.": "Cette boutique ne partage pas d'aperçu : saisissez le nom et le prix vous-même.",
+ "No link? Add a": "Pas de lien ? Ajoutez une pièce",
+ "piece by hand": "à la main",
  "2 seats +": "2 places +",
  "{n} seats +": "{n} places +",
  "Agora reads Reddit, YouTube comments, Google Maps reviews, TikTok, Instagram and forums, and writes a cited answer. It runs on your PC: start it, then come back.": "Agora lit Reddit, les commentaires YouTube, les avis Google Maps, TikTok, Instagram et les forums, et écrit une réponse sourcée. Il tourne sur votre PC : lancez-le, puis revenez.",

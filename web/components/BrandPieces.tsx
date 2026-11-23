@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import EntityImage from "@/components/EntityImage";
+import PieceFromLink from "@/components/PieceFromLink";
 import { detailHref } from "@/components/RecCard";
 import type { DomainData } from "@/lib/data";
 import { addCustom, recordFeedback } from "@/lib/store";
@@ -91,6 +92,7 @@ export default function BrandPieces({ d, e }: { d: DomainData; e: Entity }) {
         </div>
       </section>
 
+      <PieceFromLink d={d} brand={brand} />
       <AddPiece brand={brand} />
     </div>
   );
@@ -105,7 +107,7 @@ function AddPiece({ brand }: { brand: string }) {
   const [done, setDone] = useState<string | null>(null);
   return (
     <section className="card space-y-3 p-4">
-      <h2 className="font-display text-xl">{T("Add a")}{" "}{brand} {T("piece you want")}</h2>
+      <h2 className="font-display text-xl">{T("No link? Add a")}{" "}{brand} {T("piece by hand")}</h2>
       <form className="grid gap-2 sm:grid-cols-[1fr_auto_7rem]" onSubmit={(ev) => {
         ev.preventDefault();
         if (!name.trim()) return;

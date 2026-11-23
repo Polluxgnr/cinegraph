@@ -1,5 +1,6 @@
 "use client";
 
+import PieceFromLink from "@/components/PieceFromLink";
 import { useT } from "@/lib/i18n";
 
 import { motion } from "motion/react";
@@ -51,6 +52,7 @@ export default function Home() {
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
       {space === "music" && <ExtraRow d={d} name="releases" title={T("New releases")} hint="out in the last weeks, artists you like first" />}
+      {space === "brands" && <PieceFromLink d={d} />}
       {space === "brands" && <Pieces d={d} />}
       <Mine d={d} />
     </div>

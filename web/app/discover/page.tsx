@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import RecCard from "@/components/RecCard";
 import WebLookup from "@/components/WebLookup";
 import PeopleRow from "@/components/PeopleRow";
+import PieceFromLink from "@/components/PieceFromLink";
 import { GROUPS, groupTest, isAnimation, isAnime, subgenres } from "@/lib/groups";
 import { cuisineOf, dietOf, type Diet, driveOf, engineOf, ENGINES, hpOf, ingredientText, MAINS, mainsOf, POWER, seatsOf, VIDEO_THEMES, videoScore, videoThemes } from "@/lib/facets";
 import type { FilmData } from "@/lib/data";
@@ -227,6 +228,7 @@ export default function Discover() {
           <input type="checkbox" checked={showAnswered} onChange={(e) => setShowAnswered(e.target.checked)} /> {T("include things I already answered")}</label>
       </div>
       {domain === "brands" && words.length > 0 && recs && recs.length < 6 && <WebLookup key={q.trim()} query={q.trim()} />}
+      {domain === "brands" && !words.length && <PieceFromLink d={d} />}
       <div key={key + sort} className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {recs ? sorted.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>
