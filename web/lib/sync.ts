@@ -16,9 +16,30 @@ function headers(token: string) {
 
 /** Device settings from `local`; the taste settings (follows, swipe filters) from whichever side changed them last. */
 export function mergeSettings(local: Settings, remote?: Settings): Settings {
-  if (!remote || (remote.tasteAt ?? 0) <= (local.tasteAt ?? 0)) return local;
-  const out: Settings = { ...local, tasteAt: remote.tasteAt };
-  for (const k of SYNCED_SETTINGS) (out as unknown as Record<string, unknown>)[k] = remote[k];
+  if (!remote) return local;
+  const remoteNewer = (remote.tasteAt ?? 0) > (local.tasteAt ?? 0);
+  const out: Settings = { ...local };
+  if (remoteNewer) {
+    out.tasteAt = remote.tasteAt;
+    for (const k of SYNCED_SETTINGS) (out as unknown as Record<string, unknown>)[k] = remote[k];
+  }
+  // follows merge per person, whichever device changed last: the later change wins for each name, so following
+  // someone on the phone and someone else on the laptop keeps both (a removal keeps its date and wins if later)
+  const la = local.followAt ?? {}, ra = remote.followAt ?? {};
+  const following: Record<string, 1 | -1> = {};
+  const followAt: Record<string, number> = {};
+  const names = new Set([...Object.keys(la), ...Object.keys(ra), ...Object.keys(local.following ?? {}), ...Object.keys(remote.following ?? {})]);
+  for (const n of names) {
+    const lt = la[n], rt = ra[n];
+    // dated changes win over undated ones; without dates, the side whose taste settings changed last
+    const useRemote = rt != null && lt != null ? rt > lt : rt != null ? true : lt != null ? false : remoteNewer ? n in (remote.following ?? {}) : !(n in (local.following ?? {}));
+    const v = (useRemote ? remote : local).following?.[n];
+    if (v) following[n] = v;
+    const at = Math.max(lt ?? 0, rt ?? 0);
+    if (at) followAt[n] = at;
+  }
+  out.following = following;
+  out.followAt = followAt;
   return out;
 }
 

@@ -23,16 +23,17 @@ export default function PersonPage() {
   if (!isFilmData(data)) return null;
   // the index changes when the catalogue is rebuilt: trust the name when they disagree
   let idx = p != null ? Number(p) : undefined;
-  if (n && (idx == null || data.people[idx] !== n)) idx = personIndex(data, n);
-  if (idx == null || !data.people[idx]) return <p className="card p-4">{T("Not found in the catalogue.")}</p>;
-  return <Person key={idx} d={data} idx={idx} />;
+  // people beyond the first list (deeper cast) have no name there: the link's name stands in
+  if (n && (idx == null || (data.people[idx] != null && data.people[idx] !== n))) idx = personIndex(data, n) ?? (data.people[idx ?? -1] == null ? idx : undefined);
+  const name = idx != null ? data.people[idx] ?? n : undefined;
+  if (idx == null || !name) return <p className="card p-4">{T("Not found in the catalogue.")}</p>;
+  return <Person key={idx} d={data} idx={idx} name={name} />;
 }
 
 type Sort = "match" | "newest" | "rating";
 
-function Person({ d, idx }: { d: FilmData; idx: number }) {
+function Person({ d, idx, name }: { d: FilmData; idx: number; name: string }) {
   const T = useT();
-  const name = d.people[idx];
   const [meta, setMeta] = useState<PersonMeta>({});
   const [bio, setBio] = useState<Bio | null | undefined>(undefined);
   const [works, setWorks] = useState<Work[] | null>(null);
@@ -71,7 +72,7 @@ function Person({ d, idx }: { d: FilmData; idx: number }) {
     const cur = { ...(getState().settings.following ?? {}) };
     if (v == null) delete cur[name];
     else cur[name] = v;
-    setSettings({ following: cur });
+    setSettings({ following: cur, followAt: { ...(getState().settings.followAt ?? {}), [name]: Date.now() } });
   };
 
   const others = (works ?? [])

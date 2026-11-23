@@ -144,6 +144,12 @@ export async function filmDetails(f: Film): Promise<Film> {
   if (!detailShards.has(n)) detailShards.set(n, json<Record<string, Partial<Film>>>(`/data/films/details/${n}.json`).catch(() => ({})));
   const d = (await detailShards.get(n)!)[String(f.id)] ?? {};
   Object.assign(f, d, { full: true });
+  // link ids that only the title page needs (IMDb, AlloCiné, Letterboxd…) arrive with the details
+  const xl = (d as { xl?: Film["x"] }).xl;
+  if (xl) {
+    f.x = { ...f.x, ...xl };
+    f.links = filmLinks(f);
+  }
   if (d.jw && f.links) f.links.justwatch = d.jw;
   return f;
 }
@@ -172,7 +178,8 @@ export function itemEntity(domain: string, it: Item): Entity {
   return {
     key: it.id.includes(":") ? it.id : `${domain}:${it.id}`,
     domain,
-    title: it.title,
+    // places carry their French name (London -> Londres) for the French interface
+    title: currentLang() === "fr" && typeof it.meta?.fr === "string" ? it.meta.fr : it.title,
     subtitle: it.subtitle ?? "",
     image: it.image,
     date: it.date,

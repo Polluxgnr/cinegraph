@@ -118,10 +118,25 @@ describe("taste settings travel, device settings don't", () => {
     const local = { space: "films", platforms: [], lang: "fr", hideBlocked: true, blocked: [], theme: "light", following: { "Denis Villeneuve": 1 }, tasteAt: 100 } as never;
     const remote = { space: "music", platforms: [], lang: "fr", hideBlocked: true, blocked: [], theme: "dark", following: { "Greta Gerwig": 1 }, swipeFilters: { kind: "tv" }, tasteAt: 200 } as never;
     const m = mergeSettings(local, remote) as unknown as Record<string, unknown>;
-    expect(m.following).toEqual({ "Greta Gerwig": 1 });
+    expect(m.following).toEqual({ "Greta Gerwig": 1, "Denis Villeneuve": 1 }); // nobody's follow is dropped
     expect(m.swipeFilters).toEqual({ kind: "tv" });
     expect(m.theme).toBe("light"); // device setting stays
     expect(m.space).toBe("films");
-    expect(mergeSettings(remote, local)).toBe(remote); // older remote changes nothing
+    const old = mergeSettings(remote, local) as unknown as Record<string, unknown>;
+    expect(old.swipeFilters).toEqual({ kind: "tv" }); // an older remote doesn't override newer filters
+    expect(old.theme).toBe("dark");
+  });
+});
+
+describe("follows merge per person", () => {
+  it("keeps follows made on both devices, and a later unfollow", async () => {
+    const { mergeSettings } = await import("./sync");
+    const base = { space: "films", platforms: [], lang: "fr", hideBlocked: true, blocked: [] };
+    const phone = { ...base, tasteAt: 300, following: { "Greta Gerwig": 1 }, followAt: { "Greta Gerwig": 300, "Denis Villeneuve": 250 } } as never;
+    const laptop = { ...base, tasteAt: 200, following: { "Denis Villeneuve": 1, "Wes Anderson": 1 }, followAt: { "Denis Villeneuve": 200, "Wes Anderson": 200 } } as never;
+    const m = mergeSettings(laptop, phone) as unknown as { following: Record<string, number> };
+    expect(m.following).toEqual({ "Greta Gerwig": 1, "Wes Anderson": 1 }); // Villeneuve unfollowed later on the phone
+    const back = mergeSettings(phone, laptop) as unknown as { following: Record<string, number> };
+    expect(back.following).toEqual({ "Greta Gerwig": 1, "Wes Anderson": 1 });
   });
 });

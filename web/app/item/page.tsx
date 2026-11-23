@@ -1,6 +1,6 @@
 "use client";
 
-import { filmOverview, useT } from "@/lib/i18n";
+import { filmOverview, useT, itemDescription } from "@/lib/i18n";
 
 import Link from "next/link";
 import { useMemo } from "react";
@@ -247,7 +247,7 @@ function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
         </div>
       )}
       <div className="flex flex-wrap gap-1.5">{(it.tags ?? []).slice(0, 8).map((t) => <span key={t} className="chip">{t}</span>)}</div>
-      {typeof meta.description === "string" && <p className="text-ink/90">{meta.description}</p>}
+      {itemDescription(meta) && <p className="text-ink/90">{itemDescription(meta)}</p>}
       {Array.isArray(meta.ingredients) && (
         <div className="grid gap-4 md:grid-cols-[220px_1fr]">
           <ul className="space-y-1 text-sm">{(meta.ingredients as string[]).map((x) => <li key={x}>• {x}</li>)}</ul>

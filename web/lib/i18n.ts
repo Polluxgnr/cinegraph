@@ -55,3 +55,10 @@ export function filmOverview(f: { ov?: string; ovf?: string }, lang: Lang = curr
 export function filmTitle(f: { t: string; tf?: string }, lang: Lang = currentLang()): string {
   return lang === "fr" && f.tf ? f.tf : f.t;
 }
+
+/** An item's description in the interface language (places carry a French one from Wikidata). */
+export function itemDescription(meta: Record<string, unknown> | undefined, lang: Lang = currentLang()): string | undefined {
+  const fr = meta?.description_fr;
+  const d = lang === "fr" && typeof fr === "string" ? fr : meta?.description;
+  return typeof d === "string" ? d : undefined;
+}

@@ -109,6 +109,7 @@ export interface Settings {
   blocked: string[]; // which hard filters are on
   swipeFilters?: import("./engine/swipeFilter").SwipeFilters; // films & series deck filters
   following?: Record<string, 1 | -1>; // actors & directors you follow (1) or avoid (-1), by name
+  followAt?: Record<string, number>; // when each follow changed (sync merges per person; a removal keeps its date)
   sportsTeams?: string[]; // teams and players you follow in Sports
   agoraUrl?: string; // your local Agora (multi-platform review reader), default http://127.0.0.1:8765
   tasteAt?: number; // last change to the settings that follow you across devices (following, swipeFilters)

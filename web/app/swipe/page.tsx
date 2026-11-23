@@ -1,6 +1,6 @@
 "use client";
 
-import { filmOverview, useT } from "@/lib/i18n";
+import { filmOverview, useT, itemDescription } from "@/lib/i18n";
 
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import Link from "next/link";
@@ -233,7 +233,7 @@ function CardMeta({ d, card }: { d: DomainData; card: Card }) {
       <p className="text-[11px] uppercase tracking-[0.18em] text-white/60">{e.subtitle}</p>
       <h2 className="font-display text-2xl leading-tight text-white md:text-3xl">{e.title}</h2>
       <div className="mt-1"><Match p={card.rec.p} film={card.rec.entity.film} /></div>
-      <p className="mt-1 line-clamp-3 text-[13px] text-white/75">{String(e.item?.meta?.description ?? e.tags.slice(0, 5).join(" · "))}</p>
+      <p className="mt-1 line-clamp-3 text-[13px] text-white/75">{itemDescription(e.item?.meta) ?? e.tags.slice(0, 5).join(" · ")}</p>
     </>
   );
 }

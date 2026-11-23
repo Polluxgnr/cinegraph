@@ -1,6 +1,19 @@
 // French interface. Keys are the English strings used in the code (see lib/i18n.ts); `node scripts/i18n-keys.mjs`
 // lists any string still missing. Proper names (TMDB, Spotify, Netflix…) are left as they are.
 export const FR: Record<string, string> = {
+ "New releases for you": "Nouveautés pour vous",
+ "Out in the last four months": "Sortis ces quatre derniers mois",
+ "Because you follow {name}": "Parce que vous suivez {name}",
+ "How well it knows you": "À quel point il vous connaît",
+ "One in five of the films you liked is hidden, your model is rebuilt from everything else in the order you answered, and we look for the hidden ones among your top 50 recommendations.": "Un film aimé sur cinq est caché, votre modèle est reconstruit avec tout le reste dans l'ordre de vos réponses, et on cherche les films cachés parmi vos 50 premières recommandations.",
+ "Measure": "Mesurer",
+ "Measure again": "Mesurer à nouveau",
+ "Measuring…": "Mesure en cours…",
+ "Like at least 15 films first: there's nothing to hide yet.": "Aimez d'abord au moins 15 films : il n'y a encore rien à cacher.",
+ "hidden favourites came back in your top 50": "favoris cachés sont revenus dans votre top 50",
+ "at least one in the top 10": "au moins un dans le top 10",
+ "Found": "Retrouvés",
+ "Random picks would find about {n} of them.": "Un tirage au hasard en retrouverait environ {n}.",
  "Save a piece from any shop": "Enregistrer une pièce de n'importe quelle boutique",
  "Save a {b} piece from its link": "Enregistrer une pièce {b} depuis son lien",
  "Paste a product link (any shop)": "Collez le lien d'un produit (n'importe quelle boutique)",

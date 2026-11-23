@@ -226,3 +226,10 @@ test("style: save a piece from a shop link", async ({ page }) => {
   await form.getByRole("button", { name: "+ Save to my style" }).click();
   await expect(form.getByText(/Scuffers Zip Hoodie Black saved to your list/)).toBeVisible();
 });
+
+test("taste page: measuring your own accuracy needs enough answers", async ({ page }) => {
+  await open(page, "/me/");
+  const panel = page.getByTestId("my-score");
+  await panel.getByRole("button", { name: "Measure" }).click();
+  await expect(panel.getByText(/Like at least 15 films first/)).toBeVisible();
+});

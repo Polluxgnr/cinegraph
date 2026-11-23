@@ -22,6 +22,8 @@ import { recommend } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { getState, isDone, useLoaded, useStore } from "@/lib/store";
 import { useRecs } from "@/lib/useRecs";
+import { groupTest } from "@/lib/groups";
+import { careerInCatalog, personHref, personIndex } from "@/lib/people";
 
 const HERO: Record<string, { title: string; sub: string }> = {
   films: { title: "What are we watching", sub: "Films & series picked for you, with the reason why." },
@@ -117,10 +119,37 @@ function FilmHome({ d }: { d: FilmData }) {
       {recs && recs.length > 1 && (
         <Row title={T("For you")} href="/discover/">{recs.slice(1).map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>
       )}
+      <NewForYou d={d} />
       <TonightPanel compact />
+      <FollowedRows d={d} />
       <BecauseYouLiked d={d} />
     </div>
   );
+}
+
+/** Out in the last four months, ranked for you. */
+function NewForYou({ d }: { d: FilmData }) {
+  const T = useT();
+  const isNew = useMemo(() => groupTest(d, "new"), [d]);
+  const recs = useRecs(d, { n: 14, explore: 0, includeListed: true, filter: (e) => !!e.film && isNew(e.film) }, "films-new");
+  if (!recs?.length) return null;
+  return <Row title={T("New releases for you")} hint={T("Out in the last four months")} href="/discover/">{recs.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>;
+}
+
+/** One row per actor or director you follow: their titles you haven't answered, best match first. */
+function FollowedRows({ d }: { d: FilmData }) {
+  const T = useT();
+  const following = useStore((s) => s.settings.following ?? {});
+  const names = Object.entries(following).filter(([, v]) => v === 1).map(([n]) => n).slice(0, 4);
+  return <>{names.map((n) => <FollowedRow key={n} d={d} name={n} T={T} />)}</>;
+}
+
+function FollowedRow({ d, name, T }: { d: FilmData; name: string; T: ReturnType<typeof useT> }) {
+  const idx = personIndex(d, name);
+  const keys = useMemo(() => new Set(idx == null ? [] : careerInCatalog(d, idx).map((c) => d.entities[c.row].key)), [d, idx]);
+  const recs = useRecs(d, { n: 14, explore: 0, includeListed: true, noCaps: true, filter: (e) => keys.has(e.key) }, `follow|${name}`);
+  if (idx == null || !recs?.length) return null;
+  return <Row title={T("Because you follow {name}", { name })} href={personHref(idx, name)}>{recs.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>;
 }
 
 function Skeleton() {

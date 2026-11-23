@@ -224,21 +224,37 @@ def export_films(out: Path) -> dict:
     rows = db.fetchall("""
         SELECT t.*, e.embedding FROM titles t JOIN title_embeddings e ON e.title_id = t.id
         ORDER BY t.id""")
-    credits = defaultdict(lambda: defaultdict(list))
-    people: dict[int, int] = {}
-    names: list[str] = []
-    pmeta: list[list] = []  # idx -> [tmdb person id, profile path, wikidata id]
+    raw = defaultdict(lambda: defaultdict(list))  # title -> role -> person db ids (billing order)
+    pinfo: dict[int, tuple] = {}  # person db id -> (name, tmdb id, profile path, wikidata id)
     chars: dict[int, list[str]] = defaultdict(list)  # title -> character per cast member (billing order)
     for r in db.fetchall("""SELECT c.title_id, c.role, c.person_id, c.character, p.name, p.tmdb_person_id,
                                    p.profile_path, p.wikidata_id FROM credits c
                              JOIN people p ON p.id = c.person_id ORDER BY c.title_id, c.role, c.ord"""):
-        if r["person_id"] not in people:
-            people[r["person_id"]] = len(names)
-            names.append(r["name"])
-            pmeta.append([r["tmdb_person_id"], r["profile_path"], r["wikidata_id"]])
-        credits[r["title_id"]][r["role"]].append(people[r["person_id"]])
+        pinfo.setdefault(r["person_id"], (r["name"], r["tmdb_person_id"], r["profile_path"], r["wikidata_id"]))
+        raw[r["title_id"]][r["role"]].append(r["person_id"])
         if r["role"] == "cast":
             chars[r["title_id"]].append(r["character"] or "")
+    # people on the catalogue's cards come first: people.json ships only their names (about half of everyone);
+    # the rest (deeper cast, details only) get their name from their people/N.json shard when shown
+    core_roles = {"cast": CORE_CAST, "director": 99, "writer": 4, "creator": 99, "composer": 2}
+    people: dict[int, int] = {}
+    for tid in sorted(raw):
+        for role, n in core_roles.items():
+            for pid in raw[tid].get(role, [])[:n]:
+                people.setdefault(pid, len(people))
+    n_core = len(people)
+    for tid in sorted(raw):
+        for ids in raw[tid].values():
+            for pid in ids:
+                people.setdefault(pid, len(people))
+    names = [""] * len(people)
+    pmeta: list[list] = [[]] * len(people)  # idx -> [tmdb person id, profile path, wikidata id, (name if not core)]
+    for pid, i in people.items():
+        nm, tm, img, wd = pinfo[pid]
+        names[i] = nm
+        pmeta[i] = [tm, img, wd] + ([nm] if i >= n_core else [])
+    credits = {tid: {role: [people[pid] for pid in ids] for role, ids in roles.items()} for tid, roles in raw.items()}
+    credits = defaultdict(lambda: defaultdict(list), {k: defaultdict(list, v) for k, v in credits.items()})
     facts = defaultdict(lambda: defaultdict(list))
     for r in db.fetchall("SELECT title_id, prop, object_qid, object_label FROM wikidata_facts"):
         facts[r["title_id"]][r["prop"]].append((r["object_qid"], r["object_label"]))
@@ -294,11 +310,13 @@ def export_films(out: Path) -> dict:
             "coll": coll_of.get(r["id"]), "aw": lab("award"), "src": lab("based_on", 3),
             "inf": lab("influenced_by", 4), "loc": lab("narrative_location", 4), "sub": lab("main_subject", 4),
             "prov": sorted(provs[r["id"]]["prov"]),
-            "x": _ids(r), "chips": reaction_chips(r),
+            "x": {k: v for k, v in _ids(r).items() if k in ("tm", "wd")}, "chips": reaction_chips(r),
         }
         # loaded on demand when the film is shown (web/lib/data.ts filmDetails)
         detail = {"ov": r["overview"], "ovf": ((r["extra"] or {}).get("fr") or {}).get("ov"), "kw": (r["keywords"] or [])[:25], "cast": cr.get("cast", [])[:30], "chr": chars[r["id"]][:30] if any(chars[r["id"]][:30]) else None,
-                  "rent": sorted(provs[r["id"]]["rent"]), "nom": lab("nominated", 4), "jw": ex.get("watch_link")}
+                  "rent": sorted(provs[r["id"]]["rent"]), "nom": lab("nominated", 4), "jw": ex.get("watch_link"),
+                  # outside-site link ids (IMDb, AlloCiné, SensCritique, Letterboxd, Wikipedia): only the title page needs them
+                  "xl": {k: v for k, v in _ids(r).items() if k not in ("tm", "wd")}}
         details[r["id"] % DETAIL_SHARDS][r["id"]] = {k: v for k, v in detail.items() if v not in (None, [], {}, "")}
         if r["original_title"] and r["original_title"] != r["title"]:
             t["ot"] = r["original_title"]
@@ -315,12 +333,12 @@ def export_films(out: Path) -> dict:
     fd = out / "films"
     fd.mkdir(parents=True, exist_ok=True)
     size = write_json(fd / "catalog.json", catalog)
-    write_json(fd / "people.json", names)
+    write_json(fd / "people.json", names[:n_core])
     # photos and ids per person, sharded like the details (loaded when a cast list or person page is shown)
     (fd / "people").mkdir(exist_ok=True)
     pshards: list[dict[int, list]] = [{} for _ in range(DETAIL_SHARDS)]
     for i, m in enumerate(pmeta):
-        if any(m):
+        if any(m[:3]) or len(m) > 3:
             pshards[i % DETAIL_SHARDS][i] = m
     for i, shard in enumerate(pshards):
         write_json(fd / "people" / f"{i}.json", shard)

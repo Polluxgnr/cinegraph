@@ -7,16 +7,16 @@ import { currentLang } from "./i18n";
 import type { Film } from "./types";
 import { sparql } from "./wikidata";
 
-export interface PersonMeta { tm?: number; img?: string; wd?: string }
+export interface PersonMeta { tm?: number; img?: string; wd?: string; name?: string }
 
 const SHARDS = 64;
-const shards = new Map<number, Promise<Record<string, [number | null, string | null, string | null]>>>();
+const shards = new Map<number, Promise<Record<string, [number | null, string | null, string | null, string?]>>>();
 
 export async function personMeta(idx: number): Promise<PersonMeta> {
   const n = idx % SHARDS;
-  if (!shards.has(n)) shards.set(n, json<Record<string, [number | null, string | null, string | null]>>(`/data/films/people/${n}.json`).catch(() => ({})));
+  if (!shards.has(n)) shards.set(n, json<Record<string, [number | null, string | null, string | null, string?]>>(`/data/films/people/${n}.json`).catch(() => ({})));
   const m = (await shards.get(n)!)[String(idx)];
-  return m ? { tm: m[0] ?? undefined, img: m[1] ?? undefined, wd: m[2] ?? undefined } : {};
+  return m ? { tm: m[0] ?? undefined, img: m[1] ?? undefined, wd: m[2] ?? undefined, name: m[3] } : {};
 }
 
 export const photoUrl = (img?: string, size: "w185" | "h632" = "w185") =>
@@ -38,6 +38,9 @@ export function careerInCatalog(d: FilmData, idx: number): { row: number; roles:
   });
   return out;
 }
+
+/** A person's name: the catalogue's list holds people on cards; deeper cast names come with their shard. */
+export const personName = (d: FilmData, idx: number, meta?: PersonMeta) => d.people[idx] ?? meta?.name ?? "";
 
 /** Name -> person index, built once per catalogue (157k names). */
 const byName = new WeakMap<FilmData, Map<string, number>>();

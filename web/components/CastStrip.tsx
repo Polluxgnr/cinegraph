@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { FilmData } from "@/lib/data";
 import { useT } from "@/lib/i18n";
-import { personHref, personMeta, photoUrl, type PersonMeta } from "@/lib/people";
+import { personHref, personMeta, personName, photoUrl, type PersonMeta } from "@/lib/people";
 import { useStore } from "@/lib/store";
 import type { Film } from "@/lib/types";
 
@@ -53,7 +53,8 @@ export default function CastStrip({ d, f }: { d: FilmData; f: Film }) {
       <h2 className="font-display text-2xl">{T("Cast & crew")}</h2>
       <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
         {all.map(([i, role], k) => {
-          const name = d.people[i];
+          const name = personName(d, i, metas[i]);
+          if (!name) return <div key={`${i}-${k}`} className="h-36 w-28 shrink-0 animate-pulse rounded-2xl bg-panel" />;
           const fol = following[name];
           return (
             <motion.div key={`${i}-${k}`} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: Math.min(k, 10) * 0.03 }}

@@ -17,13 +17,25 @@ engine is far below the blend on this test because the test users are cold (a fe
 starts from the crowd. The last tuning changed nothing measurable here; it was aimed at your real answers (the
 "known title" model went from AUC 0.731 to 0.745, the taste model from 0.623 to 0.641).
 
+## Your own score (added November 23)
+
+The Taste page now measures the engine on *your* answers: one liked film in five is hidden, the model is rebuilt
+from the rest in the order you answered, and the hidden ones are looked for in your top 50. On the owner's 408
+answers (68 liked): **0 of 13 back in the top 50** of 16k titles; against 1,000 random unanswered titles the hidden
+favourites rank around **57th (top 6%)**, and 16% make that top 10. Five weight variants (less community rating and
+popularity, more similarity and genre, less collaborative filtering) all land within noise (median rank 57–70,
+16–19% in the top 10), so the defaults stay. What fills the very top is widely loved classics not answered yet
+(Blade Runner, The Godfather…), a fair suggestion but one that crowds out the owner's animation favourites.
+Next: a per-user "already seen it elsewhere?" discount for the most famous classics, and a diversity slot for the
+genres you like most (animation here) in the first rows.
+
 ## Cross-cutting
 
-1. **The app's engine is measured on MovieLens users, not on you.** Add a *personal* weekly score: hide 20% of
-   your own loved titles, re-rank, report HR@10 on the Taste page. It's the only number that says whether the app
-   gets better for you. *Effort: small (the replay harness exists).*
-2. **First visit is heavy on phones.** The film catalogue is ~11 MB of JSON before compression. Split `catalog.json`
-   into a light list (id, title, year, poster, genres, ratings) and the rest on demand, like the details. *Medium.*
+1. ~~Personal score~~ (done, above).
+2. **First visit is heavy on phones** (~9.4 MB compressed: catalogue 4.6 MB, embeddings 2.9 MB, people 1.3 MB).
+   This round: people.json ships only the 89k people on catalogue cards (half), the rest come with their person
+   shard; outside-site link ids moved from the catalogue to the details. Next: split the catalogue itself into a
+   light list and the rest on demand. *Medium.*
 3. **Wikidata live queries are slow** (10–45 s for "best spots", 2–5 s for careers). Precompute the best spots of
    each destination and careers of the 5,000 most credited people in the weekly build; keep live queries as a
    fallback. *Medium; removes the longest waits in the app.*
@@ -33,9 +45,8 @@ starts from the crowd. The last tuning changed nothing measurable here; it was a
    filter panel and the More sheet, colour contrast of muted text in light mode. Run axe in the Playwright suite.
    *Small.*
 6. **Sync conflicts** are resolved per item (latest answer wins). Device settings (theme, language, tokens) stay on
-   each device; follows and swipe filters sync (fixed this round: they used to stay on the device), as one block
-   where the latest change wins, so following someone on the phone while changing filters on the laptop keeps
-   only the later of the two. Merge them per person / per filter. *Small.*
+   each device; follows now merge per person (each change dated), swipe filters and followed teams as one block
+   where the latest change wins.
 
 ## Films & series
 
@@ -88,8 +99,7 @@ starts from the crowd. The last tuning changed nothing measurable here; it was a
 
 1. **Best spots load live** (see cross-cutting 3). They now show a clear loading state, a retry on error, and names
    in the interface language.
-2. **Places are named in English** in the catalogue (London, not Londres). Export Wikidata French labels like the
-   French film titles.
+2. ~~Places named in English~~: French names and descriptions from Wikidata now show in the French interface.
 3. **Trips**: add opening hours (OpenStreetMap `opening_hours`) and travel time between days.
 
 ## Dream garage and Style
