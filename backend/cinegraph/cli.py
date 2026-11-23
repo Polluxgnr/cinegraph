@@ -108,11 +108,19 @@ def ingest_wikidata(
     from .ingest import wikidata
 
     sp = wikidata.Sparql()
+
+    def step(label: str, fn):
+        # Wikidata's public endpoint has bad hours (504s): a failed part keeps last week's data, the build goes on
+        try:
+            typer.echo(f"{label}: {fn()}")
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"{label}: skipped this run ({type(e).__name__}: {str(e)[:160]})")
+
     if tv_bootstrap:
-        typer.echo(f"tv series seeded: {wikidata.bootstrap_tv(tv_bootstrap, sp=sp)}")
-        typer.echo(f"non-series removed: {wikidata.prune_non_series(sp=sp)}")
-    typer.echo(f"ids resolved: {wikidata.resolve_qids(sp=sp)}")
-    typer.echo(f"titles enriched: {wikidata.fetch_facts(limit=limit, sp=sp)}")
+        step("tv series seeded", lambda: wikidata.bootstrap_tv(tv_bootstrap, sp=sp))
+        step("non-series removed", lambda: wikidata.prune_non_series(sp=sp))
+    step("ids resolved", lambda: wikidata.resolve_qids(sp=sp))
+    step("titles enriched", lambda: wikidata.fetch_facts(limit=limit, sp=sp))
 
 
 @ingest_app.command("links")

@@ -83,6 +83,7 @@ jobs:
         run: uv run cinegraph ingest french
 
       - name: Wikidata enrichment + links + Wikipedia images
+        continue-on-error: true  # a Wikidata outage keeps last week's links and facts
         run: |
           uv run cinegraph ingest wikidata --tv-bootstrap 1200
           uv run cinegraph ingest links
