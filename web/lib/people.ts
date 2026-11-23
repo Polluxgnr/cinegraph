@@ -151,4 +151,5 @@ export function rowOfTmdb(d: FilmData, id: number, tv: boolean): number | undefi
 }
 
 /** Person page link: index for speed, name so the link survives a catalogue rebuild (indexes change). */
-export const personHref = (idx: number, name: string) => `/person/?p=${idx}&n=${encodeURIComponent(name)}`;
+/** `from`: the title the link sits on, listed on the person's page even when the catalogue only keeps its main cast. */
+export const personHref = (idx: number, name: string, from?: string) => `/person/?p=${idx}&n=${encodeURIComponent(name)}${from ? `&f=${encodeURIComponent(from)}` : ""}`;

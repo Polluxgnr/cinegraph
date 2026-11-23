@@ -18,6 +18,7 @@ export default function PersonPage() {
   const T = useT();
   const [p] = useQueryParam("p");
   const [n] = useQueryParam("n");
+  const [from] = useQueryParam("f");
   const { data } = useDomain("films");
   if (!data) return <div className="card h-96 animate-pulse" />;
   if (!isFilmData(data)) return null;
@@ -27,12 +28,12 @@ export default function PersonPage() {
   if (n && (idx == null || (data.people[idx] != null && data.people[idx] !== n))) idx = personIndex(data, n) ?? (data.people[idx ?? -1] == null ? idx : undefined);
   const name = idx != null ? data.people[idx] ?? n : undefined;
   if (idx == null || !name) return <p className="card p-4">{T("Not found in the catalogue.")}</p>;
-  return <Person key={idx} d={data} idx={idx} name={name} />;
+  return <Person key={idx} d={data} idx={idx} name={name} from={from ?? undefined} />;
 }
 
 type Sort = "match" | "newest" | "rating";
 
-function Person({ d, idx, name }: { d: FilmData; idx: number; name: string }) {
+function Person({ d, idx, name, from }: { d: FilmData; idx: number; name: string; from?: string }) {
   const T = useT();
   const [meta, setMeta] = useState<PersonMeta>({});
   const [bio, setBio] = useState<Bio | null | undefined>(undefined);
@@ -57,7 +58,13 @@ function Person({ d, idx, name }: { d: FilmData; idx: number; name: string }) {
     };
   }, [idx, name]);
 
-  const career = useMemo(() => careerInCatalog(d, idx), [d, idx]);
+  const career = useMemo(() => {
+    const c = careerInCatalog(d, idx);
+    // the catalogue keeps each title's main cast only: the title you came from always counts
+    const row = from ? d.index.get(from) : undefined;
+    if (row != null && !c.some((x) => x.row === row)) c.unshift({ row, roles: ["Actor"] });
+    return c;
+  }, [d, idx, from]);
   const roles = [...new Set(career.flatMap((c) => c.roles))];
   const keys = useMemo(() => new Set(career.filter((c) => role === "All" || c.roles.includes(role)).map((c) => d.entities[c.row].key)), [career, role, d]);
   const recs = useRecs(d, { n: 80, filter: (e) => keys.has(e.key), includeAnswered: true, includeListed: true, noCaps: true, diversity: 1, explore: 0 }, `person|${idx}|${role}`);

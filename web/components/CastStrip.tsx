@@ -59,7 +59,7 @@ export default function CastStrip({ d, f }: { d: FilmData; f: Film }) {
           return (
             <motion.div key={`${i}-${k}`} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: Math.min(k, 10) * 0.03 }}
                         className="w-28 shrink-0 snap-start">
-              <Link href={personHref(i, name)} className="group block text-center">
+              <Link href={personHref(i, name, `films:${f.id}`)} className="group block text-center">
                 <div className="mx-auto w-fit transition duration-300 group-hover:-translate-y-1 group-hover:drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
                   <Face name={name} meta={metas[i]} />
                 </div>

@@ -40,7 +40,7 @@ PLACE_TYPES = {
 
 # one query per place type keeps each under the endpoint's 60 s limit
 PLACES_Q = """
-SELECT ?item ?itemLabel ?itemDescription ?countryLabel ?img ?links ?voy ?coord ?frLabel ?frDesc WHERE {{
+SELECT ?item ?itemLabel ?itemDescription ?countryLabel ?img ?links ?voy ?coord WHERE {{
   {{ SELECT ?item ?links WHERE {{
       ?item wdt:P31 wd:{qid} ; wikibase:sitelinks ?links . FILTER(?links > {min_links})
   }} ORDER BY DESC(?links) LIMIT {limit} }}
@@ -48,10 +48,31 @@ SELECT ?item ?itemLabel ?itemDescription ?countryLabel ?img ?links ?voy ?coord ?
   OPTIONAL {{ ?voy schema:about ?item ; schema:isPartOf <https://en.wikivoyage.org/> }}
   OPTIONAL {{ ?item wdt:P17 ?country }}
   OPTIONAL {{ ?item wdt:P625 ?coord }}
-  OPTIONAL {{ ?item rdfs:label ?frLabel FILTER(LANG(?frLabel) = "fr") }}
-  OPTIONAL {{ ?item schema:description ?frDesc FILTER(LANG(?frDesc) = "fr") }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,fr". }}
 }}"""
+
+
+# French names, asked separately by id so the heavy per-type queries stay as light as before (a failure here only
+# leaves the English names)
+FR_Q = """
+SELECT ?item ?frLabel ?frDesc WHERE {{
+  VALUES ?item {{ {ids} }}
+  OPTIONAL {{ ?item rdfs:label ?frLabel FILTER(LANG(?frLabel) = "fr") }}
+  OPTIONAL {{ ?item schema:description ?frDesc FILTER(LANG(?frDesc) = "fr") }}
+}}"""
+
+
+def french_labels(qids: list[str], batch: int = 200) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for i in range(0, len(qids), batch):
+        try:
+            rows = _rows(FR_Q.format(ids=" ".join(f"wd:{q}" for q in qids[i:i + batch])))
+        except Exception as e:  # noqa: BLE001
+            log.warning("french labels %d-%d failed: %s", i, i + batch, e)
+            continue
+        for q, d in _group(rows, ()).items():
+            out[q] = d
+    return out
 
 
 def places(limit_per_type: int = 150) -> list[Item]:
@@ -80,11 +101,17 @@ def places(limit_per_type: int = 150) -> list[Item]:
                        "maps": f"https://www.openstreetmap.org/search?query={label.replace(' ', '%20')}",
                        "pinterest": f"https://www.pinterest.com/search/pins/?q={label.replace(' ', '%20')}"},
                 meta={"coord": d.get("coord"), "country": country, "description": d.get("itemDescription"),
-                      # French name and description, shown when the interface is in French (London -> Londres)
-                      **({"fr": d["frLabel"]} if d.get("frLabel") and d["frLabel"] != label else {}),
-                      **({"description_fr": d["frDesc"]} if d.get("frDesc") else {})},
+                      },
             ))
-    log.info("places: %d", len(items))
+    # French name and description, shown when the interface is in French (London -> Londres)
+    fr = french_labels([it.id.split(":", 1)[1] for it in items])
+    for it in items:
+        d = fr.get(it.id.split(":", 1)[1], {})
+        if d.get("frLabel") and d["frLabel"] != it.title:
+            it.meta["fr"] = d["frLabel"]
+        if d.get("frDesc"):
+            it.meta["description_fr"] = d["frDesc"]
+    log.info("places: %d (%d with a French name)", len(items), sum("fr" in it.meta for it in items))
     return items
 
 
