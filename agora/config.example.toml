@@ -1,0 +1,122 @@
+# Copy this file to config.toml and edit. config.toml is yours; this file is the template.
+
+# Which model answers when the interface doesn't say otherwise.
+default_model = "local"
+
+# ---------------------------------------------------------------- models
+# provider = "openai"    -> any OpenAI-compatible endpoint (local or hosted)
+# provider = "anthropic" -> Claude through the official SDK
+# context_chars          -> how much scraped text one answer may read (characters).
+#                           Small local models: 20_000-40_000. Big hosted models: 150_000+.
+
+[models.local]                       # free, runs on your PC: install Ollama, then `ollama pull qwen3:8b`
+provider = "openai"
+base_url = "http://localhost:11434/v1"
+model = "qwen3:8b"
+context_chars = 30000
+
+[models.lmstudio]                    # free, LM Studio's local server
+provider = "openai"
+base_url = "http://localhost:1234/v1"
+model = "local-model"
+context_chars = 30000
+
+[models.gemini]                      # free tier: key from aistudio.google.com, set GEMINI_API_KEY
+provider = "openai"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+model = "gemini-2.5-flash"
+api_key_env = "GEMINI_API_KEY"
+context_chars = 200000
+
+[models.groq]                        # free tier: key from console.groq.com, set GROQ_API_KEY
+provider = "openai"
+base_url = "https://api.groq.com/openai/v1"
+model = "llama-3.3-70b-versatile"
+api_key_env = "GROQ_API_KEY"
+context_chars = 60000
+
+[models.openrouter]                  # free on OpenRouter; best free model at the answer-writing step in tests
+provider = "openai"
+base_url = "https://openrouter.ai/api/v1"
+model = "nvidia/nemotron-3.5-super-vl:free"
+extra_body = { reasoning = { enabled = false } }   # free reasoning models sometimes reply empty after thinking
+api_key_env = "OPENROUTER_API_KEY"
+context_chars = 60000
+timeout = 300
+fallbacks = ["nemotron-ultra", "gemma"]   # tried in order if this one fails (rate limits, empty replies)
+
+[models.nemotron-ultra]              # free backup: good at planning, unreliable on long answers
+provider = "openai"
+base_url = "https://openrouter.ai/api/v1"
+model = "nvidia/nemotron-3-ultra-550b-a55b:free"
+json_mode = false
+extra_body = { reasoning = { enabled = false } }
+api_key_env = "OPENROUTER_API_KEY"
+context_chars = 60000
+timeout = 300
+[models.gemma]                       # free backup on OpenRouter
+provider = "openai"
+base_url = "https://openrouter.ai/api/v1"
+model = "google/gemma-4-31b-it:free"
+api_key_env = "OPENROUTER_API_KEY"
+context_chars = 60000
+timeout = 300
+
+[models.claude]                      # paid: set ANTHROPIC_API_KEY
+provider = "anthropic"
+model = "claude-opus-5-5"
+api_key_env = "ANTHROPIC_API_KEY"
+effort = "medium"                    # low | medium | high
+fallbacks = true                     # retry on a fallback model if a request is declined
+context_chars = 300000
+
+# ---------------------------------------------------------------- search
+[search]
+geocode = true                       # put places on the map via OpenStreetMap (free)
+
+# Per mode: how many search queries per source, results per query, results read in full,
+# and comments read per result.
+[search.modes.quick]
+queries = 2
+per_query = 8
+read = 8
+comments = 15
+
+[search.modes.standard]
+queries = 3
+per_query = 10
+read = 20
+comments = 30
+
+[search.modes.deep]
+queries = 5
+per_query = 15
+read = 40
+comments = 60
+
+# ---------------------------------------------------------------- sources
+# Every source can take `enabled = false`.
+
+[sources.reddit]
+# Free key: https://www.reddit.com/prefs/apps -> create app -> type "script".
+# Or set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET.
+client_id = ""
+client_secret = ""
+username = ""                        # your Reddit username, used in the User-Agent Reddit asks for
+
+[sources.web]
+region = ""                          # e.g. "fr-fr" or "us-en"; empty = default
+
+[sources.local]
+folder = "data/imports"              # exported chats (Discord exports, Telegram, notes...)
+
+# ---------------------------------------------------------------- browser
+# TikTok, Instagram, X, Google Maps and Reddit-without-a-key are read through a real
+# Chrome window logged in as you. Run `python -m agora login` once to sign in.
+# Use secondary accounts: these sites can restrict accounts that read automatically.
+[browser]
+channel = "chrome"                   # your installed Chrome; "msedge" or "" (Playwright's Chromium) also work
+headless = false                     # these sites trust a visible window more; you can minimise it
+profile_dir = "data/browser-profile"
+pace_seconds = 2.5                   # pause between page loads, so it browses at human speed
+max_pages = 12                       # pages opened per source per search

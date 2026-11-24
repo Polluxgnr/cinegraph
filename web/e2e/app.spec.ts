@@ -206,6 +206,7 @@ test("instagram saves: import a library, filter and search", async ({ page }) =>
 
 test("search: groups and animation filters", async ({ page }) => {
   await open(page, "/discover/?d=films");
+  await page.getByTestId("more-filters").click();
   await page.getByRole("button", { name: "Nolan", exact: true }).click();
   await expect(page.locator("main img[alt='Interstellar'], main img[alt='Inception']").first()).toBeVisible();
   await page.getByRole("button", { name: "Nolan", exact: true }).click();
@@ -300,4 +301,87 @@ test("sports: a match opens its events, stats and line-ups", async ({ page }) =>
   await expect(d).toContainText("55%");
   await d.getByRole("button", { name: "Line-ups" }).click();
   await expect(d).toContainText("4-3-3");
+});
+
+test("film search: type, genre, more filters with removable chips", async ({ page }) => {
+  await open(page, "/discover/?d=films");
+  const f = page.getByTestId("film-filters");
+  await expect(page.getByRole("button", { name: "Directors", exact: true })).toHaveCount(0); // the search box covers people
+  await f.getByRole("radio", { name: "Series" }).click();
+  await page.getByTestId("more-filters").click();
+  const panel = page.getByTestId("more-panel");
+  await panel.getByRole("button", { name: "2010s" }).click();
+  const active = page.getByTestId("active-filters");
+  await expect(active).toContainText("Series");
+  await expect(active).toContainText("2010s");
+  await expect(page.getByTestId("more-filters")).toContainText("· 1");
+  await active.getByRole("button", { name: /Remove 2010s/ }).click();
+  await expect(active).not.toContainText("2010s");
+  await f.getByRole("button", { name: "Reset" }).click();
+  await expect(page.getByTestId("active-filters")).toHaveCount(0);
+});
+
+test("tonight lives on the films Home; the old page leads there", async ({ page }) => {
+  await open(page, "/tonight/");
+  await expect(page).toHaveURL(/\/#tonight$/);
+  await expect(page.getByTestId("tonight")).toBeVisible();
+});
+
+test("sports: teams, athletes and matches open their own pages", async ({ page }) => {
+  const when = new Date(Date.now() - 864e5).toISOString();
+  const match = { id: "7", name: "PSG at OM", date: when, competitions: [{ id: "7", date: when, status: { type: { state: "post", shortDetail: "FT" } },
+    competitors: [{ id: "176", homeAway: "home", score: "1", team: { id: "176", displayName: "Marseille" } }, { id: "160", homeAway: "away", winner: true, score: "3", team: { id: "160", displayName: "Paris Saint-Germain" } }] }] };
+  await page.route("https://site.api.espn.com/apis/site/v2/**/scoreboard*", (r) => r.fulfill({ json: { events: [match] } }));
+  await page.route("https://site.api.espn.com/apis/site/v2/**/teams/160/roster", (r) => r.fulfill({ json: {
+    team: { id: "160", displayName: "Paris Saint-Germain", standingSummary: "1st in French Ligue 1", recordSummary: "8-2-1", clubhouse: "https://www.espn.com/soccer/club/_/id/160" },
+    coach: [{ firstName: "Luis", lastName: "Enrique" }],
+    athletes: [{ id: "231388", displayName: "Ousmane Dembélé", jersey: "10", age: 29, citizenship: "France", position: { displayName: "Forward" } }] } }));
+  await page.route("https://site.api.espn.com/apis/site/v2/**/teams/160/schedule", (r) => r.fulfill({ json: { events: [{ id: "7", date: when,
+    competitions: [{ status: { type: { completed: true } }, competitors: [{ id: "160", homeAway: "away", score: { displayValue: "3" }, team: { id: "160" } },
+      { id: "176", homeAway: "home", score: { displayValue: "1" }, team: { id: "176", displayName: "Marseille" } }] }] }] } }));
+  await page.route("https://site.web.api.espn.com/apis/common/v3/**/athletes/231388", (r) => r.fulfill({ json: { athlete: {
+    id: "231388", displayName: "Ousmane Dembélé", age: 29, citizenship: "France", position: { displayName: "Forward" }, displayHeight: "1.78 m",
+    team: { id: "160", displayName: "Paris Saint-Germain" }, statsSummary: { displayName: "2026-27 Ligue 1", statistics: [{ displayName: "Goals", displayValue: "9" }] } } } }));
+  await page.route("https://*.wikipedia.org/api/rest_v1/page/summary/**", (r) => r.fulfill({ json: {
+    type: "standard", title: "Paris Saint-Germain F.C.", description: "French association football club", extract: "Paris Saint-Germain is a professional football club based in Paris.",
+    content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Paris_Saint-Germain_F.C." } } } }));
+  await page.route("https://site.api.espn.com/apis/site/v2/**/summary*", (r) => r.fulfill({ json: {
+    header: { competitions: [{ date: when, status: { type: { state: "post", shortDetail: "FT" } }, competitors: [
+      { homeAway: "home", score: "1", team: { id: "176", displayName: "Marseille" } }, { homeAway: "away", score: "3", winner: true, team: { id: "160", displayName: "Paris Saint-Germain" } }] }] },
+    boxscore: { teams: [{ team: { id: "176", displayName: "Marseille" } }, { team: { id: "160", displayName: "Paris Saint-Germain" } }] } } }));
+
+  await open(page, "/sports/");
+  await page.getByRole("link", { name: "Paris Saint-Germain" }).first().click();
+  const team = page.getByTestId("team-page");
+  await expect(team).toContainText("1st in French Ligue 1");
+  await expect(team).toContainText("Luis Enrique");
+  await expect(page.getByTestId("team-bio")).toContainText("professional football club");
+  await expect(team.getByRole("link", { name: "Marseille" })).toBeVisible(); // the season's games lead to the opponent
+  await page.getByTestId("squad-player").first().click();
+  const ath = page.getByTestId("athlete-page");
+  await expect(ath).toContainText("Forward");
+  await expect(ath).toContainText("Goals");
+  await ath.getByRole("link", { name: "Paris Saint-Germain" }).click();
+  await expect(page.getByTestId("team-page")).toBeVisible();
+  await page.getByRole("link", { name: "3–1" }).click();
+  await expect(page.getByTestId("match-page-view")).toContainText("Marseille");
+  expect(await cspViolations(page)).toEqual([]);
+});
+
+test("sports is a space of its own in the space list", async ({ page, isMobile }) => {
+  await open(page, "/");
+  if (isMobile) await page.locator("header").getByRole("button").last().click();
+  await page.locator("[data-space='sports']:visible").first().click();
+  await expect(page).toHaveURL(/\/sports\/$/);
+});
+
+test("destinations: pick a country; style: a photo catalogue by category", async ({ page }) => {
+  await open(page, "/discover/?d=places");
+  const country = page.getByTestId("country");
+  await expect(country).toBeVisible();
+  const first = await country.locator("option").nth(1).textContent();
+  await country.selectOption({ index: 1 });
+  await expect(page.locator("main article").first()).toContainText(first!.trim());
+  await page.goto("/?d=brands");
+  await expect(page.getByTestId("catalogue")).toBeVisible();
 });

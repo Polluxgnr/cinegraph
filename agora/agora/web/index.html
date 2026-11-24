@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agora</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1b1b18; --muted: #6b6a63; --line: #e3e1d9;
+  --accent: #2f5bea; --accent-ink: #ffffff; --accent-soft: #e8eefd;
+  --warn: #9a5b00; --warn-bg: #fff4e0; --ok: #1d7a46; --bad: #b3261e; --chip: #efede6;
+  --radius: 10px; --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131312; --panel: #1c1c1a; --ink: #ecebe6; --muted: #9b9a92; --line: #2e2e2b;
+    --accent: #7c9cff; --accent-ink: #0d0d0c; --accent-soft: #1f2740;
+    --warn: #f0b860; --warn-bg: #2b2213; --ok: #5fcf8f; --bad: #ff8a80; --chip: #262624;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+button, select, input, textarea { font: inherit; color: inherit; }
+header { display: flex; gap: 12px; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--line);
+  background: var(--panel); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; margin-right: auto; }
+.brand span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+select, .seg button, .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 8px 8px 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn:disabled { opacity: .5; cursor: default; }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; max-width: 1200px; margin: 0 auto; padding: 20px; }
+aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+aside h3:first-child { margin-top: 0; }
+.src { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 14px; }
+.src input { margin-top: 4px; }
+.src small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.src.off { opacity: .55; }
+main { min-width: 0; }
+.ask { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.ask textarea { width: 100%; border: 0; outline: none; resize: vertical; min-height: 64px; background: transparent; font-size: 17px; }
+.ask .row { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.ask .row .hint { margin-right: auto; color: var(--muted); font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-top: 16px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+.intent { color: var(--muted); margin: 0 0 12px; }
+.cq { margin-bottom: 14px; }
+.cq label { font-weight: 600; display: block; margin-bottom: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 3px 11px; cursor: pointer; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.cq input { margin-top: 6px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--bg); }
+.log { font-size: 14px; }
+.log div { padding: 2px 0; display: flex; gap: 8px; }
+.log .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex: none; background: var(--muted); }
+.log .ok .dot { background: var(--ok); } .log .error .dot { background: var(--bad); } .log .skipped .dot, .log .empty .dot { background: var(--line); }
+.log small { color: var(--muted); }
+.bar { height: 6px; background: var(--chip); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+details.plan { font-size: 13px; color: var(--muted); margin-top: 8px; }
+details.plan code { font-family: var(--mono); background: var(--chip); padding: 1px 6px; border-radius: 4px; margin: 2px; display: inline-block; }
+.tldr { font-size: 18px; line-height: 1.5; }
+.warns { background: var(--warn-bg); border-color: transparent; }
+.warns h2 { color: var(--warn); }
+.warns li { margin: 4px 0; }
+.md h1, .md h2, .md h3 { text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 17px; margin: 18px 0 6px; }
+.md p, .md li { margin: 6px 0; }
+.md table { border-collapse: collapse; width: 100%; font-size: 14px; display: block; overflow-x: auto; }
+.md td, .md th { border: 1px solid var(--line); padding: 5px 8px; text-align: left; }
+a.cite { font-size: 11px; font-weight: 600; text-decoration: none; background: var(--accent-soft); color: var(--accent);
+  padding: 0 5px; border-radius: 4px; margin: 0 1px; vertical-align: 2px; }
+#map { height: 380px; border-radius: 8px; margin-bottom: 12px; z-index: 0; }
+.places, .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.place, .item { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.place b, .item b { display: block; font-size: 15px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  padding: 1px 7px; border-radius: 4px; background: var(--chip); color: var(--muted); margin-right: 4px; }
+.badge.open { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.badge.closed, .badge.restricted { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.place .w { color: var(--warn); margin-top: 4px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.side { border-left: 3px solid var(--line); padding-left: 10px; font-size: 14px; }
+.vs { margin-bottom: 12px; } .vs b { display: block; margin-bottom: 4px; }
+.fvc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; padding: 8px 0; border-top: 1px solid var(--line); }
+.fvc:first-of-type { border-top: 0; }
+.fvc span { color: var(--muted); font-size: 12px; display: block; text-transform: uppercase; letter-spacing: .05em; }
+.sources .s { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; scroll-margin-top: 80px; }
+.sources .s:first-of-type { border-top: 0; }
+.sources .s.flash { background: var(--accent-soft); border-radius: 6px; }
+.sources .n { font-family: var(--mono); color: var(--muted); text-align: right; }
+.sources .meta { color: var(--muted); font-size: 12px; }
+.sources .snip { color: var(--muted); margin-top: 3px; }
+.sources details { margin-top: 4px; } .sources details div { padding: 3px 0 3px 10px; border-left: 2px solid var(--line); margin: 4px 0; }
+.followups .chip { background: var(--panel); }
+.stats { color: var(--muted); font-size: 12px; margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.err { color: var(--bad); }
+dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink); width: min(600px, 92vw); padding: 20px 22px; }
+dialog textarea { width: 100%; min-height: 220px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--bg); }
+dialog::backdrop { background: rgb(0 0 0 / .35); }
+.hidden { display: none !important; }
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; padding: 16px; }
+  aside { order: 2; }
+  .two, .fvc { grid-template-columns: 1fr; }
+  header { padding: 10px 16px; }
+  #model { flex: 1 1 100%; max-width: 100%; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">agora<span>what people actually say</span></div>
+  <select id="model" aria-label="Model"></select>
+  <div class="seg" id="modes" role="group" aria-label="Depth"></div>
+  <button class="btn" id="profileBtn">Profile</button>
+</header>
+
+<div class="layout">
+  <aside>
+    <div id="sourceList"></div>
+  </aside>
+
+  <main>
+    <div class="ask">
+      <textarea id="q" placeholder="Ask anything: cliff diving spots near Marseille, catacomb entrances still open, best budget ramen in Lyon, how people really get through China by train…"></textarea>
+      <div class="row">
+        <span class="hint">Ctrl+Enter to ask</span>
+        <button class="btn" id="direct" title="Skip the refining questions">Search now</button>
+        <button class="btn primary" id="go">Ask</button>
+      </div>
+    </div>
+
+    <div id="clarify" class="card hidden"></div>
+    <div id="progress" class="card hidden">
+      <h2>Working</h2>
+      <div class="log" id="log"></div>
+      <div class="bar"><i id="barFill"></i></div>
+      <details class="plan hidden" id="plan"><summary>Searches it ran</summary><div id="planBody"></div></details>
+    </div>
+    <div id="result"></div>
+  </main>
+</div>
+
+<dialog id="profileDlg">
+  <form method="dialog">
+    <h3 style="margin-top:0">Your profile</h3>
+    <p style="color:var(--muted);margin-top:0">Used to tailor every answer and to skip questions it already knows. Plain text, anything goes: where you live, languages, budget, diet, tastes, skill levels, gear.</p>
+    <textarea id="profileText"></textarea>
+    <p style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" value="cancel">Cancel</button><button class="btn primary" id="saveProfile" value="save">Save</button></p>
+  </form>
+</dialog>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const GROUPS = { open: "Open sources", browser: "Your logged-in browser", local: "Your files" };
+let META = null, MODE = store.get("mode", "standard"), SOURCES = [], LAST = null, busy = false;
+
+async function loadMeta() {
+  META = await (await fetch("/api/meta")).json();
+  const sel = $("#model");
+  const saved = store.get("model", META.default_model);
+  sel.innerHTML = META.models.map((m) => `<option value="${esc(m.name)}">${esc(m.name)} · ${esc(m.model)}</option>`).join("");
+  sel.value = META.models.some((m) => m.name === saved) ? saved : META.default_model;
+  sel.onchange = () => store.set("model", sel.value);
+  $("#modes").innerHTML = META.modes.map((m) => `<button data-mode="${esc(m)}" aria-pressed="${m === MODE}">${esc(m[0].toUpperCase() + m.slice(1))}</button>`).join("");
+  $("#modes").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; MODE = b.dataset.mode; store.set("mode", MODE);
+    [...$("#modes").children].forEach((x) => x.setAttribute("aria-pressed", x === b)); };
+  const chosen = store.get("sources", null);
+  let html = "";
+  for (const g of Object.keys(GROUPS)) {
+    const list = META.sources.filter((s) => s.group === g);
+    if (!list.length) continue;
+    html += `<h3>${GROUPS[g]}</h3>`;
+    for (const s of list) {
+      const on = s.available && s.enabled && (chosen ? chosen.includes(s.name) : true);
+      html += `<label class="src ${s.available ? "" : "off"}" title="${esc(s.reason || s.description)}">
+        <input type="checkbox" value="${esc(s.name)}" ${on ? "checked" : ""} ${s.available ? "" : "disabled"}>
+        <span>${esc(s.label)}<small>${esc(s.available ? s.description : s.reason)}</small></span></label>`;
+    }
+  }
+  $("#sourceList").innerHTML = html;
+  $("#sourceList").onchange = () => store.set("sources", selectedSources());
+  $("#profileText").value = META.profile || "";
+}
+const selectedSources = () => [...document.querySelectorAll("#sourceList input:checked")].map((i) => i.value);
+
+// ---------------- clarify
+async function ask(skipQuestions) {
+  const question = $("#q").value.trim();
+  if (!question || busy) return;
+  $("#result").innerHTML = ""; $("#progress").classList.add("hidden");
+  if (skipQuestions) return search(question, {});
+  setBusy(true);
+  const box = $("#clarify");
+  box.classList.remove("hidden");
+  box.innerHTML = `<h2>Refining</h2><p class="intent">Working out what to ask you…</p>`;
+  try {
+    const r = await fetch("/api/clarify", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, model: $("#model").value }) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.statusText);
+    if (!data.questions.length) { box.classList.add("hidden"); setBusy(false); return search(question, {}); }
+    box.innerHTML = `<h2>A few questions first</h2>${data.intent ? `<p class="intent">${esc(data.intent)}</p>` : ""}
+      ${data.questions.map((q, i) => `<div class="cq" data-q="${esc(q.q)}"><label>${esc(q.q)}</label>
+        <div class="chips">${(q.options || []).map((o) => `<button class="chip" aria-pressed="false">${esc(o)}</button>`).join("")}</div>
+        <input placeholder="Or type your own answer"></div>`).join("")}
+      <div class="row" style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="skipQ">Skip</button><button class="btn primary" id="runQ">Search</button></div>`;
+    box.querySelectorAll(".chips").forEach((c) => c.onclick = (e) => {
+      const b = e.target.closest(".chip"); if (!b) return;
+      const on = b.getAttribute("aria-pressed") !== "true";
+      b.setAttribute("aria-pressed", on);
+    });
+    setBusy(false);
+    $("#skipQ").onclick = () => { box.classList.add("hidden"); search(question, {}); };
+    $("#runQ").onclick = () => {
+      const answers = {};
+      box.querySelectorAll(".cq").forEach((el) => {
+        const picked = [...el.querySelectorAll('.chip[aria-pressed="true"]')].map((b) => b.textContent);
+        const typed = el.querySelector("input").value.trim();
+        const val = [...picked, typed].filter(Boolean).join(", ");
+        if (val) answers[el.dataset.q] = val;
+      });
+      box.classList.add("hidden");
+      search(question, answers);
+    };
+  } catch (e) {
+    setBusy(false);
+    box.innerHTML = `<h2>Refining</h2><p class="err">${esc(e.message)}</p><p class="intent">Check the model is running (see README), or pick another one at the top.</p>`;
+  }
+}
+
+// ---------------- search (streamed)
+async function search(question, answers) {
+  setBusy(true);
+  $("#clarify").classList.add("hidden");
+  $("#progress").classList.remove("hidden");
+  $("#log").innerHTML = ""; $("#barFill").style.width = "4%"; $("#plan").classList.add("hidden");
+  SOURCES = [];
+  const body = { question, answers, sources: selectedSources(), mode: MODE, model: $("#model").value };
+  try {
+    const r = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (line) onEvent(JSON.parse(line), question); }
+    }
+  } catch (e) { logLine("error", e.message); }
+  setBusy(false);
+}
+
+function logLine(cls, text, small) {
+  const d = document.createElement("div"); d.className = cls;
+  d.innerHTML = `<span class="dot"></span><span>${esc(text)}${small ? ` <small>${esc(small)}</small>` : ""}</span>`;
+  $("#log").appendChild(d);
+}
+
+function onEvent(ev, question) {
+  if (ev.type === "status") logLine("", ev.message);
+  else if (ev.type === "source") logLine(ev.status, `${ev.name}: ${ev.status === "ok" ? ev.count + " found" : ev.status}`, ev.detail);
+  else if (ev.type === "plan") {
+    $("#barFill").style.width = "15%";
+    $("#plan").classList.remove("hidden");
+    $("#planBody").innerHTML = `<p>Answer shape: <b>${esc(ev.format)}</b></p>` + Object.entries(ev.queries)
+      .map(([s, qs]) => `<div>${esc(s)}: ${qs.map((q) => `<code>${esc(q)}</code>`).join(" ")}</div>`).join("");
+  }
+  else if (ev.type === "reading") {
+    $("#barFill").style.width = `${30 + 50 * (ev.done / Math.max(ev.total, 1))}%`;
+    const last = $("#log").lastElementChild;
+    const text = `Reading posts and comments: ${ev.done}/${ev.total}`;
+    if (last && last.dataset.reading) last.querySelector("span:last-child").textContent = text;
+    else { logLine("", text); $("#log").lastElementChild.dataset.reading = 1; }
+  }
+  else if (ev.type === "sources") SOURCES = ev.items;
+  else if (ev.type === "error") logLine("error", ev.message);
+  else if (ev.type === "answer") { $("#barFill").style.width = "100%"; LAST = { question, answer: ev.answer, sources: SOURCES }; renderAnswer(ev.answer); }
+  else if (ev.type === "done") $("#progress").classList.add("hidden");
+}
+
+// ---------------- answer
+function cite(html) {
+  return html.replace(/\[(\d{1,3})\](?!\()/g, (m, n) => {
+    const s = SOURCES[n - 1];
+    return s ? `<a class="cite" href="#src-${n}" title="${esc(s.platform + ": " + s.title)}">${n}</a>` : m;
+  });
+}
+const md = (t) => cite(DOMPurify.sanitize(marked.parse(String(t || ""))));
+const inline = (t) => cite(DOMPurify.sanitize(marked.parseInline(String(t || ""))));
+
+function renderAnswer(a) {
+  const out = [];
+  if (a.tldr) out.push(`<div class="card"><h2>In short</h2><div class="tldr">${inline(a.tldr)}</div></div>`);
+  if (a.warnings?.length) out.push(`<div class="card warns"><h2>Warnings</h2><ul>${a.warnings.map((w) => `<li>${inline(w)}</li>`).join("")}</ul></div>`);
+  if (a.places?.length) {
+    out.push(`<div class="card"><h2>Places (${a.places.length})</h2><div id="map"></div><div class="places">${a.places.map((p, i) => `
+      <div class="place" id="place-${i}"><b>${esc(p.name)}</b>
+        <div><span class="badge ${esc(p.status)}">${esc(p.status || "unknown")}</span>${p.last_mentioned ? `<small>last mentioned ${esc(p.last_mentioned)}</small>` : ""}</div>
+        <div>${inline(p.summary)}</div>${p.warnings ? `<div class="w">⚠ ${inline(p.warnings)}</div>` : ""}
+        <small>${esc(p.area || "")}${p.lat ? ` · ${p.approx ? "approximate location" : "exact location"}` : " · not on map"}</small></div>`).join("")}</div></div>`);
+  }
+  if (a.answer_md) out.push(`<div class="card md"><h2>Answer</h2>${md(a.answer_md)}</div>`);
+  if (a.items?.length) out.push(`<div class="card"><h2>Options</h2><div class="items">${a.items.map((it) => `
+      <div class="item"><b>${esc(it.name)}</b>${it.verdict ? `<span class="badge">${esc(it.verdict)}</span>` : ""}<div>${inline(it.why)}</div></div>`).join("")}</div></div>`);
+  if (a.consensus?.length) out.push(`<div class="card"><h2>What most people agree on</h2><ul>${a.consensus.map((c) => `<li>${inline(c)}</li>`).join("")}</ul></div>`);
+  if (a.disagreements?.length) out.push(`<div class="card"><h2>Where people disagree</h2>${a.disagreements.map((d) => `
+      <div class="vs"><b>${esc(d.topic)}</b><div class="two">${(d.sides || []).map((s) => `<div class="side">${inline(s)}</div>`).join("")}</div></div>`).join("")}</div>`);
+  if (a.facts_vs_crowd?.length) out.push(`<div class="card"><h2>Official line vs. lived experience</h2>${a.facts_vs_crowd.map((f) => `
+      <div class="fvc"><div><span>Official / factual</span>${inline(f.official)}</div><div><span>What people report</span>${inline(f.crowd)}</div></div>`).join("")}</div>`);
+  if (a.gaps) out.push(`<div class="card"><h2>Not covered</h2>${inline(a.gaps)}</div>`);
+  if (a.followups?.length) out.push(`<div class="card followups"><h2>Dig further</h2><div class="chips">${a.followups.map((f) => `<button class="chip">${esc(f)}</button>`).join("")}</div></div>`);
+  out.push(`<div class="card sources"><h2>Sources (${SOURCES.length})</h2>${SOURCES.map(sourceHtml).join("")}
+    <div class="stats"><span>${a.stats?.found ?? "?"} results found</span><span>${a.stats?.read ?? "?"} read in full</span>
+    <span>${a.stats?.seconds ?? "?"}s</span><span>${esc(a.stats?.model || "")}</span>
+    <button class="btn" id="export">Export Markdown</button></div></div>`);
+  $("#result").innerHTML = out.join("");
+  document.querySelectorAll(".followups .chip").forEach((c) => c.onclick = () => { $("#q").value = c.textContent; window.scrollTo({ top: 0, behavior: "smooth" }); ask(false); });
+  $("#export").onclick = exportMd;
+  $("#result").onclick = (e) => {
+    const c = e.target.closest("a.cite"); if (!c) return;
+    const el = document.querySelector(c.getAttribute("href")); if (!el) return;
+    e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600);
+  };
+  if (a.places?.length) drawMap(a.places);
+}
+
+function sourceHtml(s) {
+  const bits = [s.platform, s.meta?.subreddit, s.date, s.score ? `${Number(s.score).toLocaleString()} ${s.meta?.score_label || "points"}` : "",
+    s.num_comments ? `${s.num_comments} comments` : "", s.comments?.length ? `${s.comments.length} read` : ""].filter(Boolean);
+  const snippet = (s.text || "").slice(0, 260);
+  const comments = (s.comments || []).slice(0, 6);
+  const safeUrl = /^(https?|file):/.test(s.url) ? s.url : "#";
+  return `<div class="s" id="src-${s.id}"><div class="n">${s.id}</div><div>
+    <a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(s.title || s.url)}</a>
+    <div class="meta">${bits.map(esc).join(" · ")}</div>
+    ${snippet ? `<div class="snip">${esc(snippet)}${s.text.length > 260 ? "…" : ""}</div>` : ""}
+    ${comments.length ? `<details><summary class="meta">Top comments</summary>${comments.map((c) =>
+      `<div>${c.score ? `<b>${c.score}↑</b> ` : ""}${esc(c.text.slice(0, 300))}</div>`).join("")}</details>` : ""}
+  </div></div>`;
+}
+
+function drawMap(places) {
+  const pts = places.map((p, i) => [p, i]).filter(([p]) => p.lat != null);
+  if (!pts.length) { $("#map").remove(); return; }
+  const map = L.map("map", { scrollWheelZoom: false });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 18, attribution: "© OpenStreetMap contributors" }).addTo(map);
+  const markers = pts.map(([p, i]) => L.circleMarker([p.lat, p.lon], {
+      radius: 8, weight: 2, color: p.status === "closed" || p.status === "restricted" ? "#b3261e" : p.status === "open" ? "#1d7a46" : "#2f5bea",
+      fillOpacity: p.approx ? 0.25 : 0.7, dashArray: p.approx ? "3" : null })
+    .addTo(map).bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.status || "unknown")}${p.approx ? " · approximate" : ""}`)
+    .on("click", () => document.getElementById(`place-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" })));
+  map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2), { maxZoom: 13 });
+}
+
+function exportMd() {
+  if (!LAST) return;
+  const a = LAST.answer, L2 = [`# ${LAST.question}`, "", a.tldr || "", ""];
+  if (a.warnings?.length) L2.push("## Warnings", ...a.warnings.map((w) => `- ${w}`), "");
+  if (a.places?.length) L2.push("## Places", ...a.places.map((p) => `- **${p.name}** (${p.area || ""}, ${p.status || "unknown"}${p.lat ? `, ${p.lat},${p.lon}` : ""}): ${p.summary}${p.warnings ? ` ⚠ ${p.warnings}` : ""}`), "");
+  L2.push(a.answer_md || "", "");
+  if (a.consensus?.length) L2.push("## Consensus", ...a.consensus.map((c) => `- ${c}`), "");
+  if (a.disagreements?.length) L2.push("## Disagreements", ...a.disagreements.flatMap((d) => [`- **${d.topic}**`, ...(d.sides || []).map((s) => `  - ${s}`)]), "");
+  L2.push("## Sources", ...LAST.sources.map((s) => `${s.id}. [${s.title || s.url}](${s.url}) (${s.platform}${s.date ? ", " + s.date : ""})`));
+  const blob = new Blob([L2.join("\n")], { type: "text/markdown" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+  link.download = LAST.question.slice(0, 60).replace(/[^\w\- ]+/g, "").trim().replace(/ +/g, "-") + ".md"; link.click();
+}
+
+function setBusy(b) { busy = b; $("#go").disabled = b; $("#direct").disabled = b; }
+
+$("#go").onclick = () => ask(false);
+$("#direct").onclick = () => ask(true);
+$("#q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask(false); });
+$("#profileBtn").onclick = () => $("#profileDlg").showModal();
+$("#saveProfile").onclick = async () => {
+  await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: $("#profileText").value }) });
+};
+loadMeta();
+</script>
+</body>
+</html>

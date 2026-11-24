@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       { name: "Swipe", url: `${BASE}/swipe/` },
-      { name: "Tonight", url: `${BASE}/tonight/` },
+      { name: "Tonight", url: `${BASE}/#tonight` },
       { name: "Vault", url: `${BASE}/vault/` },
     ],
     // "Share" a link from any app on your phone straight into your vault

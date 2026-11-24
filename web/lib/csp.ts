@@ -11,7 +11,7 @@ const CONNECT = [
   "https://www.googleapis.com", "https://accounts.google.com", // YouTube (your OAuth client)
   "https://query.wikidata.org", "https://*.wikipedia.org", // scores, spots, summaries
   "https://api.open-meteo.com", "https://archive-api.open-meteo.com", // weather now and typical climate of places
-  "https://site.api.espn.com", // sports: results, fixtures, tables, news, injuries
+  "https://site.api.espn.com", "https://site.web.api.espn.com", // sports: results, fixtures, tables, news, injuries, teams, athletes
   "https://noembed.com", "https://api.microlink.io", "https://api.rss2json.com", // link previews, Pinterest RSS
   "https://api.anthropic.com", // optional AI
   "http://127.0.0.1:8765", "http://localhost:8765", // Agora, your review reader, when it runs on your PC

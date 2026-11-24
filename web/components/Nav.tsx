@@ -14,6 +14,9 @@ import { ACTION_VALUE, setSpace, useProfiles, useStore } from "@/lib/store";
 
 type NavLink = { href: string; label: string };
 
+/** Sports isn't a catalogue you rate: it's a live space of its own (scores, tables, teams, athletes). */
+const SPORTS_SPACE = { label: "Sports", short: "Sport", emoji: "⚽" };
+
 /** The four destinations of every space (docs/NAVIGATION.md). */
 export const MAIN: NavLink[] = [
   { href: "/", label: "Home" },
@@ -25,7 +28,7 @@ export const MAIN: NavLink[] = [
 /** Space tools that live under "More" (rarely used, still one tap away). */
 export function moreTabs(space: string): NavLink[] {
   const taste = { href: "/me/", label: "My taste" };
-  if (space === "films") return [taste, { href: "/tonight/", label: "Tonight (full page)" }, { href: "/graph/", label: "Taste graph" }];
+  if (space === "films") return [taste, { href: "/graph/", label: "Taste graph" }];
   if (space === "music") return [taste, { href: "/playlists/", label: "Playlists" }, { href: "/add/", label: "+ Add" }];
   if (space === "places") return [taste, { href: "/trips/", label: "Trips" }, { href: "/add/", label: "+ Add" }];
   return [taste, { href: "/add/", label: "+ Add" }];
@@ -36,7 +39,7 @@ export const spaceTabs = (space: string): NavLink[] => [...MAIN, ...moreTabs(spa
 
 const GLOBAL = [
   { href: "/together/", label: "Pick together", icon: "M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20a6 6 0 0112 0M10 20a6 6 0 0112 0" },
-  { href: "/sports/", label: "Sports", icon: "M12 21a9 9 0 100-18 9 9 0 000 18zm0-18v18M3 12h18M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8" },
+  { href: "/ask/", label: "Ask people (Agora)", icon: "M4 5h16v11H8l-4 4zM8 9h8M8 12h5" },
   { href: "/saves/", label: "Instagram saves", icon: "M5 3h14a1 1 0 011 1v17l-8-4-8 4V4a1 1 0 011-1z" },
   { href: "/vault/", label: "Second brain", icon: "M9 3a3 3 0 00-3 3v.5A3.5 3.5 0 004 13a3 3 0 002 5.2V18a3 3 0 006 0V5a2 2 0 00-3-2zm6 0a3 3 0 013 3v.5a3.5 3.5 0 012 6.5 3 3 0 01-2 5.2V18a3 3 0 01-6 0" },
   { href: "/import/", label: "Import & connect", icon: "M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" },
@@ -63,7 +66,8 @@ export default function Nav() {
   const tr = useT();
   const spaces = DOMAINS.filter((d) => !m || d.name === "films" || m.domains[d.name]?.count);
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
-  const cfg = DOMAIN[space] ?? DOMAINS[0];
+  const onSports = path.startsWith("/sports");
+  const cfg = onSports ? SPORTS_SPACE : DOMAIN[space] ?? DOMAINS[0];
   const moreActive = [...moreTabs(space), ...GLOBAL].some((t) => active(t.href));
   const profiles = useProfiles();
   const me = profiles.list.find((p) => p.id === profiles.active) ?? profiles.list[0];
@@ -104,7 +108,7 @@ export default function Nav() {
       {/* desktop: tabs of the current space */}
       <header className="fixed left-64 right-0 top-0 z-20 hidden h-14 items-center gap-1 border-b border-line/60 bg-bg/85 px-6 backdrop-blur md:flex">
         <span className="mr-3 text-sm text-muted">{cfg.emoji} {tr(cfg.label)}</span>
-        {MAIN.map((t) => (
+        {!onSports && MAIN.map((t) => (
           <Link key={t.href} href={t.href} className={`rounded-lg px-3 py-1.5 text-sm transition ${active(t.href) ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
             {tr(t.label)}
           </Link>
@@ -216,7 +220,7 @@ function SpaceList({ spaces, space, counts, path, onPick }: {
                 onPick?.();
               }}
               data-space={d.name}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${d.name === space ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${d.name === space && !path.startsWith("/sports") ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}
             >
               <span className="text-lg">{d.emoji}</span>
               <span className="flex-1">
@@ -230,6 +234,14 @@ function SpaceList({ spaces, space, counts, path, onPick }: {
           </li>
         );
       })}
+      <li>
+        <Link href="/sports/" onClick={() => onPick?.()} data-space="sports"
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${path.startsWith("/sports") ? "bg-panel-2 text-ink" : "text-muted hover:bg-panel hover:text-ink"}`}>
+          <span className="text-lg">{SPORTS_SPACE.emoji}</span>
+          <span className="flex-1 leading-tight">{t(SPORTS_SPACE.label)}</span>
+          <span className="text-[11px] text-muted">{t("live")}</span>
+        </Link>
+      </li>
     </ul>
   );
 }

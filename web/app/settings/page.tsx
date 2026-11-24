@@ -132,7 +132,7 @@ export default function Settings() {
 
       {msg && <p className="fixed bottom-24 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 rounded-xl bg-panel-2 px-4 py-2 text-sm shadow-xl md:bottom-6">{msg}</p>}
       <p className="text-xs text-muted/70">
-        {T("Data: TMDB (this product uses the TMDB API but is not endorsed or certified by TMDB), Wikidata & Wikimedia Commons (CC0 / CC BY-SA), MovieLens (GroupLens), TheMealDB, Deezer API, YouTube RSS. Streaming availability: TMDB / JustWatch.")}</p>
+        {T("Data: TMDB (this product uses the TMDB API but is not endorsed or certified by TMDB), Wikidata & Wikimedia Commons (CC0 / CC BY-SA), Wikipedia (CC BY-SA), GeoNames (CC BY 4.0), Open-Meteo (CC BY 4.0), MovieLens (GroupLens), TheMealDB, Deezer API, YouTube RSS, ESPN's public scores feed. Streaming availability: TMDB / JustWatch.")}</p>
     </div>
   );
 }

@@ -111,12 +111,197 @@ def collect() -> list[Item]:
             meta={"kind": "piece", "brand": p["brand"], "price": p["price"], "price_approx": True},
             related=[b.id],
         ))
+    # Wikidata (CC0) and Wikimedia Commons (free licences): photos for what has none, more brands, their famous pieces
+    try:
+        n_more, n_wd_pieces = enrich_from_wikidata(items, brand_item)
+    except Exception as e:  # noqa: BLE001 - the curated catalogue stands on its own
+        log.warning("style wikidata failed: %s", e)
+        n_more = n_wd_pieces = 0
+    n_photos = commons_piece_photos([it for it in items if it.meta.get("kind") == "piece" and not it.meta.get("photo")])
     # the brands' own shops: their current pieces (photo, price, category), browsable and saveable in the app
     shop_items = shop_pieces(cfg, brand_item)
     items.extend(shop_items)
-    log.info("style: %d brands (%d with images), %d curated pieces, %d pieces from the brands' shops", len(cfg),
-             sum(1 for p in previews if p.get("image")), len(pieces), len(shop_items))
+    log.info("style: %d brands (%d with images), %d curated pieces (%d with a photo), %d more brands and %d pieces from Wikidata, "
+             "%d pieces from the brands' shops", len(cfg), sum(1 for p in previews if p.get("image")), len(pieces), n_photos,
+             n_more, n_wd_pieces, len(shop_items))
     return items
+
+
+# ------------------------------------------------------------------ Wikidata and Commons
+WD_UA = "CineGraph/1.0 (personal taste app; https://github.com/Polluxgnr/cinegraph)"
+FASHION_INDUSTRIES = "wd:Q12684 wd:Q11828862 wd:Q5915560 wd:Q107601662 wd:Q3231404"
+WD_BRANDS_Q = """
+SELECT ?item ?itemLabel ?itemDescription ?img ?logo ?links ?countryLabel ?site WHERE {
+  { VALUES ?ind { %s } ?item wdt:P452 ?ind } UNION { ?item wdt:P31 wd:Q1618899 }
+  ?item wikibase:sitelinks ?links . FILTER(?links >= 5)
+  OPTIONAL { ?item wdt:P18 ?img } OPTIONAL { ?item wdt:P154 ?logo }
+  OPTIONAL { ?item wdt:P17 ?country } OPTIONAL { ?item wdt:P856 ?site }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}""" % FASHION_INDUSTRIES
+# the curated brands, found by name among companies and labels
+WD_NAMES_Q = """
+SELECT ?item ?l ?itemDescription ?img ?logo ?links WHERE {{
+  VALUES ?l {{ {names} }}
+  ?item rdfs:label ?l ; wikibase:sitelinks ?links .
+  FILTER EXISTS {{ {{ ?item wdt:P452 ?ind }} UNION {{ ?item wdt:P31/wdt:P279* wd:Q431289 }} UNION {{ ?item wdt:P31/wdt:P279* wd:Q4830453 }} }}
+  OPTIONAL {{ ?item wdt:P18 ?img }} OPTIONAL {{ ?item wdt:P154 ?logo }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}"""
+# what a brand makes or puts its name on, with a photo
+WD_PIECES_Q = """
+SELECT ?item ?itemLabel ?itemDescription ?brand ?img ?classLabel ?links WHERE {{
+  VALUES ?brand {{ {ids} }}
+  {{ ?item wdt:P1716 ?brand }} UNION {{ ?item wdt:P176 ?brand }}
+  ?item wdt:P18 ?img ; wikibase:sitelinks ?links .
+  OPTIONAL {{ ?item wdt:P31 ?class }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}"""
+NOT_A_PIECE = re.compile(r"human|ball|trophy|award|organi[sz]ation|company|business|store|shop|building|event|tournament|team|advertis|campaign|software|app\b|video game|film|\bcar\b"
+                         r"|automobile|racing|formula|vehicle|device|tracker|electronic|fashion label|clothing line|subsidiary|fashion house", re.I)
+# retailers, holdings and groups: not labels you dress in
+NOT_A_LABEL = re.compile(r"holding|conglomerate|department store|retailer|retail (company|chain)|e-commerce|online shop|investment"
+                         r"|wholesale|multinational corporation|group of companies", re.I)
+COMPANY_SUFFIX = re.compile(r",?\s+(Inc\.?|B\.V\.|plc|SE|AG|S\.p\.A\.|S\.A\.|Ltd\.?|GmbH|Co\.|Corporation|Group)$")
+PIECE_KIND = [("sneakers", r"shoe|sneaker|boot|footwear|sandal|slipper|trainer"), ("bags", r"bag|handbag|backpack|purse"),
+              ("outerwear", r"jacket|coat|parka|anorak"), ("pants", r"jeans|trousers|pants"), ("accessories", r"watch|sunglasses|eyewear|hat|belt|jewel|wallet"),
+              ("fragrance", r"perfume|fragrance|eau de"), ("tops", r"shirt|sweater|polo|garment|clothing|dress")]
+
+
+def _commons(name: str | None, width: int = 600) -> str | None:
+    from .base import commons_image
+    return commons_image(name, width)
+
+
+def _fold(s: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)).strip()
+
+
+def enrich_from_wikidata(items: list[Item], brand_item: dict[str, Item]) -> tuple[int, int]:
+    """Curated brands without a photo get Wikidata's; well-known labels not in the list join; their pieces with a photo too."""
+    from ..ingest.wikidata import _qid, _val
+    from .wikidata_domains import _group, _rows
+
+    qid_of: dict[str, Item] = {}
+    names = list(brand_item)
+    for i in range(0, len(names), 80):
+        part = names[i:i + 80]
+        try:
+            res = _rows(WD_NAMES_Q.format(names=" ".join('"%s"@en' % n.replace('"', "") for n in part)))
+        except Exception as e:  # noqa: BLE001
+            log.info("style names %d: %s", i, e)
+            continue
+        best: dict[str, dict] = {}
+        for b in res:
+            l, q = _val(b, "l"), _qid(_val(b, "item"))
+            if l and (l not in best or float(_val(b, "links") or 0) > float(best[l].get("links") or 0)):
+                best[l] = {"qid": q, **{k: v["value"] for k, v in b.items()}}
+        for l, d in best.items():
+            it = brand_item.get(l)
+            if not it:
+                continue
+            qid_of[d["qid"]] = it
+            if "favicons" in (it.image or "") and (d.get("img") or d.get("logo")):
+                it.image = _commons(d.get("img") or d.get("logo"))
+            if not it.meta.get("description") and d.get("itemDescription"):
+                it.meta["description"] = d["itemDescription"]
+            it.links["wikidata"] = f"https://www.wikidata.org/wiki/{d['qid']}"
+    # more labels
+    known = {_fold(n) for n in brand_item}
+    more = 0
+    for q, d in _group(_rows(WD_BRANDS_Q), ()).items():
+        label = COMPANY_SUFFIX.sub("", d.get("itemLabel", q)).strip()
+        img = d.get("img") or d.get("logo")
+        generic = label == label.lower() and label in {"fashion", "clothing", "footwear", "apparel"}
+        if label == q or not img or generic or _fold(label) in known or NOT_A_LABEL.search(d.get("itemDescription", "")):
+            continue
+        known.add(_fold(label))
+        country = d.get("countryLabel", "")
+        it = Item(
+            id=f"brands:{slug(label)}", title=label, subtitle=" · ".join(x for x in (country, "label") if x),
+            image=_commons(img), url=d.get("site") or f"https://www.wikidata.org/wiki/{q}",
+            tags=["label", *([country] if country else [])],
+            text=f"{label}. {d.get('itemDescription', '')}. fashion label. {country}.", pop=float(d.get("links", 0)),
+            links={"wikidata": f"https://www.wikidata.org/wiki/{q}", "pinterest": f"https://www.pinterest.com/search/pins/?q={urllib.parse.quote(label)}",
+                   "vinted": f"https://www.vinted.fr/catalog?search_text={urllib.parse.quote(label)}"},
+            meta={"description": d.get("itemDescription"), "kind": "brand", "from_wikidata": True},
+        )
+        items.append(it)
+        brand_item[label] = it
+        qid_of[q] = it
+        more += 1
+    # their famous pieces
+    pieces = 0
+    ids = list(qid_of)
+    seen: set[str] = set()
+    have = {it.id for it in items}
+    for i in range(0, len(ids), 60):
+        try:
+            res = _rows(WD_PIECES_Q.format(ids=" ".join(f"wd:{q}" for q in ids[i:i + 60])))
+        except Exception as e:  # noqa: BLE001
+            log.info("style pieces %d: %s", i, e)
+            continue
+        for q, d in _group(res, ("classLabel",)).items():
+            label, classes = d.get("itemLabel", q), " ".join(d.get("classLabel", []))
+            brand = qid_of.get(_qid(d.get("brand", "")))
+            if q in seen or label == q or not brand or NOT_A_PIECE.search(f"{classes} {d.get('itemDescription', '')}"):
+                continue
+            seen.add(q)
+            kind = next((k for k, pat in PIECE_KIND if re.search(pat, f"{classes} {d.get('itemDescription', '')} {label}", re.I)), "other")
+            pid = f"brands:piece:{slug(brand.title)}-{slug(label)}"
+            if pid in have:
+                continue
+            have.add(pid)
+            title = label if _fold(brand.title.split()[0]) in _fold(label) else f"{brand.title} {label}"
+            qs = urllib.parse.quote(title)
+            items.append(Item(
+                id=f"brands:piece:{slug(brand.title)}-{slug(label)}", title=title, subtitle=f"{kind} · {brand.title}",
+                image=_commons(d.get("img")), url=f"https://www.wikidata.org/wiki/{q}",
+                tags=["piece", kind, *brand.tags[:3]], pop=float(d.get("links", 0)),
+                text=f"{title}. {d.get('itemDescription', '')}. {kind} by {brand.title}. {', '.join(brand.tags)}.",
+                links={"wikidata": f"https://www.wikidata.org/wiki/{q}", "shop": f"https://www.google.com/search?tbm=shop&q={qs}",
+                       "vinted": f"https://www.vinted.fr/catalog?search_text={qs}", "pinterest": f"https://www.pinterest.com/search/pins/?q={qs}"},
+                meta={"kind": "piece", "brand": brand.title, "category": kind, "photo": True, "description": d.get("itemDescription")},
+                related=[brand.id],
+            ))
+            brand.related.append(f"brands:piece:{slug(brand.title)}-{slug(label)}")
+            pieces += 1
+    return more, pieces
+
+
+def commons_piece_photos(pieces: list[Item]) -> int:
+    """A Wikimedia Commons photo for a curated piece, only when the file is plainly of it (brand and model in its name)."""
+    import time
+
+    n = 0
+    for it in pieces:
+        brand = it.meta.get("brand", "")
+        model = _fold(it.title[len(brand):] if it.title.startswith(brand) else it.title)
+        words = [w for w in re.findall(r"[a-z0-9]{2,}", model) if w not in {"the", "and", "of", "jacket", "shirt", "coat", "bag", "sneaker", "sneakers", "boot", "boots"}]
+        if not words:
+            continue
+        try:
+            r = httpx.get("https://commons.wikimedia.org/w/api.php", params={
+                "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrlimit": 5,
+                "gsrsearch": f"{brand} {model} filetype:bitmap", "prop": "imageinfo", "iiprop": "url", "iiurlwidth": 600,
+            }, headers={"User-Agent": WD_UA}, timeout=20)
+            pages = sorted(((r.json().get("query") or {}).get("pages") or {}).values(), key=lambda p: p.get("index", 99))
+        except Exception:  # noqa: BLE001
+            continue
+        finally:
+            time.sleep(0.4)
+        bw = [w for w in re.findall(r"[a-z0-9]{2,}", _fold(brand))][:1]
+        for p in pages:
+            t = _fold(p.get("title", ""))
+            if all(w in t for w in bw) and sum(w in t for w in words) >= max(1, (len(words) + 1) // 2):
+                info = (p.get("imageinfo") or [{}])[0]
+                if info.get("thumburl"):
+                    it.image = info["thumburl"]
+                    it.meta["photo"] = True
+                    it.links.setdefault("commons", info.get("descriptionurl", ""))
+                    n += 1
+                    break
+    return n
 
 
 # ------------------------------------------------------------------ the brands' own shops

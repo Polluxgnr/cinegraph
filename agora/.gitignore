@@ -1,0 +1,9 @@
+config.toml
+profile.md
+data/browser-profile/
+data/imports/*
+!data/imports/.gitkeep
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/

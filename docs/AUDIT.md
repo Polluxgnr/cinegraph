@@ -125,6 +125,10 @@ help (kept off). Re-run: `lib/engine/tune.eval.ts` and `lib/engine/myscore.eval.
 3. ~~When to go~~: each destination now shows its typical year (two years of Open-Meteo records), the best months,
    today's weather, the week ahead and the local time.
 4. **Trips**: add opening hours (OpenStreetMap `opening_hours`) and travel time between days.
+5. ~~Big cities missing~~ (Paris, Madrid: Wikidata files them as "commune", "municipality", not "city"): every city
+   of 100,000 people or more and every capital now come from GeoNames (CC BY 4.0, cached two months in `data/geonames`,
+   the server sends ~10 KB/s), matched to Wikidata by GeoNames id for the photo and Wikivoyage guide, or by name when
+   that id points to a district. Plus all ~210 countries. ~7,600 places; Search has a country picker.
 
 ## Dream garage and Style
 
@@ -135,11 +139,33 @@ help (kept off). Re-run: `lib/engine/tune.eval.ts` and `lib/engine/myscore.eval.
    brand's own product page where it exists.
 2. **Style discovery** relies on curated brands plus your Pinterest boards. Instagram saves come through packs;
    there is no legal live access to Instagram saves.
+3. ~~Brands without pictures, pieces without photos~~: the brands' shops refuse or time out from GitHub's servers
+   (0 pieces in the November 24 build; not worked around). Wikidata now gives a photo or logo to curated brands whose
+   site has no preview, ~230 more labels, and their famous pieces with a Commons photo (Levi's 501, Birkin, Air Max...);
+   curated pieces get a Commons photo only when the file is plainly of that piece. Style Home has a photo catalogue by
+   category. Still thin: photos for most curated pieces (no open source has them).
+4. A kept car export (Wikidata timed out) still gets the curated specs.
 
 ## Sports
 
 1. ~~Match details~~: a match opens its recent form, goals, cards and substitutions, team stats with bars,
    line-ups with formation, leaders (US sports) and attendance, from ESPN's summary feed.
+2. ~~Teams and athletes~~: Sports is a space of its own. Every team, player, driver and fighter opens a page:
+   Wikipedia description, standing, record, coach, the season's results and fixtures, the squad (photos, age,
+   nationality, injuries); an athlete's profile and season numbers; each match has a page. Sources linked (ESPN,
+   Wikipedia). ESPN's team endpoint refuses browsers, so identity comes from the roster endpoint, which allows them.
+
+## Films: search filters
+
+Type and genre (with its subgenres underneath) stay in view; length, decade, original language, collections and
+animation wait in "More filters". Whatever is on shows as a removable chip with a Reset. The People / Directors /
+Actors switch is gone: the box searches everything and matching people show as their own row. Tonight moved into
+the films Home (`/tonight/` leads there).
+
+## Agora
+
+The review reader now lives in this repository (`agora/`, its own `config.toml` and `data/` stay out of git). The app
+has an "Ask people" page and asks it from film, place, recipe, brand, team and athlete pages.
 
 ## Design
 

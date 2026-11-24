@@ -99,7 +99,7 @@ export default function AskPeople({ suggestions = [], title }: { suggestions?: s
       {up === false ? (
         <div className="space-y-1 text-sm text-muted">
           <p>{T("Agora reads Reddit, YouTube comments, Google Maps reviews, TikTok, Instagram and forums, and writes a cited answer. It runs on your PC: start it, then come back.")}</p>
-          <code className="block rounded-lg bg-panel-2 px-3 py-2 text-xs text-ink">python -m agora</code>
+          <code className="block whitespace-pre rounded-lg bg-panel-2 px-3 py-2 text-xs text-ink">{"cd cinegraph/agora\npip install -e .   # once\npython -m agora"}</code>
           <p className="text-xs">{T("Settings → Connections lets you change its address.")}</p>
         </div>
       ) : (

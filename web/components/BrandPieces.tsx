@@ -13,7 +13,7 @@ import { fmtPrice } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 
 export const CATEGORIES = ["outerwear", "tops", "pants", "sneakers", "shoes", "bags", "accessories", "eyewear", "fragrance"] as const;
-const LABEL: Record<string, string> = {
+export const LABEL: Record<string, string> = {
   outerwear: "Outerwear", tops: "Tops & knits", pants: "Pants & denim", sneakers: "Sneakers", shoes: "Shoes & boots",
   bags: "Bags", accessories: "Accessories", eyewear: "Eyewear", fragrance: "Fragrance",
 };
@@ -22,7 +22,7 @@ const SEARCH: Record<string, string> = {
   bags: "bag", accessories: "cap belt", eyewear: "sunglasses", fragrance: "parfum",
 };
 
-const categoryOf = (e: Entity) => e.tags.find((t) => (CATEGORIES as readonly string[]).includes(t)) ?? "other";
+export const categoryOf = (e: Entity) => e.tags.find((t) => (CATEGORIES as readonly string[]).includes(t)) ?? "other";
 
 /**
  * A brand, piece by piece: what's in the catalogue and what you added, grouped by category, plus a way to

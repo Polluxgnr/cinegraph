@@ -103,8 +103,18 @@ def places(limit_per_type: int = 150) -> list[Item]:
                 meta={"coord": d.get("coord"), "country": country, "description": d.get("itemDescription"),
                       },
             ))
+    # every country, and every city of 100,000 people or more (Wikidata's "city" class misses Paris, Madrid...)
+    for extra, what in ((countries, "countries"), (big_cities, "cities")):
+        try:
+            for it in extra():
+                q = it.id.split(":", 1)[1]
+                if q not in seen:
+                    seen.add(q)
+                    items.append(it)
+        except Exception as e:  # noqa: BLE001 - keep what the per-type queries found
+            log.warning("places %s failed: %s", what, e)
     # French name and description, shown when the interface is in French (London -> Londres)
-    fr = french_labels([it.id.split(":", 1)[1] for it in items])
+    fr = french_labels([it.id.split(":", 1)[1] for it in items if not it.id.startswith("places:gn")])
     for it in items:
         d = fr.get(it.id.split(":", 1)[1], {})
         if d.get("frLabel") and d["frLabel"] != it.title:
@@ -113,6 +123,161 @@ def places(limit_per_type: int = 150) -> list[Item]:
             it.meta["description_fr"] = d["frDesc"]
     log.info("places: %d (%d with a French name)", len(items), sum("fr" in it.meta for it in items))
     return items
+
+
+def _place_item(q: str, label: str, kind: str, country: str, d: dict, pop: float, coord: str | None) -> Item:
+    voy = d.get("voy")
+    return Item(
+        id=f"places:{q}", title=label, subtitle=" · ".join(x for x in (country, kind) if x),
+        image=commons_image(d.get("img")),
+        url=voy or f"https://en.wikivoyage.org/wiki/Special:Search?search={label.replace(' ', '%20')}",
+        tags=[kind] + ([country] if country else []),
+        text=f"{label}. {d.get('itemDescription') or d.get('desc') or ''}. {kind}. {country}.",
+        pop=pop,
+        links={"wikidata": f"https://www.wikidata.org/wiki/{q}" if not q.startswith("gn") else "",
+               "maps": f"https://www.openstreetmap.org/search?query={label.replace(' ', '%20')}",
+               "pinterest": f"https://www.pinterest.com/search/pins/?q={label.replace(' ', '%20')}"},
+        meta={"coord": coord, "country": country, "description": d.get("itemDescription") or d.get("desc")},
+    )
+
+
+COUNTRIES_Q = """
+SELECT ?item ?itemLabel ?itemDescription ?img ?links ?voy ?coord ?capitalLabel ?population WHERE {
+  VALUES ?t { wd:Q6256 wd:Q3624078 }
+  ?item wdt:P31 ?t ; wikibase:sitelinks ?links .
+  FILTER NOT EXISTS { ?item wdt:P576 ?end }
+  OPTIONAL { ?item wdt:P18 ?img }
+  OPTIONAL { ?voy schema:about ?item ; schema:isPartOf <https://en.wikivoyage.org/> }
+  OPTIONAL { ?item wdt:P625 ?coord }
+  OPTIONAL { ?item wdt:P36 ?capital }
+  OPTIONAL { ?item wdt:P1082 ?population }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}"""
+
+
+def countries() -> list[Item]:
+    out = []
+    for q, d in _group(_rows(COUNTRIES_Q), ()).items():
+        label = d.get("itemLabel", q)
+        if label == q:
+            continue
+        it = _place_item(q, label, "country", "", d, float(d.get("links", 0)), d.get("coord"))
+        it.tags = ["country"]
+        it.meta.update(capital=d.get("capitalLabel"), population=int(float(d["population"])) if d.get("population") else None)
+        out.append(it)
+    log.info("countries: %d", len(out))
+    return out
+
+
+GEONAMES = "https://download.geonames.org/export/dump/"
+# GeoNames id (P1566) -> the Wikidata item, for its photo, Wikivoyage page and fame (sitelinks)
+GN_Q = """
+SELECT ?item ?gn ?img ?links ?voy ?desc WHERE {{
+  VALUES ?gn {{ {ids} }}
+  ?item wdt:P1566 ?gn ; wikibase:sitelinks ?links .
+  OPTIONAL {{ ?item wdt:P18 ?img }}
+  OPTIONAL {{ ?voy schema:about ?item ; schema:isPartOf <https://en.wikivoyage.org/> }}
+  OPTIONAL {{ ?item schema:description ?desc FILTER(LANG(?desc) = "en") }}
+}}"""
+
+
+NAME_Q = """
+SELECT ?item ?l ?countryLabel ?img ?links ?voy ?desc WHERE {{
+  VALUES ?l {{ {names} }}
+  ?item rdfs:label ?l ; wdt:P17 ?country ; wdt:P1082 ?pop ; wikibase:sitelinks ?links .
+  FILTER(?pop > 100000)
+  OPTIONAL {{ ?item wdt:P18 ?img }}
+  OPTIONAL {{ ?voy schema:about ?item ; schema:isPartOf <https://en.wikivoyage.org/> }}
+  OPTIONAL {{ ?item schema:description ?desc FILTER(LANG(?desc) = "en") }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}"""
+
+
+def _geonames(name: str, max_age_days: int = 60) -> bytes:
+    """GeoNames dump file, kept in the data folder: the server sends ~10 KB/s, so it's fetched every two months."""
+    import time
+
+    import httpx
+
+    from ..config import get_settings
+
+    p = get_settings().data_dir / "geonames" / name
+    if p.exists() and time.time() - p.stat().st_mtime < max_age_days * 86400:
+        return p.read_bytes()
+    try:
+        raw = httpx.get(GEONAMES + name, timeout=httpx.Timeout(30, read=300), follow_redirects=True).raise_for_status().content
+    except Exception:
+        if p.exists():  # an old copy beats no cities
+            return p.read_bytes()
+        raise
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(raw)
+    return raw
+
+
+def big_cities(min_pop: int = 100_000, batch: int = 250) -> list[Item]:
+    """GeoNames (CC BY 4.0): every city of `min_pop` people or more and every capital, enriched from Wikidata."""
+    import io
+    import math
+    import zipfile
+
+    names = {}
+    for line in _geonames("countryInfo.txt").decode("utf-8").splitlines():
+        if line and not line.startswith("#"):
+            c = line.split("\t")
+            names[c[0]] = c[4]
+    raw = _geonames("cities15000.zip")
+    rows = []
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        for line in z.read("cities15000.txt").decode("utf-8").splitlines():
+            c = line.split("\t")
+            pop = int(c[14] or 0)
+            if pop >= min_pop or c[7] == "PPLC":
+                rows.append((c[0], c[1], c[4], c[5], names.get(c[8], c[8]), pop, c[7] == "PPLC"))
+    wd: dict[str, dict] = {}
+    for i in range(0, len(rows), batch):
+        try:
+            res = _rows(GN_Q.format(ids=" ".join(f'"{r[0]}"' for r in rows[i:i + batch])))
+        except Exception as e:  # noqa: BLE001 - those cities keep no photo
+            log.warning("cities wikidata %d-%d failed: %s", i, i + batch, e)
+            continue
+        for q, d in _group(res, ()).items():
+            g = d.get("gn")
+            if g and (g not in wd or float(d.get("links", 0)) > float(wd[g].get("links", 0))):
+                wd[g] = d
+    # a big city whose GeoNames id points to a minor item (Madrid -> a district): look it up by its name instead
+    weak = [r for r in rows if (r[5] >= 300_000 or r[6]) and float(wd.get(r[0], {}).get("links", 0)) < 80]
+    for i in range(0, len(weak), 120):
+        part = weak[i:i + 120]
+        try:
+            res = _rows(NAME_Q.format(names=" ".join('"%s"@en' % r[1].replace('"', "") for r in part)))
+        except Exception as e:  # noqa: BLE001
+            log.warning("cities by name %d failed: %s", i, e)
+            continue
+        best: dict[tuple[str, str], dict] = {}
+        for q, d in _group(res, ()).items():
+            k = (d.get("l", ""), d.get("countryLabel", ""))
+            if k not in best or float(d.get("links", 0)) > float(best[k].get("links", 0)):
+                best[k] = d
+        for r in part:
+            d = best.get((r[1], r[4]))
+            if d and float(d.get("links", 0)) > float(wd.get(r[0], {}).get("links", 0)):
+                wd[r[0]] = d
+    out, used = [], set()
+    for gid, name, lat, lon, country, pop, capital in rows:
+        d = wd.get(gid, {})
+        q = d.get("qid") or f"gn{gid}"
+        if q in used:  # two GeoNames entries for one city
+            continue
+        used.add(q)
+        fame = float(d.get("links", 0)) or 10 * math.log10(max(pop, 10))
+        it = _place_item(q, name, "city", country, d, fame, f"Point({lon} {lat})")
+        it.meta.update(population=pop, capital=capital or None, geonames=gid)
+        if capital:
+            it.tags.append("capital")
+        out.append(it)
+    log.info("cities: %d from GeoNames (%d matched on Wikidata, %d with a photo)", len(out), len(wd), sum(1 for i in out if i.image))
+    return out
 
 
 # ------------------------------------------------------------------ cars (dream garage)

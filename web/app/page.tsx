@@ -24,6 +24,8 @@ import { getState, isDone, useLoaded, useStore } from "@/lib/store";
 import { useRecs } from "@/lib/useRecs";
 import { groupTest } from "@/lib/groups";
 import { careerInCatalog, personHref, personIndex } from "@/lib/people";
+import { CATEGORIES, categoryOf, LABEL as PIECE_LABEL } from "@/components/BrandPieces";
+import type { Entity } from "@/lib/types";
 
 const HERO: Record<string, { title: string; sub: string }> = {
   films: { title: "What are we watching", sub: "Films & series picked for you, with the reason why." },
@@ -50,12 +52,12 @@ export default function Home() {
       <ConnectStrip space={space} />
       {isFilmData(d) && <ContinueRow films={d} />}
       <ForYou d={d} />
-      {isFilmData(d) && <TonightPanel compact />}
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
       {space === "music" && <ExtraRow d={d} name="releases" title={T("New releases")} hint="out in the last weeks, artists you like first" />}
       {space === "brands" && <PieceFromLink d={d} />}
       {space === "brands" && <Pieces d={d} />}
+      {space === "brands" && <Catalogue d={d} />}
       <Mine d={d} />
     </div>
   );
@@ -115,12 +117,12 @@ function FilmHome({ d }: { d: FilmData }) {
           <span className="btn">{T("Swipe")}</span>
         </Link>
       )}
+      <TonightPanel compact />
       <ContinueRow films={d} />
       {recs && recs.length > 1 && (
         <Row title={T("For you")} href="/discover/">{recs.slice(1).map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>
       )}
       <NewForYou d={d} />
-      <TonightPanel compact />
       <FollowedRows d={d} />
       <BecauseYouLiked d={d} />
     </div>
@@ -296,6 +298,37 @@ function Fresh({ d }: { d: DomainData }) {
   const recs = useRecs(d, { n: 12, explore: 0, filter: (e) => !!e.date && Date.now() - Date.parse(e.date) < 21 * 864e5 }, "fresh");
   if (!recs?.length) return null;
   return <Row title={T("New this week")} hint="latest from the channels, ranked for you">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
+}
+
+/** Style: every piece as a photo catalogue, by category, photographed pieces first, best match first within that. */
+function Catalogue({ d }: { d: DomainData }) {
+  const T = useT();
+  const [cat, setCat] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
+  const recs = useRecs(d, { n: 400, explore: 0, includeListed: true, noCaps: true, diversity: 1, filter: (e) => e.tags.includes("piece") }, "catalogue");
+  const cats = useMemo(() => {
+    const c = new Map<string, number>();
+    for (const r of recs ?? []) c.set(categoryOf(r.entity), (c.get(categoryOf(r.entity)) ?? 0) + 1);
+    return [...c].filter(([k]) => k !== "other").sort((a, b) => CATEGORIES.indexOf(a[0] as never) - CATEGORIES.indexOf(b[0] as never));
+  }, [recs]);
+  if (!recs?.length) return null;
+  const photo = (e: Entity) => !!e.item?.meta?.photo || !!e.item?.meta?.from_shop;
+  const list = recs.filter((r) => !cat || categoryOf(r.entity) === cat).sort((a, b) => Number(photo(b.entity)) - Number(photo(a.entity)));
+  const shown = all ? list : list.slice(0, 18);
+  return (
+    <section data-testid="catalogue">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-3xl">{T("Catalogue")}</h2>
+        <span className="text-xs text-muted">{list.length} {T("pieces")}</span>
+      </div>
+      <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4">
+        <button className="chip shrink-0" data-on={!cat} onClick={() => setCat(null)}>{T("All")}</button>
+        {cats.map(([k, n]) => <button key={k} className="chip shrink-0" data-on={cat === k} onClick={() => setCat(cat === k ? null : k)}>{T(PIECE_LABEL[k] ?? k)} <span className="text-muted">{n}</span></button>)}
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{shown.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</div>
+      {list.length > shown.length && <button className="btn-ghost mt-4 w-full" onClick={() => setAll(true)}>{T("Show all {n}", { n: list.length })}</button>}
+    </section>
+  );
 }
 
 /** Style: individual pieces (with an approximate price), ranked by your taste in brands and pieces. */

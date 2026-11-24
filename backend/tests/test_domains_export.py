@@ -132,3 +132,33 @@ def test_shop_pieces_categories_and_items(monkeypatch):
     out = style.shop_pieces([{"name": "Scuffers", "url": "https://scuffers.com", "tags": ["streetwear"]}], {"Scuffers": brand})
     assert out[0].title == "Scuffers Zip Hoodie Black" and out[0].meta["category"] == "tops" and out[0].meta["price"] == 89.0
     assert out[0].related == ["brands:scuffers"]
+
+
+def test_kept_car_export_still_gets_curated_specs():
+    from cinegraph.domains import wikidata_domains as wd
+
+    kept = [{"id": "cars:Q463627", "title": "Ferrari F40", "meta": {"maker": "Ferrari"}}, {"id": "cars:Q9", "title": "Some car"}]
+    assert wd.refresh_kept_cars(kept) == 1
+    assert kept[0]["meta"]["hp"] == 478 and kept[0]["meta"]["kg"] == 1100
+    assert "meta" not in kept[1]
+
+
+def test_commons_photo_only_when_the_file_is_of_the_piece(monkeypatch):
+    from cinegraph.domains import style
+    from cinegraph.domains.base import Item
+
+    class R:
+        def __init__(self, titles):
+            self.titles = titles
+
+        def json(self):
+            return {"query": {"pages": {str(i): {"index": i, "title": t, "imageinfo": [{"thumburl": f"https://up/{i}.jpg"}]} for i, t in enumerate(self.titles)}}}
+
+    answers = {"Dr. Martens": ["File:Dr. Martens 1460 02.jpg"], "Our Legacy": ["File:Our Legacy, Bridgwater - geograph.jpg"]}
+    monkeypatch.setattr(style.httpx, "get", lambda url, params, **k: R(answers[params["gsrsearch"].split(" 1460")[0].split(" Box")[0]]))
+    monkeypatch.setattr(__import__("time"), "sleep", lambda s: None)
+    boots = Item(id="brands:piece:dr-martens-1460", title="Dr. Martens 1460 boots", meta={"brand": "Dr. Martens", "kind": "piece"})
+    shirt = Item(id="brands:piece:our-legacy-box-shirt", title="Our Legacy Box shirt", meta={"brand": "Our Legacy", "kind": "piece"})
+    assert style.commons_piece_photos([boots, shirt]) == 1
+    assert boots.image == "https://up/0.jpg" and boots.meta["photo"] is True
+    assert shirt.image is None  # a building that shares the brand's name is not the shirt

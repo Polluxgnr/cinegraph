@@ -12,7 +12,7 @@ import { platformOf } from "@/lib/watch";
 
 const HINT: Record<string, string> = { tense: "gripping", laugh: "dark, sharp humour", mind: "twists, time, reality", horror: "lights off", epic: "big, sweeping" };
 
-/** Tonight: mood x length x your platforms. Full page at /tonight/, compact section on the films Home. */
+/** Tonight: mood x length x your platforms, on the films Home (/tonight/ leads there). */
 export default function TonightPanel({ compact = false }: { compact?: boolean }) {
   const T = useT();
   const films = useFilms().data;
@@ -41,7 +41,7 @@ export default function TonightPanel({ compact = false }: { compact?: boolean })
     [mood, kind, maxRt, onlyMine, platforms.join()].join("|"),
   );
   return (
-    <div className="space-y-6">
+    <section id="tonight" className="scroll-mt-20 space-y-6" data-testid="tonight">
       <header>
         {compact ? <h2 className="font-display text-3xl md:text-4xl">{T("Tonight")}</h2> : <h1 className="font-display text-4xl md:text-5xl">{T("Tonight")}</h1>}
         <p className="text-sm text-muted">{T("On")}{" "}{platforms.join(", ")} {T("+ free (arte.tv, france.tv), in France.")}</p>
@@ -68,6 +68,6 @@ export default function TonightPanel({ compact = false }: { compact?: boolean })
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {recs ? recs.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 6 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>
-    </div>
+    </section>
   );
 }
