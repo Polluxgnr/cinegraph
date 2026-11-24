@@ -37,9 +37,13 @@ async function summary(lang: "en" | "fr", title: string, kind: WikiKind): Promis
 
 /** Wikipedia's own search, for names that are also something else ("Marseille" the club, not the city). */
 async function search(lang: "en" | "fr", q: string): Promise<string[]> {
-  const r = await fetch(`https://${lang}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=3`);
+  const r = await fetch(`https://${lang}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=10`);
   if (!r.ok) return [];
-  return ((await r.json()).pages ?? []).map((p: { title: string }) => p.title).filter((t: string) => !/^(saison|season)\b|\d{4}[–-]\d{2,4}/i.test(t));
+  // a season's page leads to its club: "Saison 2026-2027 de l'Olympique de Marseille", "2026–27 Olympique de Marseille season"
+  const titles = ((await r.json()).pages ?? []).map((p: { title: string }) => p.title
+    .replace(/^Saison \d{4}[–-]\d{2,4} (de l'|de la |du |des |de |d')/i, "")
+    .replace(/^\d{4}[–-]\d{2,4} (.+) season$/i, "$1")) as string[];
+  return [...new Set(titles)].slice(0, 3);
 }
 
 /**
