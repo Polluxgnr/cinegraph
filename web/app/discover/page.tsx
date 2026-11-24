@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useT } from "@/lib/i18n";
 
 import { useMemo, useState } from "react";
@@ -17,6 +18,7 @@ import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import { useRecs } from "@/lib/useRecs";
+import { ALLERGEN_ICON, type Allergen, allergensOf, type Effort, effortOf, fridgeMatch, fridgeTerms, timeOf } from "@/lib/recipe";
 
 type Sort = "match" | "date" | "popular" | "rating" | "length" | "liked" | "price-up" | "price-down";
 
@@ -37,6 +39,10 @@ export default function Discover() {
   const [cuisine, setCuisine] = useState<string | null>(null); // recipes
   const [main, setMain] = useState<string | null>(null);
   const [diet, setDiet] = useState<Diet | null>(null);
+  const [free, setFree] = useState<Allergen[]>([]); // recipes: free from
+  const [effort, setEffort] = useState<Effort | null>(null);
+  const [fridge, setFridge] = useState(false); // the search box lists what you have
+  const terms = useMemo(() => (fridge ? fridgeTerms(q) : []), [fridge, q]);
   const [group, setGroup] = useState<string | null>(null); // films: studio / auteur / new releases
   const [anim, setAnim] = useState<"no-anime" | "none" | "only" | null>(null);
   const [sub, setSub] = useState<string | null>(null); // subgenre (keyword) within the chosen genre
@@ -44,7 +50,7 @@ export default function Discover() {
   const [power, setPower] = useState<string | null>(null);
   const [seats, setSeats] = useState<number | null>(null);
   const [drive, setDrive] = useState<string | null>(null);
-  const words = useMemo(() => normTitle(q).split(" ").filter((w) => w.length > 1), [q]);
+  const words = useMemo(() => (fridge && domain === "recipes" ? [] : normTitle(q).split(" ").filter((w) => w.length > 1)), [q, fridge, domain]);
 
   const facets = useMemo(() => {
     if (!d) return { tags: [] as string[], langs: [] as string[], cuisines: [] as string[] };
@@ -100,11 +106,18 @@ export default function Discover() {
     if (cuisine && cuisineOf(e) !== cuisine) return false;
     if (main && !mainsOf(e).includes(main)) return false;
     if (diet && !(dietOf(e) === diet || (diet === "vegetarian" && dietOf(e) === "vegan"))) return false;
+    if (e.domain === "recipes") {
+      if (free.length && allergensOf(e).some((a) => free.includes(a))) return false;
+      if (effort && effortOf(e) !== effort) return false;
+      if (terms.length && !fridgeMatch(e, terms).have.length) return false;
+    }
     return true;
   };
-  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, scope, theme, cuisine, main, diet, group, anim, sub, engine, power, seats, drive, words.join(" ")].join("|");
+  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, scope, theme, cuisine, main, diet, free.join(","), effort, terms.join(","), group, anim, sub, engine, power, seats, drive, words.join(" ")].join("|");
   const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9, noCaps: words.length > 0 }, key);
   const sorted = useMemo(() => {
+    // fridge: most of your ingredients used first, then fewest still to buy
+    if (terms.length) return [...(recs ?? [])].map((r) => ({ r, m: fridgeMatch(r.entity, terms) })).sort((a, b) => b.m.have.length - a.m.have.length || a.m.missing.length - b.m.missing.length || b.r.p - a.r.p).map((x) => x.r);
     if (!words.length || sort !== "match") return sortRecs(recs ?? [], sort, d?.entities ?? []);
     // relevance first (where the words hit, whole words over prefixes), then how much you'd like it
     const rel = (e: Entity) => {
@@ -117,7 +130,7 @@ export default function Discover() {
     };
     return [...(recs ?? [])].map((r) => ({ r, k: rel(r.entity) + r.p })).sort((a, b) => b.k - a.k).map((x) => x.r);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recs, sort, words]);
+  }, [recs, sort, words, terms]);
   const isFilm = domain === "films";
 
   return (
@@ -134,6 +147,7 @@ export default function Discover() {
             <option value="popular">{T("Most popular")}</option>
             {isFilm && <option value="rating">{T("Community rating")}</option>}
             {(isFilm || domain === "youtube") && <option value="length">{T("Shortest first")}</option>}
+            {domain === "recipes" && <option value="length">{T("Quickest first")}</option>}
             {domain === "youtube" && <option value="liked">{T("Best rated by viewers")}</option>}
             {(domain === "cars" || domain === "brands") && <option value="price-up">{T("Price: low to high")}</option>}
             {(domain === "cars" || domain === "brands") && <option value="price-down">{T("Price: high to low")}</option>}
@@ -141,7 +155,7 @@ export default function Discover() {
         </label>
       </header>
       <input value={q} onChange={(e) => setQ(e.target.value)} type="search" autoFocus
-             placeholder={domain === "films" ? T("Search a title, a director, an actor, a theme…") : domain === "recipes" ? T("A dish, an ingredient (chicken, lentils…), a cuisine…") : T("Search…")}
+             placeholder={domain === "films" ? T("Search a title, a director, an actor, a theme…") : domain === "recipes" && fridge ? T("chicken, lemon, rice…") : domain === "recipes" ? T("A dish, an ingredient (chicken, lentils…), a cuisine…") : T("Search…")}
              className="w-full rounded-xl border border-line bg-panel px-4 py-3 outline-none placeholder:text-muted/70 focus:border-accent" />
       {isFilm && (
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={T("Search in")}>
@@ -189,6 +203,7 @@ export default function Discover() {
               {[2, 4, 5].map((n) => <button key={n} className="chip text-xs" data-on={seats === n} onClick={() => setSeats(seats === n ? null : n)}>{n === 2 ? T("2 seats +") : T("{n} seats +", { n })}</button>)}
               <span className="mx-1 w-px bg-line" />
               {["RWD", "AWD", "4WD"].map((x) => <button key={x} className="chip text-xs" data-on={drive === x} onClick={() => setDrive(drive === x ? null : x)}>{x}</button>)}
+              <Link href="/compare/" className="chip text-xs">⚖️ {T("Compare cars")}</Link>
             </div>
           </div>
         )}
@@ -203,6 +218,17 @@ export default function Discover() {
               <option value="">{T("Every cuisine")}</option>
               {facets.cuisines.map((c) => <option key={c} value={c}>{T(c)}</option>)}
             </select>
+            <span className="mx-1 w-px bg-line" />
+            {(["Easy", "Medium", "Involved"] as const).map((x) => <button key={x} className="chip text-xs" data-on={effort === x} onClick={() => setEffort(effort === x ? null : x)}>{T(x)}</button>)}
+            <div className="flex w-full flex-wrap items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-[0.14em] text-muted">{T("Free from")}</span>
+              {(["gluten", "dairy", "eggs", "nuts", "peanuts", "fish", "shellfish", "sesame", "soy"] as const).map((a) => (
+                <button key={a} className="chip text-xs" data-on={free.includes(a)} onClick={() => setFree(free.includes(a) ? free.filter((x) => x !== a) : [...free, a])}>{ALLERGEN_ICON[a]} {T(a)}</button>
+              ))}
+              <span className="mx-1 w-px self-stretch bg-line" />
+              <button className="chip text-xs" data-on={fridge} onClick={() => setFridge(!fridge)} data-testid="fridge">🧊 {T("What's in my fridge")}</button>
+            </div>
+            {fridge && <p className="w-full text-xs text-muted">{T("List what you have in the search box, separated by commas (chicken, lemon, rice): recipes using most of it come first, with what's left to buy.")}</p>}
           </div>
         )}
         <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
@@ -230,7 +256,12 @@ export default function Discover() {
       {domain === "brands" && words.length > 0 && recs && recs.length < 6 && <WebLookup key={q.trim()} query={q.trim()} />}
       {domain === "brands" && !words.length && <PieceFromLink d={d} />}
       <div key={key + sort} className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-        {recs ? sorted.map((r) => <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
+        {recs ? sorted.map((r) => terms.length ? (
+          <div key={r.entity.key} className="space-y-1">
+            <RecCard r={r} />
+            <FridgeLine e={r.entity} terms={terms} />
+          </div>
+        ) : <RecCard key={r.entity.key} r={r} />) : Array.from({ length: 12 }).map((_, i) => <div key={i} className="card aspect-[2/3] animate-pulse" />)}
       </div>
       {recs && !recs.length && <p className="text-muted">{T("Nothing matches these filters.")}</p>}
     </div>
@@ -248,10 +279,21 @@ function sortRecs(recs: Rec[], sort: Sort, all: Entity[]): Rec[] {
     case "date": return by((r) => (r.entity.date ? Date.parse(r.entity.date) : 0));
     case "popular": return by((r) => r.entity.pop);
     case "rating": return by((r) => crowdRating(r.entity.film)?.v ?? 0);
-    case "length": return by((r) => -(minutesOf(r.entity) || 999));
+    case "length": return by((r) => -(minutesOf(r.entity) || (r.entity.domain === "recipes" ? timeOf(r.entity) : 0) || 999));
     case "liked": return by((r) => videoScore(r.entity, all) ?? 0);
     case "price-up": return by((r) => -(meta(r, "price") || 1e12));
     case "price-down": return by((r) => meta(r, "price"));
     default: return recs;
   }
+}
+
+function FridgeLine({ e, terms }: { e: Entity; terms: string[] }) {
+  const T = useT();
+  const m = fridgeMatch(e, terms);
+  return (
+    <p className="px-1 text-[11px] leading-snug text-muted" data-testid="fridge-line">
+      <b className="text-accent">{m.have.length}/{terms.length}</b> {T("of yours")}
+      {m.missing.length > 0 && <> · {T("to buy")}: {m.missing.slice(0, 3).map((x) => x.replace(/^[\d\s/½¼¾.,]+(g|kg|ml|l|tsp|tbsp|tablespoons?|teaspoons?|cups?|cloves?)?\s*/i, "")).join(", ")}{m.missing.length > 3 ? ` +${m.missing.length - 3}` : ""}</>}
+    </p>
+  );
 }

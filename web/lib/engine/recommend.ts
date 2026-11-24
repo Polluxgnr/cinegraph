@@ -31,6 +31,27 @@ export interface RecOptions {
   boost?: Map<string, number>; // extra score (NL queries)
   auteurCap?: boolean; // at most two titles per director / creator (default on)
   noCaps?: boolean; // searches: show every match, no saga or director cap
+  genreSlot?: boolean; // keep your favourite genre in the first rows (default on)
+}
+
+const POS = new Set(["loved", "fav", "liked"]);
+
+/** Your favourite genre: the one you like far more often than the catalogue offers it (needs a few likes). */
+export function favouriteGenre(d: DomainData, s: State): string | undefined {
+  if (!isFilmData(d)) return undefined;
+  const liked = Object.values(s.feedback).filter((f) => f.domain === d.name && POS.has(f.action));
+  if (liked.length < 12) return undefined;
+  const mine = new Map<string, number>();
+  for (const fb of liked) for (const g of d.entities[d.index.get(fb.key) ?? -1]?.film?.g ?? []) mine.set(g, (mine.get(g) ?? 0) + 1);
+  const base = new Map<string, number>();
+  for (const f of d.films) for (const g of f.g ?? []) base.set(g, (base.get(g) ?? 0) + 1);
+  let best: string | undefined, bl = 1.6;
+  for (const [g, n] of mine) {
+    if (n < 5) continue;
+    const lift = n / liked.length / ((base.get(g) ?? 1) / d.films.length);
+    if (lift > bl) [best, bl] = [g, lift];
+  }
+  return best;
 }
 
 /** Next unwatched entry of every saga you've started. */
@@ -126,6 +147,16 @@ export function recommend(d: DomainData, s: State, o: RecOptions = {}): Rec[] {
     return auteur == null || !capped(`p:${auteur}`);
   });
   const picked = mmr(d, pool, n - nExplore, o.diversity ?? 0.8);
+  // your favourite genre keeps two of the first ten places (a ranker trained on few answers drifts to crowd hits)
+  const fav = o.genreSlot === false || o.noCaps || o.filter ? undefined : favouriteGenre(d, s);
+  if (fav) {
+    const has = (row: number) => d.entities[row].film?.g?.includes(fav);
+    const inTop = picked.slice(0, 10).filter((x) => has(x.row)).length;
+    const taken = new Set(picked.map((x) => x.row));
+    const extra = pool.filter((x) => has(x.row) && !taken.has(x.row)).slice(0, Math.max(0, 2 - inTop));
+    extra.forEach((x, k) => picked.splice(Math.min(picked.length, 2 + k * 5), 0, x));
+    picked.length = Math.min(picked.length, n - nExplore);
+  }
   const pickedRows = new Set(picked.map((x) => x.row));
   const explorePicks = exploreSlots(d, s, scored.slice(n), nExplore, pickedRows);
 

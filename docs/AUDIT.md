@@ -26,8 +26,11 @@ favourites rank around **57th (top 6%)**, and 16% make that top 10. Five weight 
 popularity, more similarity and genre, less collaborative filtering) all land within noise (median rank 57–70,
 16–19% in the top 10), so the defaults stay. What fills the very top is widely loved classics not answered yet
 (Blade Runner, The Godfather…), a fair suggestion but one that crowds out the owner's animation favourites.
-Next: a per-user "already seen it elsewhere?" discount for the most famous classics, and a diversity slot for the
-genres you like most (animation here) in the first rows.
+Tried next (November 24, five rotations of the hidden fifth, 68 hidden favourites in all): a "probably seen it
+elsewhere" discount on the most famous titles *lowered* the score (5/68 found → 3/68 and 1/68 as it grew), because
+the owner's favourites are famous too, so it was dropped. A favourite-genre slot (your most over-liked genre keeps
+two of the first ten places) left the score unchanged at 5/68 and stays, since it only changes which titles lead.
+The remaining lever is more answers on the titles the model is unsure about (the swipe deck already asks those).
 
 ## Cross-cutting
 
@@ -92,22 +95,34 @@ genres you like most (animation here) in the first rows.
 2. **Diet detection** reads the ingredient list (vegetarian/vegan) and is right on the obvious cases; edge cases
    (gelatine in desserts, fish sauce, Worcestershire) are covered for the common ones. Add allergen flags (nuts,
    gluten, lactose) the same way.
-3. **"From what's in my fridge"**: search already matches any ingredient; a multi-ingredient mode ("chicken +
-   lemon + rice", ranked by how many you have) is a small step from here.
+3. ~~Fridge, allergens, cooking~~: done. "What's in my fridge" ranks recipes by how many of your ingredients
+   they use and lists what's left to buy, there are "free from" filters for nine allergens, effort and hands-on time
+   (with resting time apart), portions that rescale every quantity, a shopping list to copy, step timers and a
+   full-screen cook mode that keeps the screen awake.
 
 ## Destinations
 
 1. **Best spots load live** (see cross-cutting 3). They now show a clear loading state, a retry on error, and names
    in the interface language.
 2. ~~Places named in English~~: French names and descriptions from Wikidata now show in the French interface.
-3. **Trips**: add opening hours (OpenStreetMap `opening_hours`) and travel time between days.
+3. ~~When to go~~: each destination now shows its typical year (two years of Open-Meteo records), the best months,
+   today's weather, the week ahead and the local time.
+4. **Trips**: add opening hours (OpenStreetMap `opening_hours`) and travel time between days.
 
 ## Dream garage and Style
+
+0. ~~Compare~~: up to four cars side by side (power, torque, 0–100, top speed, displacement, price, € per hp), best
+   of each row lit. Next: curb weight in `car_specs.yaml` for power-to-weight, and specs for more models.
 
 1. **Prices** are approximate and curated in YAML. A yearly refresh is enough for cars; for style pieces, link the
    brand's own product page where it exists.
 2. **Style discovery** relies on curated brands plus your Pinterest boards. Instagram saves come through packs;
    there is no legal live access to Instagram saves.
+
+## Sports
+
+1. ~~Match details~~: a match opens its recent form, goals, cards and substitutions, team stats with bars,
+   line-ups with formation, leaders (US sports) and attendance, from ESPN's summary feed.
 
 ## Design
 

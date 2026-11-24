@@ -1,3 +1,5 @@
+import { effortOf, formatMinutes, timeOf } from "./recipe";
+import type { Entity } from "./types";
 /** Same normalisation as backend/cinegraph/textnorm.py, so matching behaves identically. */
 const ARTICLES = ["the ", "a ", "an ", "le ", "la ", "les ", "l ", "un ", "une ", "el ", "il ", "lo ", "der ", "die ", "das "];
 const ROMAN: [string, string][] = [[" ii", " 2"], [" iii", " 3"], [" iv", " 4"], [" v", " 5"]];
@@ -68,6 +70,12 @@ export function itemFacts(e: { domain: string; item?: { meta?: Record<string, un
   if (num(m.comments)) out.push(`${compact(num(m.comments))} 💬`);
   if (typeof m.engine === "string") out.push(m.engine.replace(/ (petrol|diesel)$/i, ""));
   if (num(m.hp)) out.push(`${num(m.hp)} hp`);
+  if (e.domain === "recipes" && Array.isArray(m.ingredients)) {
+    const r = e as unknown as Entity;
+    const t = timeOf(r);
+    if (t) out.push(`⏱ ${formatMinutes(t)}`);
+    out.push(effortOf(r));
+  }
   if (num(m.price)) {
     const p = fmtPrice(num(m.price), m.price_approx === true);
     out.push(m.kind === "brand" ? `pieces around ${p}` : m.price_kind === "from" ? `from ${p}` : m.price_kind === "market" ? `${p} (market)` : m.price_kind === "new" ? `${p} new` : p);

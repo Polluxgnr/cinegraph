@@ -233,3 +233,71 @@ test("taste page: measuring your own accuracy needs enough answers", async ({ pa
   await panel.getByRole("button", { name: "Measure" }).click();
   await expect(panel.getByText(/Like at least 15 films first/)).toBeVisible();
 });
+
+test("recipes: fridge mode, free-from filter, portions and cook mode", async ({ page }) => {
+  await open(page, "/discover/?d=recipes");
+  await page.getByRole("button", { name: /gluten/ }).click();
+  await page.getByTestId("fridge").click();
+  await page.getByRole("searchbox").fill("chicken, lemon");
+  await expect(page.getByTestId("fridge-line").first()).toContainText(/\d\/2/);
+  await page.locator("main article a").first().click();
+  const recipe = page.getByTestId("recipe");
+  await expect(recipe).toBeVisible();
+  const first = await recipe.locator("li label span").first().textContent();
+  await recipe.getByRole("button", { name: "×2" }).click();
+  if (first && /^\d/.test(first)) await expect(recipe.locator("li label span").first()).not.toHaveText(first);
+  await page.getByTestId("cook").click();
+  await expect(page.getByTestId("cook-mode")).toContainText("Step 1 of");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("cook-mode")).toHaveCount(0);
+});
+
+test("garage: compare two cars side by side", async ({ page }) => {
+  await open(page, "/compare/");
+  await page.getByTestId("compare-search").fill("911 GT3");
+  await page.locator("ul button").filter({ hasText: "hp" }).first().click();
+  await page.getByTestId("compare-search").fill("Zonda");
+  await page.locator("ul button").first().click();
+  const table = page.getByTestId("compare-table");
+  await expect(table).toContainText("Power");
+  await expect(table.locator("thead th")).toHaveCount(3);
+  await expect(table).toContainText("★");
+});
+
+test("destinations: climate, best months and the week's weather", async ({ page }) => {
+  const days = Array.from({ length: 730 }, (_, i) => new Date(Date.UTC(2024, 0, 1) + i * 864e5).toISOString().slice(0, 10));
+  const m = (d: string) => Number(d.slice(5, 7));
+  await page.route("https://archive-api.open-meteo.com/**", (r) => r.fulfill({ json: { timezone: "Europe/Madrid", daily: {
+    time: days, temperature_2m_max: days.map((d) => 12 + 14 * Math.sin(((m(d) - 3) / 12) * Math.PI * 2) ** 2 * (m(d) >= 4 && m(d) <= 9 ? 1 : 0.3)),
+    temperature_2m_min: days.map(() => 8), precipitation_sum: days.map((d) => (m(d) >= 10 ? 4 : 0.2)), sunshine_duration: days.map(() => 8 * 3600) } } }));
+  await page.route("https://api.open-meteo.com/**", (r) => r.fulfill({ json: { current: { temperature_2m: 18, weather_code: 0, wind_speed_10m: 10 },
+    daily: { time: days.slice(0, 7), temperature_2m_max: [20, 21, 19, 18, 22, 23, 21], temperature_2m_min: [10, 11, 9, 8, 12, 13, 11], weather_code: [0, 1, 3, 61, 0, 2, 95], precipitation_probability_max: [0, 10, 20, 80, 0, 5, 60] } } }));
+  await page.route("https://query.wikidata.org/**", (r) => r.fulfill({ json: { results: { bindings: [] } } }));
+  await open(page, "/item/?k=places%3AQ1492");
+  const c = page.getByTestId("climate");
+  await expect(c).toContainText("When to go");
+  await expect(c).toContainText("Most pleasant");
+  await expect(c).toContainText("18°");
+  expect(await cspViolations(page)).toEqual([]);
+});
+
+test("sports: a match opens its events, stats and line-ups", async ({ page }) => {
+  const match = { id: "9", name: "PSG at OM", date: new Date(Date.now() - 864e5).toISOString(), competitions: [{ id: "9", date: new Date(Date.now() - 864e5).toISOString(),
+    status: { type: { state: "post", shortDetail: "FT" } },
+    competitors: [{ homeAway: "home", score: "1", team: { displayName: "Marseille" } }, { homeAway: "away", winner: true, score: "3", team: { displayName: "Paris Saint-Germain" } }] }] };
+  await page.route("https://site.api.espn.com/apis/site/v2/**/scoreboard*", (r) => r.fulfill({ json: { events: [match] } }));
+  await page.route("https://site.api.espn.com/apis/site/v2/**/summary*", (r) => r.fulfill({ json: {
+    keyEvents: [{ type: { type: "goal" }, scoringPlay: true, clock: { displayValue: "12'" }, team: { displayName: "Paris Saint-Germain" }, participants: [{ athlete: { displayName: "Ousmane Dembélé" } }] }],
+    boxscore: { teams: [{ team: { displayName: "Marseille" }, statistics: [{ name: "possessionPct", label: "Possession", displayValue: "45.0" }] },
+                        { team: { displayName: "Paris Saint-Germain" }, statistics: [{ name: "possessionPct", label: "Possession", displayValue: "55.0" }] }] },
+    rosters: [{ team: { displayName: "Marseille" }, formation: "4-3-3", roster: [{ starter: true, jersey: "1", athlete: { displayName: "Gerónimo Rulli" }, position: { abbreviation: "G" } }] }],
+    gameInfo: { attendance: 65000, venue: { fullName: "Vélodrome" } } } }));
+  await open(page, "/sports/");
+  await page.getByTestId("match-more").first().click();
+  const d = page.getByTestId("match-detail");
+  await expect(d).toContainText("Ousmane Dembélé");
+  await d.getByRole("button", { name: "Stats" }).click();
+  await expect(d).toContainText("55%");
+  await d.getByRole("button", { name: "Line-ups" }).click();
+  await expect(d).toContainText("4-3-3");
+});

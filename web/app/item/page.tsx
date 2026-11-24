@@ -21,6 +21,8 @@ import ArtistPanel from "@/components/ArtistPanel";
 import { useFilmDetails } from "@/lib/useFilmDetails";
 import FilmSources from "@/components/FilmSources";
 import CastStrip from "@/components/CastStrip";
+import RecipeView from "@/components/RecipeView";
+import { toggleCompare, useCompare } from "@/lib/compare";
 import Poster3D from "@/components/Poster3D";
 import AskPeople from "@/components/AskPeople";
 import { carSpecs, cuisineOf, dietOf, mainsOf, variations } from "@/lib/facets";
@@ -28,6 +30,7 @@ import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
 import { trailerSearch } from "@/components/MediaPreview";
 import PlaceSpots from "@/components/PlaceSpots";
+import PlaceClimate from "@/components/PlaceClimate";
 import { deezerArtistId } from "@/lib/deezer";
 import { watchOptions } from "@/lib/watch";
 
@@ -133,6 +136,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
       {f && <Trailer e={e} />}
       {f && <FilmSources f={f} />}
       {deezerArtistId(e.key) && <ArtistPanel id={deezerArtistId(e.key)!} d={d} />}
+      {e.domain === "places" && <PlaceClimate e={e} />}
       {e.domain === "places" && <PlaceSpots e={e} />}
       {e.domain === "brands" && <BrandPieces d={d} e={e} />}
       {f && <Saga d={d as FilmData} row={row} />}
@@ -141,7 +145,10 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
           {carSpecs(e).map(([k, v]) => (
             <div key={k}><p className="text-[11px] uppercase tracking-[0.14em] text-muted">{T(k)}</p><p className="font-display text-xl">{v}</p></div>
           ))}
-          <p className="text-[11px] text-muted sm:col-span-2 lg:col-span-4">{T("Approximate figures from the manufacturer, rounded (config/car_specs.yaml).")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 lg:col-span-4">
+            <p className="text-[11px] text-muted">{T("Approximate figures from the manufacturer, rounded (config/car_specs.yaml).")}</p>
+            <CompareButton k={e.key} />
+          </div>
         </section>
       )}
       {recipeBadges.length > 0 && <div className="flex flex-wrap gap-1.5">{recipeBadges.map((b) => <span key={b} className="chip text-xs">{T(b)}</span>)}</div>}
@@ -248,12 +255,7 @@ function ItemFacts({ e }: { e: import("@/lib/types").Entity }) {
       )}
       <div className="flex flex-wrap gap-1.5">{(it.tags ?? []).slice(0, 8).map((t) => <span key={t} className="chip">{t}</span>)}</div>
       {itemDescription(meta) && <p className="text-ink/90">{itemDescription(meta)}</p>}
-      {Array.isArray(meta.ingredients) && (
-        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-          <ul className="space-y-1 text-sm">{(meta.ingredients as string[]).map((x) => <li key={x}>• {x}</li>)}</ul>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-ink/85">{String(meta.instructions ?? "")}</p>
-        </div>
-      )}
+      {Array.isArray(meta.ingredients) && <RecipeView e={e} />}
       {it.date && <p className="text-xs text-muted">{new Date(it.date).toLocaleDateString("fr-FR")}</p>}
       <div className="flex flex-wrap gap-1.5">
         {it.url && <a href={it.url} target="_blank" rel="noreferrer" className="btn px-3 py-1.5 text-sm">{T("Open ↗")}</a>}
@@ -348,4 +350,16 @@ function askFor(e: Entity, T: (s: string, v?: Record<string, string | number>) =
     case "music": return [T("Where to start with {t}", { t }), T("Best {t} live performances", { t })];
     default: return [T("What people think of {t}", { t })];
   }
+}
+
+function CompareButton({ k }: { k: string }) {
+  const T = useT();
+  const list = useCompare();
+  const on = list.includes(k);
+  return (
+    <div className="flex items-center gap-2">
+      <button className="chip text-xs" data-on={on} onClick={() => toggleCompare(k)} data-testid="compare-toggle">{on ? T("✓ In comparison") : T("+ Compare")}</button>
+      {list.length > 0 && <Link className="text-xs text-accent hover:underline" href="/compare/">{T("Open comparison ({n})", { n: list.length })} →</Link>}
+    </div>
+  );
 }

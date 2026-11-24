@@ -155,3 +155,60 @@ export async function injuries(l: League): Promise<Injury[]> {
     status: x.status, detail: x.shortComment ?? x.longComment ?? "", date: x.date,
   })));
 }
+
+// ------------------------------------------------------------------ one match in detail
+export interface MatchEvent { minute: string; kind: "goal" | "yellow" | "red" | "sub" | "other"; team?: string; text: string; who?: string }
+export interface StatLine { label: string; a: string; b: string; share?: number } // share: a's part of a+b, for the bar
+export interface Lineup { team: string; formation?: string; starters: { n?: string; name: string; pos?: string }[]; bench: string[] }
+export interface Summary { events: MatchEvent[]; stats: StatLine[]; lineups: Lineup[]; teams: string[]; attendance?: number; venue?: string; form: { team: string; results: string }[]; leaders: { team: string; lines: string[] }[] }
+
+const KEEP_STATS = /possession|shots|on goal|corner|fouls|offsides|saves|yellow|red|passes$|pass completion|tackles$|interceptions|field goal|three point|rebounds|assists|turnovers|steals|blocks|free throw|total yards|passing yards|rushing yards|first downs|penalties|hits|power play|faceoff/i;
+
+export async function matchSummary(l: League, id: string): Promise<Summary> {
+  const j: J = await get(`${API}/site/v2/sports/${l.path}/summary?event=${id}`);
+  const teamsBox = (j.boxscore?.teams ?? []) as J[];
+  const teams = teamsBox.map((t) => t.team?.displayName ?? "");
+  const events: MatchEvent[] = ((j.keyEvents ?? j.scoringPlays ?? []) as J[]).flatMap((e) => {
+    const t = String(e.type?.type ?? e.type?.text ?? "").toLowerCase();
+    const kind: MatchEvent["kind"] = e.scoringPlay || t.includes("goal") ? "goal" : t.includes("yellow") ? "yellow" : t.includes("red") ? "red" : t.includes("substitution") ? "sub" : "other";
+    if (kind === "other" && !e.scoringPlay) return [];
+    const who = (e.participants ?? []).map((p: J) => p.athlete?.displayName).filter(Boolean);
+    return [{
+      minute: e.clock?.displayValue || (e.period?.number ? `P${e.period.number}` : ""), kind, team: e.team?.displayName,
+      who: kind === "sub" ? who.join(" ↔ ") : who[0], text: e.shortText ?? e.text ?? "",
+    }];
+  });
+  const stats: StatLine[] = [];
+  if (teamsBox.length === 2) {
+    const sa = (teamsBox[0].statistics ?? []) as J[], sb = (teamsBox[1].statistics ?? []) as J[];
+    for (const s of sa) {
+      const raw = String(s.label ?? s.name ?? "");
+      const label = raw === raw.toUpperCase() ? raw.charAt(0) + raw.slice(1).toLowerCase() : raw; // "ON GOAL" -> "On goal"
+      if (!KEEP_STATS.test(label)) continue;
+      const o = sb.find((x) => x.name === s.name);
+      if (!o) continue;
+      let a = String(s.displayValue), b = String(o.displayValue);
+      if (/%|completion/i.test(label) && +a <= 1 && +b <= 1) { a = `${Math.round(+a * 100)}%`; b = `${Math.round(+b * 100)}%`; }
+      if (/possession/i.test(label)) { a = `${Math.round(+s.displayValue)}%`; b = `${Math.round(+o.displayValue)}%`; }
+      const na = parseFloat(a), nb = parseFloat(b);
+      stats.push({ label, a, b, share: na + nb > 0 ? na / (na + nb) : undefined });
+    }
+  }
+  const lineups: Lineup[] = ((j.rosters ?? []) as J[]).map((r) => {
+    const ro = (r.roster ?? []) as J[];
+    return {
+      team: r.team?.displayName ?? "", formation: r.formation,
+      starters: ro.filter((p) => p.starter).map((p) => ({ n: p.jersey, name: p.athlete?.displayName ?? "", pos: p.position?.abbreviation })),
+      bench: ro.filter((p) => !p.starter).map((p) => `${p.athlete?.displayName ?? ""}${p.subbedIn ? " ↑" : ""}`),
+    };
+  }).filter((x) => x.starters.length);
+  const form = ((j.lastFiveGames ?? []) as J[]).map((t) => ({
+    team: t.team?.displayName ?? "",
+    results: ((t.events ?? []) as J[]).map((ev) => String(ev.gameResult ?? "").slice(0, 1)).join(""),
+  })).filter((f) => f.results);
+  const leaders = ((j.leaders ?? []) as J[]).map((t) => ({
+    team: t.team?.displayName ?? "",
+    lines: ((t.leaders ?? []) as J[]).slice(0, 3).map((c) => `${c.displayName}: ${c.leaders?.[0]?.athlete?.displayName ?? ""} ${c.leaders?.[0]?.displayValue ?? ""}`.trim()),
+  })).filter((x) => x.lines.length && x.team);
+  return { events, stats, lineups, teams, attendance: j.gameInfo?.attendance || undefined, venue: j.gameInfo?.venue?.fullName, form, leaders };
+}

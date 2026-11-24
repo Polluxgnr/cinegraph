@@ -5,18 +5,18 @@
  */
 import type { FilmData } from "../data";
 import { ACTION_VALUE, emptyState, type Feedback, type State } from "../store";
-import { recommend, scoreOne } from "./recommend";
+import { recommend, type RecOptions, scoreOne } from "./recommend";
 import { sgdStep, weights } from "./score";
 
 const POS = new Set(["loved", "fav", "liked"]);
 
 export interface MyScore { liked: number; hidden: number; hr10: number; recall50: number; found: { key: string; rank: number }[] }
 
-export function personalScore(d: FilmData, s: State): MyScore | null {
+export function personalScore(d: FilmData, s: State, opts: RecOptions = {}, fold = 4): MyScore | null {
   const answers: Feedback[] = Object.values(s.feedback).filter((f) => f.domain === "films" && d.index.has(f.key)).sort((a, b) => a.at - b.at);
   const liked = answers.filter((f) => POS.has(f.action));
   if (liked.length < 15) return null;
-  const hidden = new Set(liked.filter((_, i) => i % 5 === 4).map((f) => f.key));
+  const hidden = new Set(liked.filter((_, i) => i % 5 === fold).map((f) => f.key));
 
   // a fresh copy of you, without the hidden answers, trained in the order you answered
   const t: State = emptyState();
@@ -33,7 +33,7 @@ export function personalScore(d: FilmData, s: State): MyScore | null {
     t.feedback[fb.key] = fb;
     t.history.push(fb);
   }
-  const recs = recommend(d, t, { n: 50, explore: 0 });
+  const recs = recommend(d, t, { n: 50, explore: 0, ...opts });
   const found = recs.map((r, i) => ({ key: r.entity.key, rank: i + 1 })).filter((x) => hidden.has(x.key));
   return {
     liked: liked.length,
