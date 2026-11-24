@@ -1041,5 +1041,10 @@ export const FR: Record<string, string> = {
  "Blocked Shots": "Tirs contrés",
  "Effective Tackles": "Tacles réussis",
  "Tackles": "Tacles",
- "Interceptions": "Interceptions"
+ "Interceptions": "Interceptions",
+ "More from {c}": "Plus de {c}",
+ "Biography": "Biographie",
+ "Less": "Moins",
+ "Weight": "Poids",
+ "Power-to-weight": "Rapport poids/puissance"
 };

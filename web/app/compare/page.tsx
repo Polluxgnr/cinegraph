@@ -11,7 +11,11 @@ import { useT } from "@/lib/i18n";
 import { fmtPrice, normTitle } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 
-const num = (e: Entity, k: string) => {
+const num = (e: Entity, k: string): number | undefined => {
+  if (k === "hpt") {
+    const hp = num(e, "hp"), kg = num(e, "kg");
+    return hp && kg ? Math.round((hp / kg) * 1000) : undefined;
+  }
   const v = e.item?.meta?.[k];
   return typeof v === "number" && v > 0 ? v : undefined;
 };

@@ -160,6 +160,8 @@ export function carSpecs(e: Entity): [string, string][] {
   if (m.hp) out.push(["Power", `${m.hp} hp${m.nm ? ` · ${m.nm} Nm` : ""}`]);
   if (m.zero100) out.push(["0–100 km/h", `${m.zero100} s`]);
   if (m.vmax) out.push(["Top speed", `${m.vmax} km/h`]);
+  if (m.kg) out.push(["Weight", `${Number(m.kg).toLocaleString()} kg`]);
+  if (m.kg && m.hp) out.push(["Power-to-weight", `${Math.round((Number(m.hp) / Number(m.kg)) * 1000)} hp/t`]);
   if (m.seats) out.push(["Seats", String(m.seats)]);
   if (m.drive) out.push(["Drive", `${m.drive}${m.gearbox ? ` · ${m.gearbox}` : ""}`]);
   if (m.body) out.push(["Body", String(m.body)]);

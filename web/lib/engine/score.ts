@@ -275,12 +275,20 @@ function jitter(key: string): number {
   return ((h >>> 0) % 1000) / 1000;
 }
 
+/** Tuning knobs, set by the offline evaluations (lib/engine/*.eval.ts) and kept at their measured best. */
+export const KNOBS = { cfQuick: 0, popQuick: 1 / 30, cfCap: 5 };
+
 /** Stage-1 score: cheap enough for the whole catalogue (one dot product + lookups). */
 export function quickScore(c: Ctx, row: number): number {
   const { d, p } = c;
   const e = d.entities[row];
   // small stable jitter so cold-start lists aren't alphabetical when a domain has no popularity data
-  let s = e.pop / 30 + 0.08 * jitter(e.key);
+  let s = e.pop * KNOBS.popQuick + 0.08 * jitter(e.key);
+  // "people who liked what you liked": without it here, collaborative picks never reach the shortlist
+  if (KNOBS.cfQuick && e.film && p.cfUser && isFilmData(d) && d.cf) {
+    const r = d.cfIndex.get(e.film.id);
+    if (r != null) s += KNOBS.cfQuick * Math.tanh(d.cf.dot(r, p.cfUser) / 2);
+  }
   if (d.emb && p.vector) s += 2 * centre(d.emb.dot(row, p.vector) / d.norms[row], baseline(d));
   let ta = 0;
   for (const t of e.tags.slice(0, 6)) ta += p.tagAff.get(t.toLowerCase()) ?? 0;
@@ -331,7 +339,7 @@ let PRIOR_W: number[] = [...DEFAULT_W];
 export function tunePrior(ev?: { als?: { ndcg10: number }; content?: { ndcg10: number }; hybrid_weights?: Record<string, number> }) {
   const w = [...DEFAULT_W];
   if (ev?.als && ev.content && ev.content.ndcg10 > 0) {
-    const ratio = Math.min(2.5, Math.max(0.5, ev.als.ndcg10 / ev.content.ndcg10));
+    const ratio = Math.min(KNOBS.cfCap, Math.max(0.5, ev.als.ndcg10 / ev.content.ndcg10));
     w[F.cf] = DEFAULT_W[F.cf] * ratio;
   }
   if (ev?.hybrid_weights?.popularity != null) w[F.popularity] = DEFAULT_W[F.popularity] * (1 + ev.hybrid_weights.popularity);

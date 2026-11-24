@@ -57,6 +57,8 @@ export const COMPARE_ROWS: { key: string; label: string; unit: string; better: "
   { key: "nm", label: "Torque", unit: "Nm", better: "high" },
   { key: "zero100", label: "0–100 km/h", unit: "s", better: "low" },
   { key: "vmax", label: "Top speed", unit: "km/h", better: "high" },
+  { key: "kg", label: "Weight", unit: "kg", better: "low" },
+  { key: "hpt", label: "Power-to-weight", unit: "hp/t", better: "high" },
   { key: "litres", label: "Displacement", unit: "L", better: "high" },
   { key: "cyl", label: "Cylinders", unit: "", better: "high" },
   { key: "seats", label: "Seats", unit: "", better: "high" },

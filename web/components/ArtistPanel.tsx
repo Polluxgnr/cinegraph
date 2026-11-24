@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { detailHref } from "@/components/RecCard";
 import type { DomainData } from "@/lib/data";
+import { artistBio, type ArtistBio } from "@/lib/artistBio";
 import { dzAlbums, dzArtist, dzRelated, dzTop, type DzAlbum, type DzArtist, type DzTrack } from "@/lib/deezer";
 import { compact } from "@/lib/text";
 
@@ -21,6 +22,8 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
   const [albums, setAlbums] = useState<DzAlbum[]>([]);
   const [related, setRelated] = useState<DzArtist[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [bio, setBio] = useState<ArtistBio | null>(null);
+  const [more, setMore] = useState(false);
   const [playing, setPlaying] = useState<number | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
 
@@ -34,6 +37,12 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
       })
       .catch((e) => setErr(String(e.message ?? e)));
   }, [id]);
+  useEffect(() => {
+    if (!a?.name) return;
+    let live = true;
+    artistBio(a.name, T.lang).then((b) => live && setBio(b)).catch(() => {});
+    return () => { live = false; };
+  }, [a?.name, T.lang]);
 
   const play = (t: DzTrack) => {
     const el = audio.current;
@@ -55,6 +64,16 @@ export default function ArtistPanel({ id, d }: { id: string; d: DomainData }) {
   return (
     <div className="space-y-8">
       <audio ref={audio} onEnded={() => setPlaying(null)} />
+      {bio && (
+        <section className="card space-y-2 p-5" data-testid="artist-bio">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted">{bio.description ?? T("Biography")}</p>
+          <p className={`text-sm leading-relaxed text-ink/90 ${more ? "" : "line-clamp-4"}`}>{bio.extract}</p>
+          <div className="flex gap-3 text-xs">
+            {bio.extract.length > 320 && <button className="text-accent hover:underline" onClick={() => setMore(!more)}>{more ? T("Less") : T("More")}</button>}
+            <a className="text-muted hover:text-accent" href={bio.url} target="_blank" rel="noreferrer">Wikipedia ↗</a>
+          </div>
+        </section>
+      )}
       <div className="flex flex-wrap gap-6 text-sm">
         <Stat label="Deezer fans" value={compact(a.nb_fan)} />
         <Stat label="Albums & EPs" value={String(a.nb_album)} />

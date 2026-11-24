@@ -78,6 +78,12 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
     const keep = new Set(variations(e, d.entities, 12).map((x) => x.key));
     return keep.size ? recommend(d, getState(), { n: 12, explore: 0, includeListed: true, includeAnswered: true, noCaps: true, filter: (x) => keep.has(x.key) }) : [];
   }, [d, e, loaded, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  // videos: the rest of this channel, ranked for you
+  const channelId = e.domain === "youtube" ? (e.item?.meta?.channel_id as string | undefined) : undefined;
+  const sameChannel = useMemo(() => {
+    if (!loaded || !channelId) return [];
+    return recommend(d, getState(), { n: 12, explore: 0, includeListed: true, noCaps: true, filter: (x) => x.key !== e.key && x.item?.meta?.channel_id === channelId });
+  }, [d, e, loaded, version, channelId]); // eslint-disable-line react-hooks/exhaustive-deps
   const recipeBadges = e.domain === "recipes" ? [cuisineOf(e), ...mainsOf(e), dietOf(e) === "vegan" ? "🌿 Vegan" : dietOf(e) === "vegetarian" ? "🌱 Vegetarian" : undefined].filter(Boolean) as string[] : [];
 
   const f = e.film;
@@ -152,6 +158,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
         </section>
       )}
       {recipeBadges.length > 0 && <div className="flex flex-wrap gap-1.5">{recipeBadges.map((b) => <span key={b} className="chip text-xs">{T(b)}</span>)}</div>}
+      {sameChannel.length > 0 && <Row title={T("More from {c}", { c: String(e.item?.meta?.channel ?? e.subtitle) })}>{sameChannel.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
       {variants.length > 0 && <Row title={T("Variations")} hint={T("Other takes on the same dish, and recipes sharing most of its ingredients")}>{variants.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}
       <AskPeople key={e.key} suggestions={askFor(e, T)} />
       {similar.length > 0 && <Row title={T("Similar")}>{similar.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>}

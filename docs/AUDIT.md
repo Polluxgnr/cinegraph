@@ -32,10 +32,27 @@ the owner's favourites are famous too, so it was dropped. A favourite-genre slot
 two of the first ten places) left the score unchanged at 5/68 and stays, since it only changes which titles lead.
 The remaining lever is more answers on the titles the model is unsure about (the swipe deck already asks those).
 
+## Engine tuning (November 24)
+
+Replayed against what the app really runs (starting weights tuned by the weekly evaluation), on 150 MovieLens
+users with a fifth of their favourites hidden, the same users cut to 10 ratings, and the owner's own answers:
+
+| Collaborative-filtering cap | HR@10 (warm) | HR@10 (10 ratings) | Owner: hidden favourites in top 50 |
+|---|---|---|---|
+| 2.5 (before) | 0.567 | 0.427 | 6 / 68 |
+| 3.5 | 0.613 | 0.420 | 7 / 68 |
+| 4 | 0.633 | 0.427 | 7 / 68 |
+| **5 (now)** | **0.660** | **0.440** | **8 / 68** |
+
+The MovieLens figures flatter collaborative filtering a little (its matrix was trained on those users); the owner's
+answers are not in it and move the same way. Adding the collaborative score to the first-stage shortlist did not
+help (kept off). Re-run: `lib/engine/tune.eval.ts` and `lib/engine/myscore.eval.ts`.
+
 ## Cross-cutting
 
 1. ~~Personal score~~ (done, above).
 2. **First visit is heavy on phones** (~9.4 MB compressed: catalogue 4.6 MB, embeddings 2.9 MB, people 1.3 MB).
+   November 24: the catalogue also ships by column (`catalog.cols.json`, 3.8 → 2.8 MB compressed), loaded first.
    This round: people.json ships only the 89k people on catalogue cards (half), the rest come with their person
    shard; outside-site link ids moved from the catalogue to the details. Next: split the catalogue itself into a
    light list and the rest on demand. *Medium.*
@@ -112,7 +129,7 @@ The remaining lever is more answers on the titles the model is unsure about (the
 ## Dream garage and Style
 
 0. ~~Compare~~: up to four cars side by side (power, torque, 0–100, top speed, displacement, price, € per hp), best
-   of each row lit. Next: curb weight in `car_specs.yaml` for power-to-weight, and specs for more models.
+   of each row lit, curb weight and power-to-weight. Next: specs for more models.
 
 1. **Prices** are approximate and curated in YAML. A yearly refresh is enough for cars; for style pieces, link the
    brand's own product page where it exists.

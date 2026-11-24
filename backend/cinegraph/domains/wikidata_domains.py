@@ -230,7 +230,7 @@ def apply_car_specs(items: list[Item]) -> int:
                       links={"pinterest": f"https://www.pinterest.com/search/pins/?q={title.replace(' ', '%20')}"},
                       meta={"maker": sp.get("maker"), "description": sp.get("body")})
             items.append(it)
-        specs = {k: sp[k] for k in ("engine", "cyl", "litres", "hp", "nm", "seats", "drive", "gearbox", "zero100", "vmax", "body") if sp.get(k) is not None}
+        specs = {k: sp[k] for k in ("engine", "cyl", "litres", "hp", "nm", "seats", "drive", "gearbox", "zero100", "vmax", "kg", "body") if sp.get(k) is not None}
         it.meta.update(specs)
         if sp.get("price"):
             it.meta.update(price=int(sp["price"][0]), price_approx=True, price_kind=sp["price"][1])

@@ -204,13 +204,34 @@ export function manifest(): Promise<Manifest> {
   return manifestP;
 }
 
+/** The film catalogue stored by column ({n, cols: {t: [...], y: [...]}}) back to one object per film. */
+export function fromColumns(c: { n: number; cols: Record<string, unknown[]> }): Film[] {
+  const out: Film[] = Array.from({ length: c.n }, () => ({}) as Film);
+  for (const [k, vs] of Object.entries(c.cols)) {
+    for (let i = 0; i < c.n; i++) {
+      const v = vs[i];
+      if (v != null) (out[i] as unknown as Record<string, unknown>)[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Column file first (smaller to download and parse), the row file for data built before it existed. */
+async function loadCatalog(): Promise<Film[]> {
+  try {
+    return fromColumns(await json<{ n: number; cols: Record<string, unknown[]> }>("/data/films/catalog.cols.json"));
+  } catch {
+    return json<Film[]>("/data/films/catalog.json");
+  }
+}
+
 export function loadFilms(): Promise<FilmData> {
   if (!cache.has("films")) {
     cache.set(
       "films",
       (async () => {
         const [films, people, collections, emb, cf, cfIds] = await Promise.all([
-          json<Film[]>("/data/films/catalog.json"),
+          loadCatalog(),
           json<string[]>("/data/films/people.json"),
           json<Collection[]>("/data/films/collections.json"),
           qmatrix("/data/films/emb"),
