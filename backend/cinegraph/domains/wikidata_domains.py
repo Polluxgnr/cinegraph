@@ -239,6 +239,27 @@ def apply_car_specs(items: list[Item]) -> int:
     return n
 
 
+def refresh_kept_cars(items: list[dict]) -> int:
+    """When last week's car export is kept (Wikidata timed out), still bring the curated specs up to date on it."""
+    from importlib import resources
+
+    import yaml
+
+    cfg = yaml.safe_load(resources.files("cinegraph").joinpath("config/car_specs.yaml").read_text("utf-8"))
+    by_title = {_fold(it["title"]): it for it in items}
+    n = 0
+    for title, sp in (cfg.get("cars") or {}).items():
+        it = by_title.get(_fold(title))
+        if it is None:
+            continue
+        meta = it.setdefault("meta", {})
+        meta.update({k: sp[k] for k in ("engine", "cyl", "litres", "hp", "nm", "seats", "drive", "gearbox", "zero100", "vmax", "kg", "body") if sp.get(k) is not None})
+        if sp.get("price"):
+            meta.update(price=int(sp["price"][0]), price_approx=True, price_kind=sp["price"][1])
+        n += 1
+    return n
+
+
 def _fold(s: str) -> str:
     import unicodedata
     return "".join(c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)).strip()

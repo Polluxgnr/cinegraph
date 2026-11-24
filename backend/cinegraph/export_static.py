@@ -451,6 +451,12 @@ def export_all(out: Path | None = None, domains: list[str] | None = None, skip_f
             if prev and len(items) < 0.6 * prev:
                 # a source that timed out half-way shouldn't wipe last week's catalogue
                 log.warning("domain %s: %d items vs %d before, keeping the previous export", name, len(items), prev)
+                refresh = getattr(importlib.import_module(mod), f"refresh_kept_{name}", None)
+                kept = out / name / "items.json"
+                if refresh and kept.exists():
+                    old = json.loads(kept.read_text("utf-8"))
+                    log.info("domain %s: curated data refreshed on %d kept items", name, refresh(old))
+                    write_json(kept, old)
                 continue
             manifest["domains"][name] = export_domain(out, name, label, items, emb)
         except Exception as e:  # noqa: BLE001 - keep the previous export of that domain
