@@ -229,6 +229,17 @@ export async function matchSummary(l: League, id: string): Promise<Summary> {
 // ------------------------------------------------------------------ teams and athletes
 export const leagueById = (id: string | null): League | undefined => SPORTS.flatMap((s) => s.leagues).find((l) => l.id === id);
 export const sportOf = (l: League): Sport => SPORTS.find((s) => s.leagues.includes(l))!;
+/** Words that, added to a team's or athlete's name, make Wikipedia's search land on them. */
+export function wikiHint(l: League, who: "team" | "athlete"): { en: string; fr: string } {
+  const sport = l.path.split("/")[0];
+  const w: Record<string, [string, string]> = {
+    soccer: ["football club", "club de football"], basketball: ["basketball", "basket-ball"], tennis: ["tennis", "tennis"], rugby: ["rugby", "rugby"],
+    racing: ["Formula One", "Formule 1"], mma: ["mixed martial arts", "arts martiaux mixtes"], golf: ["golf", "golf"], football: ["American football", "football américain"],
+    hockey: ["ice hockey", "hockey sur glace"], baseball: ["baseball", "baseball"], volleyball: ["volleyball", "volley-ball"],
+  };
+  const [en, fr] = w[sport] ?? ["sport", "sport"];
+  return who === "team" ? { en, fr } : { en: `${en.replace(/ club$/, "")} player`, fr: fr.replace(/^club de /, "") };
+}
 export const teamHref = (l: League, id: string) => `/sports/team/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
 export const athleteHref = (l: League, id: string) => `/sports/athlete/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
 export const matchHref = (l: League, id: string) => `/sports/match/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
@@ -245,6 +256,15 @@ export interface Team {
 const posName = (p: J | undefined) => p?.displayName ?? p?.name;
 const inches = (h?: number) => (h ? `${Math.round(h * 2.54)} cm` : undefined);
 const pounds = (w?: number) => (w ? `${Math.round(w * 0.4536)} kg` : undefined);
+/** ESPN writes 6' 3" and 174 lbs: metric for everyone else. */
+export function metric(v?: string): string | undefined {
+  if (!v) return v;
+  const ft = v.match(/(\d+)'\s*(\d+)?/);
+  if (ft) return `${Math.round((+ft[1] * 12 + +(ft[2] ?? 0)) * 2.54)} cm`;
+  const lb = v.match(/([\d.]+)\s*lbs?/i);
+  if (lb) return `${Math.round(+lb[1] * 0.4536)} kg`;
+  return v;
+}
 
 /** A team: identity (from its roster page, which browsers may read), squad, coach and the season's games. */
 export async function team(l: League, id: string): Promise<Team> {
@@ -257,8 +277,8 @@ export async function team(l: League, id: string): Promise<Team> {
   const raw: J[] = ((r.athletes ?? []) as J[]).flatMap((a) => (a.items ? (a.items as J[]) : [a]));
   const players: Player[] = raw.map((a) => ({
     id: String(a.id), name: a.displayName ?? a.fullName, jersey: a.jersey, pos: posName(a.position), age: a.age,
-    nat: a.citizenship ?? a.birthPlace?.country, photo: a.headshot?.href, height: a.displayHeight ?? inches(a.height),
-    weight: a.displayWeight ?? pounds(a.weight), injured: a.injuries?.[0]?.status,
+    nat: a.citizenship ?? a.birthPlace?.country, photo: a.headshot?.href, height: metric(a.displayHeight) ?? inches(a.height),
+    weight: metric(a.displayWeight) ?? pounds(a.weight), injured: a.injuries?.[0]?.status,
   }));
   const games: Game[] = ((s.events ?? []) as J[]).map((ev) => {
     const c: J = ev.competitions?.[0] ?? {};
@@ -299,7 +319,7 @@ export async function athlete(l: League, id: string): Promise<Athlete> {
   return {
     id: String(a.id ?? id), name: a.displayName ?? a.fullName ?? "", photo: a.headshot?.href, pos: posName(a.position),
     team: a.team?.displayName || a.team?.name ? { id: a.team.id, name: a.team.displayName ?? a.team.name, logo: a.team.logos?.[0]?.href } : undefined,
-    age: a.age, born: a.displayDOB, birthPlace: bp || undefined, nat: a.citizenship, flag: a.flag?.href, height: a.displayHeight, weight: a.displayWeight,
+    age: a.age, born: a.displayDOB, birthPlace: bp || undefined, nat: a.citizenship, flag: a.flag?.href, height: metric(a.displayHeight), weight: metric(a.displayWeight),
     jersey: a.displayJersey ?? a.jersey, status: a.status?.type ?? a.status?.name,
     link: ((a.links ?? []) as J[]).find((x) => x.rel?.includes("playercard"))?.href ?? a.links?.[0]?.href,
     statsTitle: a.statsSummary?.displayName,

@@ -35,15 +35,34 @@ async function summary(lang: "en" | "fr", title: string, kind: WikiKind): Promis
   return { title: j.title, extract: j.extract, description: j.description, url: j.content_urls?.desktop?.page ?? `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title)}`, image: j.thumbnail?.source, lang };
 }
 
-/** The Wikipedia summary for `name` of the given kind, French first when the interface is French. */
-export function wikiBio(name: string, lang: "en" | "fr", kind: WikiKind): Promise<ArtistBio | null> {
-  const k = `${lang}|${kind.test.source.slice(0, 12)}|${name}`;
+/** Wikipedia's own search, for names that are also something else ("Marseille" the club, not the city). */
+async function search(lang: "en" | "fr", q: string): Promise<string[]> {
+  const r = await fetch(`https://${lang}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(q)}&limit=3`);
+  if (!r.ok) return [];
+  return ((await r.json()).pages ?? []).map((p: { title: string }) => p.title).filter((t: string) => !/^(saison|season)\b|\d{4}[–-]\d{2,4}/i.test(t));
+}
+
+/**
+ * The Wikipedia summary for `name` of the given kind, French first when the interface is French. `hint` (e.g.
+ * "football club") is added to a search when no page with the name itself fits.
+ */
+export function wikiBio(name: string, lang: "en" | "fr", kind: WikiKind, hint?: { en: string; fr: string }): Promise<ArtistBio | null> {
+  const k = `${lang}|${kind.test.source.slice(0, 12)}|${name}|${hint?.en ?? ""}`;
   if (!cache.has(k)) {
     cache.set(k, (async () => {
-      for (const l of lang === "fr" ? (["fr", "en"] as const) : (["en"] as const)) {
+      const langs = lang === "fr" ? (["fr", "en"] as const) : (["en"] as const);
+      for (const l of langs) {
         for (const s of kind.suffix[l]) {
           const b = await summary(l, name + s, kind).catch(() => null);
           if (b) return b;
+        }
+      }
+      if (hint) {
+        for (const l of langs) {
+          for (const t of await search(l, `${name} ${hint[l]}`).catch(() => [] as string[])) {
+            const b = await summary(l, t, kind).catch(() => null);
+            if (b) return b;
+          }
         }
       }
       return null;

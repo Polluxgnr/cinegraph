@@ -6,7 +6,7 @@ import { ATHLETE } from "@/lib/artistBio";
 import AskPeople from "@/components/AskPeople";
 import { useQueryParam } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
-import { type Athlete, athlete, type League, leagueById, sportOf, teamHref } from "@/lib/sports";
+import { wikiHint, type Athlete, athlete, type League, leagueById, sportOf, teamHref } from "@/lib/sports";
 
 /** A player, driver or fighter: who they are (Wikipedia), their profile and this season's numbers (ESPN). */
 export default function AthletePage() {
@@ -56,7 +56,7 @@ function AthleteView({ league, id }: { league: League; id: string }) {
         ))}
       </dl>
 
-      <WikiCard name={a.name} kind={ATHLETE} testid="athlete-bio" />
+      <WikiCard name={a.name} kind={ATHLETE} testid="athlete-bio" hint={wikiHint(league, "athlete")} />
 
       {a.stats.length > 0 && (
         <section>

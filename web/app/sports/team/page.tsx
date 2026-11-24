@@ -7,7 +7,7 @@ import { TEAM } from "@/lib/artistBio";
 import AskPeople from "@/components/AskPeople";
 import { useQueryParam } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
-import { athleteHref, type Game, type League, leagueById, matchHref, sportOf, type Team, team, teamHref } from "@/lib/sports";
+import { wikiHint, athleteHref, type Game, type League, leagueById, matchHref, sportOf, type Team, team, teamHref } from "@/lib/sports";
 import { useStore } from "@/lib/store";
 
 /** A club or franchise: who they are (Wikipedia), where they stand, their season's results and fixtures, the squad. */
@@ -48,7 +48,7 @@ function TeamView({ league, id }: { league: League; id: string }) {
         </div>
       </header>
 
-      <WikiCard name={t.name} kind={TEAM} testid="team-bio" />
+      <WikiCard name={t.name} kind={TEAM} testid="team-bio" hint={wikiHint(league, "team")} />
       <Season league={league} games={t.games} />
       <Squad league={league} t={t} />
       <AskPeople key={t.id} title={T("What fans say")} suggestions={[T("{t}: what fans think of this season", { t: t.name }), T("{t}: best and worst signings", { t: t.name }), T("{t}: who should start?", { t: t.name })]} />

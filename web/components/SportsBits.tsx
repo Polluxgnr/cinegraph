@@ -37,17 +37,17 @@ export function MaybeLink({ href, children, className = "" }: { href?: string; c
 }
 
 /** What Wikipedia says about a club or an athlete, in the interface language, with the source. */
-export function WikiCard({ name, kind, testid }: { name: string; kind: WikiKind; testid?: string }) {
+export function WikiCard({ name, kind, testid, hint }: { name: string; kind: WikiKind; testid?: string; hint?: { en: string; fr: string } }) {
   const T = useT();
   const [bio, setBio] = useState<WikiBio | null | undefined>(undefined);
   const [more, setMore] = useState(false);
   useEffect(() => {
     let live = true;
-    wikiBio(name, T.lang, kind).then((b) => live && setBio(b)).catch(() => live && setBio(null));
+    wikiBio(name, T.lang, kind, hint).then((b) => live && setBio(b)).catch(() => live && setBio(null));
     return () => {
       live = false;
     };
-  }, [name, T.lang, kind]);
+  }, [name, T.lang, kind, hint?.en]); // eslint-disable-line react-hooks/exhaustive-deps
   if (bio === undefined) return <div className="card h-28 animate-pulse" />;
   if (!bio) return null;
   return (
