@@ -51,18 +51,16 @@ export function wikiBio(name: string, lang: "en" | "fr", kind: WikiKind, hint?: 
   if (!cache.has(k)) {
     cache.set(k, (async () => {
       const langs = lang === "fr" ? (["fr", "en"] as const) : (["en"] as const);
+      // the interface language first, its search included, before the other language
       for (const l of langs) {
         for (const s of kind.suffix[l]) {
           const b = await summary(l, name + s, kind).catch(() => null);
           if (b) return b;
         }
-      }
-      if (hint) {
-        for (const l of langs) {
-          for (const t of await search(l, `${name} ${hint[l]}`).catch(() => [] as string[])) {
-            const b = await summary(l, t, kind).catch(() => null);
-            if (b) return b;
-          }
+        if (!hint) continue;
+        for (const t of await search(l, `${name} ${hint[l]}`).catch(() => [] as string[])) {
+          const b = await summary(l, t, kind).catch(() => null);
+          if (b) return b;
         }
       }
       return null;
