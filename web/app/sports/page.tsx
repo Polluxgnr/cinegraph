@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { MatchDetail, MaybeLink, toggleTeam, useLoad } from "@/components/SportsBits";
 import { useT } from "@/lib/i18n";
-import { dayKey, ELSEWHERE, type Injury, injuries, type League, leagueById, type Match, matchHref, monthBoard, type News, news, scoreboard, sideHref, sportOf, SPORTS, standings, type Table } from "@/lib/sports";
+import { dayKey, ELSEWHERE, hasSummary, type Injury, injuries, type League, leagueById, type Match, matchHref, monthBoard, type News, news, scoreboard, sideHref, sportOf, SPORTS, standings, type Table } from "@/lib/sports";
 import { useQueryParam } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 
@@ -217,7 +217,7 @@ function MatchCard({ m, mine, delay, league }: { m: Match; mine: string[]; delay
         {m.venue && <span>📍 {m.venue}</span>}
         {m.odds && <span>📊 {T("Odds")}: {m.odds}</span>}
         {m.link && <a className="hover:text-accent" href={m.link} target="_blank" rel="noreferrer">ESPN ↗</a>}
-        <Link className="ml-auto text-accent hover:underline" href={matchHref(league, m.id, { date: m.date, eventId: m.eventId })} data-testid="match-page">{many ? T("Full results →") : T("Full match page →")}</Link>
+        <Link className="ml-auto text-accent hover:underline" href={matchHref(league, m.id, { date: m.date, eventId: m.eventId })} data-testid="match-page">{many || !hasSummary(league) ? T("Full results →") : T("Full match page →")}</Link>
       </p>
       {!many && (
         <button className="mt-2 w-full rounded-lg py-1 text-[11px] text-muted hover:bg-panel-2 hover:text-ink" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="match-more">

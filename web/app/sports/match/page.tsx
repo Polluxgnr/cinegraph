@@ -95,7 +95,7 @@ function EventView({ league, eventId, focus, date }: { league: League; eventId: 
       </header>
       {groups.map(([kind, parts]) => (
         <section key={kind || "all"} className="space-y-2">
-          {kind && <h2 className="font-display text-2xl">{kind}</h2>}
+          {kind && <h2 className="font-display text-2xl">{T(SESSION[kind] ?? kind)}</h2>}
           <div className={parts[0]?.sides.length > 2 ? "space-y-3" : "grid gap-2 sm:grid-cols-2"}>
             {parts.map((m) => <Part key={m.id} league={league} m={m} focus={m.id === focus && data.parts.length > 1} />)}
           </div>
@@ -107,6 +107,8 @@ function EventView({ league, eventId, focus, date }: { league: League; eventId: 
 }
 
 const dayOf = (iso: string) => new Date(iso).toDateString();
+/** ESPN's session codes, in words. */
+const SESSION: Record<string, string> = { FP1: "Practice 1", FP2: "Practice 2", FP3: "Practice 3", Qual: "Qualifying", Race: "Race", SR: "Sprint", SS: "Sprint qualifying", SQ: "Sprint qualifying" };
 
 /** One session, match or fight: two sides face to face, or the full order with times, points or scores. */
 function Part({ league, m, focus }: { league: League; m: Match; focus: boolean }) {
@@ -117,7 +119,7 @@ function Part({ league, m, focus }: { league: League; m: Match; focus: boolean }
     <article className={`card p-3 ${focus ? "border-accent" : ""}`} data-testid="event-part">
       <p className="mb-2 flex justify-between gap-2 text-[11px] text-muted">
         <span>{m.note ?? when.toLocaleDateString(T.lang, { weekday: "short", day: "numeric", month: "short" })} · {when.toLocaleTimeString(T.lang, { hour: "2-digit", minute: "2-digit" })}</span>
-        <span className={m.state === "in" ? "font-semibold text-nope" : ""}>{m.state === "in" ? "● " : ""}{m.status}</span>
+        {m.state !== "pre" && <span className={m.state === "in" ? "font-semibold text-nope" : ""}>{m.state === "in" ? "● " : ""}{m.status}</span>}
       </p>
       {many ? (
         <ol className="max-h-[28rem] divide-y divide-line/40 overflow-y-auto text-sm">

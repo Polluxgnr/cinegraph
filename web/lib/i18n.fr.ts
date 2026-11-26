@@ -100,7 +100,7 @@ export const FR: Record<string, string> = {
  "Other sports": "Autres sports",
  "Sports": "Sports",
  "Results": "Résultats",
- "Fixtures": "Calendrier",
+ "Fixtures": "À venir",
  "Standings": "Classement",
  "Injuries": "Blessures",
  "Playbooks from your saves": "Plans d'action tirés de vos enregistrements",
@@ -1166,5 +1166,12 @@ export const FR: Record<string, string> = {
  "with a real photo · the full ranges are on the brands' sites below": "avec une vraie photo · les collections complètes sont sur les sites des marques ci-dessous",
  "Out now": "Déjà sortis",
  "Coming soon": "Bientôt",
- "Calendar": "Calendrier"
+ "Calendar": "Calendrier",
+ "Practice 1": "Essais libres 1",
+ "Practice 2": "Essais libres 2",
+ "Practice 3": "Essais libres 3",
+ "Qualifying": "Qualifications",
+ "Race": "Course",
+ "Sprint": "Sprint",
+ "Sprint qualifying": "Qualifications sprint"
 };
