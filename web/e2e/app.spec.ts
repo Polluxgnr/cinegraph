@@ -415,13 +415,13 @@ test("sports: every competition in one list, a month calendar, and a race weeken
   await expect(page).toHaveURL(/sports\/\?c=f1/);
 });
 
-test("videos: categories, subscribing to a channel, filters in search", async ({ page }) => {
+test("videos: categories, subscribing to a channel, filters in search", async ({ page, isMobile }) => {
   await open(page, "/?d=youtube");
   await expect(page.getByTestId("video-categories")).toBeVisible();
   await page.getByTestId("channels").getByRole("button", { name: /Manage subscriptions/ }).click();
   await page.getByTestId("subscribe").first().click();
   await expect(page.getByTestId("subscribe").first()).toContainText("Subscribed");
-  await page.goto("/discover/?d=youtube");
+  await page.locator(isMobile ? "nav.fixed" : "header.fixed").getByRole("link", { name: "Search", exact: true }).click(); // in-app navigation, as you'd do
   const f = page.getByTestId("video-filters");
   await f.getByRole("button", { name: /My subscriptions · 1/ }).click();
   await expect(page.locator("main article").first()).toBeVisible();
@@ -437,7 +437,7 @@ test("films home: out now and coming soon", async ({ page }) => {
   await expect(r.getByRole("tab", { name: /Coming soon/ })).toHaveAttribute("aria-selected", "true");
 });
 
-test("my list: a real title, spaces with counts, comments", async ({ page }) => {
+test("my list: a real title, spaces with counts, comments", async ({ page, isMobile }) => {
   await open(page, "/discover/?d=films");
   await page.locator("main article a").first().click();
   await page.getByRole("button", { name: "+ My list" }).click();
@@ -445,7 +445,7 @@ test("my list: a real title, spaces with counts, comments", async ({ page }) => 
   await page.getByRole("textbox", { name: "My comment" }).fill("Seen the trailer with Lea, looks great");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByTestId("note")).toContainText("Lea");
-  await page.goto("/lists/");
+  await page.locator(isMobile ? "nav.fixed" : "header.fixed").getByRole("link", { name: "My list", exact: true }).click();
   await expect(page.getByRole("heading", { name: "My list" })).toBeVisible();
   await expect(page.getByTestId("list-spaces")).toContainText("Films");
   await expect(page.locator("main")).toContainText("Seen the trailer with Lea", { timeout: 60_000 }); // the films catalogue loads first
