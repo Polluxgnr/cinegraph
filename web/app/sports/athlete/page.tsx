@@ -29,7 +29,7 @@ function AthleteView({ league, id }: { league: League; id: string }) {
   ];
   return (
     <div className="space-y-8" data-testid="athlete-page">
-      <BackToSports />
+      <BackToSports league={league} />
       <header className="flex flex-wrap items-end gap-5">
         {/* eslint-disable-next-line @next/next/no-img-element -- headshot */}
         {a.photo ? <img src={a.photo} alt="" className="h-36 w-36 rounded-2xl bg-panel object-cover md:h-44 md:w-44" />

@@ -56,6 +56,8 @@ export interface Feedback {
   predicted?: number; // what the model predicted when you answered (for calibration stats)
 }
 
+export interface Note { text: string; at: number; domain: string }
+
 export interface ListEntry {
   key: string;
   domain: string;
@@ -111,6 +113,7 @@ export interface Settings {
   following?: Record<string, 1 | -1>; // actors & directors you follow (1) or avoid (-1), by name
   followAt?: Record<string, number>; // when each follow changed (sync merges per person; a removal keeps its date)
   sportsTeams?: string[]; // teams and players you follow in Sports
+  ytSubs?: string[]; // YouTube channels you subscribed to here (names); your account's subscriptions count too
   agoraUrl?: string; // your local Agora (multi-platform review reader), default http://127.0.0.1:8765
   tasteAt?: number; // last change to the settings that follow you across devices (following, swipeFilters)
 }
@@ -151,6 +154,7 @@ export interface State {
   history: Feedback[];
   lists: Record<string, ListEntry>;
   progress: Record<string, { season: number; episode: number; updated: number }>;
+  notes?: Record<string, Note>; // your own comment on a title, place, recipe...
   vault: VaultItem[];
   custom: CustomItem[];
   /** what each import found, for the Import page (counts, followed channels, playlists...) */
@@ -181,6 +185,7 @@ export function emptyState(): State {
     history: [],
     lists: {},
     progress: {},
+    notes: {},
     vault: [],
     learned: { ranker: {}, arms: {} },
     custom: [],
@@ -540,6 +545,15 @@ export function undoLast(): Feedback | null {
     else delete s.feedback[last.key];
   });
   return last;
+}
+
+/** Your comment on an item (empty text removes it). */
+export function setNote(key: string, domain: string, text: string) {
+  update((s) => {
+    s.notes ??= {};
+    if (text.trim()) s.notes[key] = { text: text.trim().slice(0, 4000), at: Date.now(), domain };
+    else delete s.notes[key];
+  });
 }
 
 export function setList(key: string, domain: string, status: ListEntry["status"] | null) {

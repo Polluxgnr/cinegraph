@@ -375,7 +375,7 @@ test("sports is a space of its own in the space list", async ({ page, isMobile }
   await expect(page).toHaveURL(/\/sports\/$/);
 });
 
-test("destinations: pick a country; style: a photo catalogue by category", async ({ page }) => {
+test("destinations: pick a country; style: the brand directory", async ({ page }) => {
   await open(page, "/discover/?d=places");
   const country = page.getByTestId("country");
   await expect(country).toBeVisible();
@@ -384,4 +384,80 @@ test("destinations: pick a country; style: a photo catalogue by category", async
   await expect(page.locator("main article").first()).toContainText(first!.trim());
   await page.goto("/?d=brands");
   await expect(page.getByTestId("catalogue")).toBeVisible();
+});
+
+test("sports: every competition in one list, a month calendar, and a race weekend's page", async ({ page }) => {
+  const day = new Date();
+  day.setHours(15, 0, 0, 0);
+  const iso = day.toISOString();
+  const race = { id: "600", name: "Qatar Grand Prix", date: iso, competitions: [
+    { id: "601", date: iso, type: { abbreviation: "Qual" }, status: { type: { state: "post", shortDetail: "Final" } },
+      competitors: [{ order: 1, athlete: { id: "4665", displayName: "Max Verstappen" } }, { order: 2, athlete: { id: "5498", displayName: "Lando Norris" } }, { order: 3, athlete: { id: "5503", displayName: "Oscar Piastri" } }] },
+    { id: "602", date: iso, type: { abbreviation: "Race" }, status: { type: { state: "pre", shortDetail: "Sun 17:00" } },
+      competitors: [{ order: 1, athlete: { id: "4665", displayName: "Max Verstappen" } }, { order: 2, athlete: { id: "5498", displayName: "Lando Norris" } }, { order: 3, athlete: { id: "5503", displayName: "Oscar Piastri" } }] }] };
+  await page.route("https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard*", (r) => r.fulfill({ json: { events: [race] } }));
+  await page.route("https://site.api.espn.com/apis/site/v2/sports/soccer/**/scoreboard*", (r) => r.fulfill({ json: { events: [] } }));
+  await open(page, "/sports/");
+  const list = page.getByTestId("competitions");
+  await expect(list.getByRole("button", { name: "Copa del Rey" })).toBeVisible();
+  await list.getByRole("searchbox").fill("formula");
+  await list.getByRole("button", { name: "Formula 1" }).click();
+  await expect(page).toHaveURL(/c=f1/);
+  await page.getByRole("button", { name: "Calendar" }).click();
+  const cal = page.getByTestId("calendar");
+  await expect(cal).toContainText("Qatar Grand Prix");
+  await cal.getByTestId("match-page").first().click();
+  const ev = page.getByTestId("event-page-view");
+  await expect(ev).toContainText("Qatar Grand Prix");
+  await expect(ev.getByTestId("event-part")).toHaveCount(2);
+  await expect(ev).toContainText("Lando Norris");
+  await page.getByRole("link", { name: /Formula 1/ }).first().click();
+  await expect(page).toHaveURL(/sports\/\?c=f1/);
+});
+
+test("videos: categories, subscribing to a channel, filters in search", async ({ page }) => {
+  await open(page, "/?d=youtube");
+  await expect(page.getByTestId("video-categories")).toBeVisible();
+  await page.getByTestId("channels").getByRole("button", { name: /Manage subscriptions/ }).click();
+  await page.getByTestId("subscribe").first().click();
+  await expect(page.getByTestId("subscribe").first()).toContainText("Subscribed");
+  await page.goto("/discover/?d=youtube");
+  const f = page.getByTestId("video-filters");
+  await f.getByRole("button", { name: /My subscriptions · 1/ }).click();
+  await expect(page.locator("main article").first()).toBeVisible();
+  await f.getByRole("button", { name: "Over an hour" }).click();
+  await expect(f.getByRole("button", { name: "Over an hour" })).toHaveAttribute("data-on", "true");
+});
+
+test("films home: out now and coming soon", async ({ page }) => {
+  await open(page, "/?d=films");
+  const r = page.getByTestId("releases");
+  await expect(r).toBeVisible();
+  await r.getByRole("tab", { name: /Coming soon/ }).click();
+  await expect(r.getByRole("tab", { name: /Coming soon/ })).toHaveAttribute("aria-selected", "true");
+});
+
+test("my list: a real title, spaces with counts, comments", async ({ page }) => {
+  await open(page, "/discover/?d=films");
+  await page.locator("main article a").first().click();
+  await page.getByRole("button", { name: "+ My list" }).click();
+  await page.getByTestId("note-add").click();
+  await page.getByRole("textbox", { name: "My comment" }).fill("Seen the trailer with Lea, looks great");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByTestId("note")).toContainText("Lea");
+  await page.goto("/lists/");
+  await expect(page.getByRole("heading", { name: "My list" })).toBeVisible();
+  await expect(page.getByTestId("list-spaces")).toContainText("Films");
+  await expect(page.locator("main")).toContainText("Seen the trailer with Lea", { timeout: 60_000 }); // the films catalogue loads first
+  await page.getByTestId("list-seen").first().click();
+  await expect(page.locator("main")).not.toContainText("Seen the trailer with Lea");
+});
+
+test("style: brands with their shops, searchable", async ({ page }) => {
+  await open(page, "/?d=brands");
+  const c = page.getByTestId("catalogue");
+  await expect(c.getByTestId("brand-row").first()).toBeVisible();
+  const name = (await c.getByTestId("brand-row").first().locator("a").nth(1).textContent())!.trim();
+  await c.getByRole("searchbox").fill(name);
+  await expect(c.getByTestId("brand-row").first()).toContainText(name);
 });

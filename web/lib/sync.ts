@@ -64,12 +64,14 @@ export function merge(a: State, b: State): State {
   for (const [k, f] of Object.entries(feedback)) if (deleted[`hist:${k}|${f.at}`]) delete feedback[k];
   const vaultIds = new Set<string>();
   const vault = [...a.vault, ...b.vault].filter((v) => !gone(`vault:${v.id}`, v.created) && !vaultIds.has(v.id) && vaultIds.add(v.id));
+  const notes = { ...(b.notes ?? {}), ...(a.notes ?? {}) };
+  for (const [k, n] of Object.entries(b.notes ?? {})) if ((a.notes?.[k]?.at ?? 0) < n.at) notes[k] = n;
   const lists = Object.fromEntries(Object.entries({ ...b.lists, ...a.lists }).filter(([k, l]) => !gone(`list:${k}`, l.added)));
   const customIds = new Set<string>();
   const custom = [...a.custom, ...b.custom].filter((c) => !gone(`custom:${c.id}`, c.created) && !customIds.has(c.id) && customIds.add(c.id));
   const trips = new Map<string, State["trips"][number]>();
   for (const t of [...(a.trips ?? []), ...(b.trips ?? [])]) if (!gone(`trip:${t.id}`, t.updated) && (!trips.has(t.id) || trips.get(t.id)!.updated < t.updated)) trips.set(t.id, t);
-  return migrate({ ...newer, history, feedback, vault, custom, deleted, trips: [...trips.values()], lists, settings: mergeSettings(a.settings, b.settings) });
+  return migrate({ ...newer, history, feedback, vault, custom, deleted, trips: [...trips.values()], lists, notes, settings: mergeSettings(a.settings, b.settings) });
 }
 
 const fileFor = (id: string) => (id === "default" ? "cinegraph-memory.json" : `cinegraph-memory-${id}.json`);
@@ -78,7 +80,7 @@ const strip = (s: State): State => ({ ...s, settings: { ...s.settings, gistToken
 const gained = (local: State, merged: State) =>
   merged.history.length !== local.history.length || merged.vault.length !== local.vault.length ||
   JSON.stringify(merged.trips) !== JSON.stringify(local.trips) ||
-  Object.keys(merged.lists).length !== Object.keys(local.lists).length || merged.custom.length !== local.custom.length ||
+  Object.keys(merged.lists).length !== Object.keys(local.lists).length || JSON.stringify(merged.notes ?? {}) !== JSON.stringify(local.notes ?? {}) || merged.custom.length !== local.custom.length ||
   Object.keys(merged.deleted ?? {}).length !== Object.keys(local.deleted ?? {}).length || merged.updatedAt > local.updatedAt ||
   (merged.settings.tasteAt ?? 0) > (local.settings.tasteAt ?? 0);
 

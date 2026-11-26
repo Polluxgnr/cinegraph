@@ -35,3 +35,50 @@
 - {id: UC2C_jShtL725hvbm1arSV9w, name: CGP Grey, lang: en, tags: [explainers]}
 - {id: UCfdNM3NAhaBOXCafH7krzrA, name: The Infographics Show, lang: en, tags: [explainers, history]}
 - {id: UCsBjURrPoezykLs9EqgamOA, name: Fireship, lang: en, tags: [tech, programming]}
+# AI, gaming, entertainment, food, cars, sport, music and more science (IDs checked against each channel's RSS feed, November 25)
+- {id: UCbfYPyITQ-7l4upoX8nvctg, name: "Two Minute Papers", lang: en, tags: [ai, science, tech]}
+- {id: UCYO_jab_esuFRV4b17AJtAw, name: "3Blue1Brown", lang: en, tags: [maths, ai, science]}
+- {id: UC9-y-6csu5WGm29I7JiwpnA, name: "Computerphile", lang: en, tags: [ai, programming, tech]}
+- {id: UCXUPKJO5MZQN11PqgIvyuvQ, name: "Andrej Karpathy", lang: en, tags: [ai, programming]}
+- {id: UCZHmQk67mSJgfCCTn7xBfew, name: "Yannic Kilcher", lang: en, tags: [ai, science]}
+- {id: UCSHZKyawb77ixDdsGog4iWA, name: "Lex Fridman", lang: en, tags: [ai, interview, science]}
+- {id: UCBJycsmduvYEL83R_U4JriQ, name: "Marques Brownlee", lang: en, tags: [tech, gadgets]}
+- {id: UCXuqSBlHAE6Xw-yeJA0Tunw, name: "Linus Tech Tips", lang: en, tags: [tech, gadgets, entertainment]}
+- {id: UCWedHS9qKebauVIK2J7383g, name: "Underscore_", lang: fr, tags: [ai, tech, programming]}
+- {id: UCYnvxJ-PKiGXo_tYXpWAC-w, name: "Micode", lang: fr, tags: [tech, ai, investigation]}
+- {id: UC6nSFpj9HTCZ5t-N3Rm3-HA, name: "Vsauce", lang: en, tags: [science, curiosity]}
+- {id: UC6107grRI4m0o2-emgoDnAA, name: "SmarterEveryDay", lang: en, tags: [science, engineering]}
+- {id: UCY1kMZp36IQSyNx_9h4mpCg, name: "Mark Rober", lang: en, tags: [science, engineering, entertainment]}
+- {id: UCBa659QWEk1AI4Tg--mrJ2A, name: "Tom Scott", lang: en, tags: [science, curiosity, history]}
+- {id: UC7_gcs09iThXybpVgjHZ_7g, name: "PBS Space Time", lang: en, tags: [space, science, physics]}
+- {id: UCoxcjq-8xIDTYp3uz647V5A, name: "Numberphile", lang: en, tags: [maths, science]}
+- {id: UCn8zNIfYAQNdrFRrr8oibKw, name: "VICE", lang: en, tags: [documentary, reportage, society]}
+- {id: UCu4XcDBdnZkV6-5z2f16M0g, name: "Real Stories", lang: en, tags: [documentary, society]}
+- {id: UC3ScyryU9Oy9Wse3a8OAmYQ, name: "FRONTLINE PBS | Official", lang: en, tags: [documentary, investigation]}
+- {id: UCYpRDnhk5H8h16jpS84uqsA, name: "Le Monde", lang: fr, tags: [news, geopolitics, explainers]}
+- {id: UCAcAnMF0OrCtUep3Y4M-ZPw, name: "HugoDécrypte - Actus du jour", lang: fr, tags: [news, explainers, society]}
+- {id: UCqJ-Xo29CKyLTjn6z2XwYAw, name: "Game Maker's Toolkit", lang: en, tags: [gaming, design]}
+- {id: UC0fDG3byEcMtbOqPMymDNbw, name: "/noclip", lang: en, tags: [gaming, documentary]}
+- {id: UCKy1dAqELo0zrOtPkf0eTMw, name: "IGN", lang: en, tags: [gaming, entertainment]}
+- {id: UC_yP2DpIgs5Y1uWC0T03Chw, name: "Joueur Du Grenier", lang: fr, tags: [gaming, entertainment, comedy]}
+- {id: UCWeg2Pkate69NFdBeuRFTAw, name: "SQUEEZIE", lang: fr, tags: [entertainment, gaming, comedy]}
+- {id: UCyWqModMQlbIo8274Wh_ZsQ, name: "Cyprien", lang: fr, tags: [entertainment, comedy]}
+- {id: UCDPK_MTu3uTUFJXRVcTJcEw, name: "Mcfly et Carlito", lang: fr, tags: [entertainment, comedy]}
+- {id: UCX6OQ3DkcsbYNE6H8uQQuVA, name: "MrBeast", lang: en, tags: [entertainment]}
+- {id: UCPD_bxCRGpmmeQcbe2kpPaA, name: "First We Feast", lang: en, tags: [entertainment, food, interview]}
+- {id: UCB_qr75-ydFVKSF9Dmo6izg, name: "FORMULA 1", lang: en, tags: [sport, motorsport]}
+- {id: UCWJ2lWNubArHWmf3FIHbfcQ, name: "NBA", lang: en, tags: [sport, basketball]}
+- {id: UCblfuW_4rakIf2h6aqANefA, name: "Red Bull", lang: en, tags: [sport, adventure, entertainment]}
+- {id: UChBEbMKI1eCcejTtmI32UEw, name: "Joshua Weissman", lang: en, tags: [food, cooking]}
+- {id: UCJHA_jMfCvEnv-3kRjTCQXw, name: "Binging with Babish", lang: en, tags: [food, cooking]}
+- {id: UCIEv3lZ_tNXHzL3ox-_uUGQ, name: "Gordon Ramsay", lang: en, tags: [food, cooking]}
+- {id: UCjOl2AUblVmg2rA_cRgZkFg, name: "Top Gear", lang: en, tags: [cars, entertainment]}
+- {id: UCsqjHFMB_JYTaEnf_vmTNqg, name: "Doug DeMuro", lang: en, tags: [cars]}
+- {id: UC2Qw1dzXDBAZPwS7zm37g8g, name: "COLORS", lang: en, tags: [music, live]}
+- {id: UC3I2GFN_F8WudD_2jUZbojA, name: "KEXP", lang: en, tags: [music, live]}
+- {id: UCddiUEpeqJcYeBxX1IVBKvQ, name: "The Verge", lang: en, tags: [tech, gadgets, ai]}
+- {id: UCUHW94eEFW7hkUMVaZz4eDg, name: "minutephysics", lang: en, tags: [science, physics]}
+- {id: UCtYLUTtgS3k1Fg4y5tAhLbw, name: "StatQuest with Josh Starmer", lang: en, tags: [ai, maths, education]}
+- {id: UCNJ1Ymd5yFuUPtn21xtRbbw, name: "AI Explained", lang: en, tags: [ai, news]}
+- {id: UCLB7AzTwc6VFZrBsO2ucBMg, name: "Robert Miles AI Safety ", lang: en, tags: [ai, science]}
+- {id: UCgBVkKoOAr3ajSdFFLp13_A, name: "KRAZAM", lang: en, tags: [comedy, tech, entertainment]}

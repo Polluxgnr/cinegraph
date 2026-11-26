@@ -30,7 +30,7 @@ function TeamView({ league, id }: { league: League; id: string }) {
   const sport = sportOf(league);
   return (
     <div className="space-y-8" data-testid="team-page">
-      <BackToSports />
+      <BackToSports league={league} />
       <header className="card relative overflow-hidden p-5" style={t.color ? { background: `linear-gradient(120deg, ${t.color}55, transparent 70%)` } : undefined}>
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- team crest */}

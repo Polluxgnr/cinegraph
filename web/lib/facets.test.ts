@@ -34,8 +34,10 @@ describe("recipes", () => {
 
 describe("videos", () => {
   it("themes come from the topic tags", () => {
-    expect(videoThemes(video("a", 1, 1, ["nature", "documentary"]))).toContain("Nature & animals");
-    expect(videoThemes(video("b", 1, 1, ["geopolitics"]))).toContain("Geopolitics");
+    expect(videoThemes(video("a", 1, 1, ["nature", "documentary"]))).toContain("Nature & travel");
+    expect(videoThemes(video("b", 1, 1, ["geopolitics"]))).toContain("News & geopolitics");
+    expect(videoThemes(video("c", 1, 1, ["ai", "programming"]))).toEqual(expect.arrayContaining(["AI", "Tech"]));
+    expect(videoThemes(video("d", 1, 1, ["gaming", "comedy"]))).toEqual(expect.arrayContaining(["Gaming", "Entertainment"]));
   });
   it("viewer score ranks like rate, damped for small audiences", () => {
     const all = [video("lo", 100_000, 1_000), video("mid", 100_000, 3_000), video("hi", 100_000, 8_000), video("big20", 100_000, 20_000), video("tiny", 400, 80)];

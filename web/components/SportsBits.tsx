@@ -26,9 +26,9 @@ export function toggleTeam(name: string) {
   setSettings({ sportsTeams: cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name] });
 }
 
-export function BackToSports() {
+export function BackToSports({ league }: { league?: League }) {
   const T = useT();
-  return <Link href="/sports/" className="text-sm text-muted hover:text-ink">← {T("Sports")}</Link>;
+  return <Link href={league ? `/sports/?c=${encodeURIComponent(league.id)}` : "/sports/"} className="text-sm text-muted hover:text-ink">← {league ? league.label : T("Sports")}</Link>;
 }
 
 /** A name that leads to its page when there is one. */

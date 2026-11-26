@@ -25,6 +25,7 @@ import RecipeView from "@/components/RecipeView";
 import { toggleCompare, useCompare } from "@/lib/compare";
 import Poster3D from "@/components/Poster3D";
 import AskPeople from "@/components/AskPeople";
+import NoteBox from "@/components/NoteBox";
 import { carSpecs, cuisineOf, dietOf, mainsOf, variations } from "@/lib/facets";
 import MatchBreakdown from "@/components/MatchBreakdown";
 import BrandPieces from "@/components/BrandPieces";
@@ -133,6 +134,7 @@ function Detail({ d, row }: { d: DomainData; row: number }) {
                 <Stars value={fb?.rating ?? null} size={24} onChange={(v) => answer(e.key, e.domain, v >= 4.5 ? "loved" : v >= 3.5 ? "liked" : v >= 2.5 ? "ok" : "disliked", { rating: v, source: "detail" })} />
               </div>
             )}
+            <NoteBox key={e.key} k={e.key} domain={e.domain} />
           </div>
           {f?.k === "tv" && <SeriesTracker k={e.key} seasons={f.ns ?? 0} />}
         </div>

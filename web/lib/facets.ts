@@ -7,14 +7,20 @@ import type { Entity } from "./types";
 
 // ------------------------------------------------------------------ videos
 export const VIDEO_THEMES: [string, RegExp][] = [
-  ["Nature & animals", /\b(nature|wildlife|animals?|biology|ocean|planet|earth)\b/i],
-  ["Geopolitics", /\b(geopolitics|politics|war|international|investigation|news|reportage)\b/i],
+  ["Documentaries", /\b(documentary|reportage|investigation|arte|frontline)\b/i],
+  ["Science", /\b(science|physics|space|astronomy|maths?|chemistry|medicine|climate|biology|curiosity)\b/i],
+  ["AI", /\b(ai|machine learning|deep learning)\b/i],
+  ["Tech", /\b(tech|engineering|programming|gadgets|energy|architecture)\b/i],
+  ["Gaming", /\b(gaming|games?|esports?)\b/i],
+  ["Entertainment", /\b(entertainment|comedy|challenge|adventure)\b/i],
+  ["News & geopolitics", /\b(news|geopolitics|politics|war|international)\b/i],
   ["History", /\b(history|archaeology|histoire)\b/i],
-  ["Science", /\b(science|physics|space|astronomy|maths?|chemistry|medicine|climate)\b/i],
-  ["Tech & engineering", /\b(tech|engineering|programming|architecture|energy|ai)\b/i],
-  ["Economics & money", /\b(economics|finance|business)\b/i],
-  ["Society & culture", /\b(society|culture|explainers|linguistics|interview|travel)\b/i],
+  ["Nature & travel", /\b(nature|wildlife|animals?|ocean|planet|earth|travel|geography)\b/i],
+  ["Economics & money", /\b(economics|finance|business|logistics)\b/i],
+  ["Food", /\b(food|cooking|recipes?)\b/i],
+  ["Cars & sport", /\b(cars?|motorsport|sport|basketball|football)\b/i],
   ["Music & concerts", /\b(music|live|concert|underground)\b/i],
+  ["Society & culture", /\b(society|culture|explainers|linguistics|language|interview|education)\b/i],
 ];
 
 export function videoThemes(e: Entity): string[] {

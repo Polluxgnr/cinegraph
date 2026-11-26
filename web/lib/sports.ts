@@ -9,26 +9,54 @@ export interface Sport { id: string; label: string; icon: string; leagues: Leagu
 export const SPORTS: Sport[] = [
   { id: "football", label: "Football", icon: "⚽", leagues: [
     { id: "fra.1", path: "soccer/fra.1", label: "Ligue 1" }, { id: "uefa.champions", path: "soccer/uefa.champions", label: "Champions League" },
+    { id: "fra.coupe_de_france", path: "soccer/fra.coupe_de_france", label: "Coupe de France" }, { id: "fra.2", path: "soccer/fra.2", label: "Ligue 2" },
+    { id: "uefa.europa", path: "soccer/uefa.europa", label: "Europa League" }, { id: "uefa.europa.conf", path: "soccer/uefa.europa.conf", label: "Conference League" },
     { id: "eng.1", path: "soccer/eng.1", label: "Premier League" }, { id: "esp.1", path: "soccer/esp.1", label: "LaLiga" },
-    { id: "ita.1", path: "soccer/ita.1", label: "Serie A" }, { id: "ger.1", path: "soccer/ger.1", label: "Bundesliga" },
-    { id: "uefa.europa", path: "soccer/uefa.europa", label: "Europa League" }, { id: "fra.2", path: "soccer/fra.2", label: "Ligue 2" },
-    { id: "fifa.world", path: "soccer/fifa.world", label: "World Cup" },
+    { id: "esp.copa_del_rey", path: "soccer/esp.copa_del_rey", label: "Copa del Rey" }, { id: "ita.1", path: "soccer/ita.1", label: "Serie A" },
+    { id: "ger.1", path: "soccer/ger.1", label: "Bundesliga" }, { id: "eng.fa", path: "soccer/eng.fa", label: "FA Cup" },
+    { id: "eng.league_cup", path: "soccer/eng.league_cup", label: "Carabao Cup" }, { id: "ita.coppa_italia", path: "soccer/ita.coppa_italia", label: "Coppa Italia" },
+    { id: "ger.dfb_pokal", path: "soccer/ger.dfb_pokal", label: "DFB-Pokal" }, { id: "eng.2", path: "soccer/eng.2", label: "Championship" },
+    { id: "esp.2", path: "soccer/esp.2", label: "LaLiga 2" }, { id: "por.1", path: "soccer/por.1", label: "Liga Portugal" },
+    { id: "ned.1", path: "soccer/ned.1", label: "Eredivisie" }, { id: "bel.1", path: "soccer/bel.1", label: "Pro League (BE)" },
+    { id: "sco.1", path: "soccer/sco.1", label: "Scottish Premiership" }, { id: "tur.1", path: "soccer/tur.1", label: "Süper Lig" },
+    { id: "ksa.1", path: "soccer/ksa.1", label: "Saudi Pro League" }, { id: "usa.1", path: "soccer/usa.1", label: "MLS" },
+    { id: "mex.1", path: "soccer/mex.1", label: "Liga MX" }, { id: "bra.1", path: "soccer/bra.1", label: "Brasileirão" },
+    { id: "arg.1", path: "soccer/arg.1", label: "Liga Argentina" }, { id: "conmebol.libertadores", path: "soccer/conmebol.libertadores", label: "Libertadores" },
+    { id: "uefa.nations", path: "soccer/uefa.nations", label: "Nations League" }, { id: "fifa.worldq.uefa", path: "soccer/fifa.worldq.uefa", label: "World Cup qualifiers (Europe)" },
+    { id: "fifa.world", path: "soccer/fifa.world", label: "World Cup" }, { id: "uefa.euro", path: "soccer/uefa.euro", label: "Euro" },
+    { id: "fifa.cwc", path: "soccer/fifa.cwc", label: "Club World Cup" }, { id: "fra.w.1", path: "soccer/fra.w.1", label: "Première Ligue (women)" },
+    { id: "eng.w.1", path: "soccer/eng.w.1", label: "WSL (women)" }, { id: "uefa.wchampions", path: "soccer/uefa.wchampions", label: "Women's Champions League" },
   ] },
   { id: "basketball", label: "Basketball", icon: "🏀", leagues: [
     { id: "nba", path: "basketball/nba", label: "NBA", injuries: true }, { id: "wnba", path: "basketball/wnba", label: "WNBA", injuries: true },
+    { id: "ncaab", path: "basketball/mens-college-basketball", label: "NCAA (men)" }, { id: "fiba", path: "basketball/fiba", label: "FIBA World Cup" },
   ] },
   { id: "tennis", label: "Tennis", icon: "🎾", leagues: [{ id: "atp", path: "tennis/atp", label: "ATP" }, { id: "wta", path: "tennis/wta", label: "WTA" }] },
   { id: "rugby", label: "Rugby", icon: "🏉", leagues: [
-    { id: "top14", path: "rugby/270559", label: "Top 14" }, { id: "6n", path: "rugby/180659", label: "Six Nations" }, { id: "rwc", path: "rugby/164205", label: "World Cup" },
+    { id: "top14", path: "rugby/270559", label: "Top 14" }, { id: "champions-cup", path: "rugby/271937", label: "Champions Cup" },
+    { id: "6n", path: "rugby/180659", label: "Six Nations" }, { id: "tests", path: "rugby/289234", label: "Test matches" },
+    { id: "prem", path: "rugby/267979", label: "Premiership (EN)" }, { id: "urc", path: "rugby/270557", label: "United Rugby Championship" },
+    { id: "trc", path: "rugby/244293", label: "Rugby Championship" }, { id: "rwc", path: "rugby/164205", label: "World Cup" },
+    { id: "league", path: "rugby-league/3", label: "Rugby league" },
   ] },
-  { id: "f1", label: "Formula 1", icon: "🏎️", leagues: [{ id: "f1", path: "racing/f1", label: "Formula 1" }] },
-  { id: "mma", label: "MMA", icon: "🥊", leagues: [{ id: "ufc", path: "mma/ufc", label: "UFC" }] },
-  { id: "golf", label: "Golf", icon: "⛳", leagues: [{ id: "pga", path: "golf/pga", label: "PGA Tour" }] },
+  { id: "f1", label: "Motorsport", icon: "🏎️", leagues: [
+    { id: "f1", path: "racing/f1", label: "Formula 1" }, { id: "indycar", path: "racing/irl", label: "IndyCar" }, { id: "nascar", path: "racing/nascar-premier", label: "NASCAR" },
+  ] },
+  { id: "mma", label: "Combat sports", icon: "🥊", leagues: [{ id: "ufc", path: "mma/ufc", label: "UFC" }, { id: "pfl", path: "mma/pfl", label: "PFL" }] },
+  { id: "golf", label: "Golf", icon: "⛳", leagues: [
+    { id: "pga", path: "golf/pga", label: "PGA Tour" }, { id: "dpwt", path: "golf/eur", label: "DP World Tour" }, { id: "lpga", path: "golf/lpga", label: "LPGA" },
+  ] },
   { id: "us", label: "US sports", icon: "🏈", leagues: [
-    { id: "nfl", path: "football/nfl", label: "NFL", injuries: true }, { id: "nhl", path: "hockey/nhl", label: "NHL", injuries: true },
-    { id: "mlb", path: "baseball/mlb", label: "MLB", injuries: true },
+    { id: "nfl", path: "football/nfl", label: "NFL", injuries: true }, { id: "ncaaf", path: "football/college-football", label: "NCAA football" },
+    { id: "nhl", path: "hockey/nhl", label: "NHL", injuries: true }, { id: "mlb", path: "baseball/mlb", label: "MLB", injuries: true },
   ] },
-  { id: "volleyball", label: "Volleyball", icon: "🏐", leagues: [{ id: "ncaa-m", path: "volleyball/mens-college-volleyball", label: "NCAA (men)" }] },
+  { id: "volleyball", label: "Volleyball", icon: "🏐", leagues: [
+    { id: "ncaa-m", path: "volleyball/mens-college-volleyball", label: "NCAA (men)" }, { id: "ncaa-w", path: "volleyball/womens-college-volleyball", label: "NCAA (women)" },
+  ] },
+  { id: "more", label: "More", icon: "🏏", leagues: [
+    { id: "afl", path: "australian-football/afl", label: "AFL (Aussie rules)" }, { id: "ipl", path: "cricket/8048", label: "IPL (cricket)" },
+    { id: "pll", path: "lacrosse/pll", label: "Lacrosse (PLL)" },
+  ] },
 ];
 
 /** Sports with no open live feed: their official sites (results, rankings, calendars). */
@@ -55,6 +83,9 @@ export interface Match {
   odds?: string;
   note?: string;
   link?: string;
+  eventId?: string; // the race weekend, tournament or card it belongs to
+  eventName?: string;
+  kind?: string; // session or round: FP1, Qualifying, Race, Quarterfinal...
 }
 
 type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -76,8 +107,17 @@ export async function scoreboard(l: League, from = -3, to = 7): Promise<Match[]>
   const b = new Date(Date.now() + to * 864e5);
   const months = [...new Set([ym(a), ym(new Date((a.getTime() + b.getTime()) / 2)), ym(b)])];
   const pages = await Promise.all(months.map((m) => get(`${API}/site/v2/sports/${l.path}/scoreboard?dates=${m}&limit=500`)));
+  const out = parseEvents(l, pages.flatMap((j) => j.events ?? []));
+  const lo = new Date(a.toDateString()).getTime();
+  const hi = new Date(b.toDateString()).getTime() + 864e5;
+  // a match in progress or a multi-day event (tennis draw, golf, race weekend) that started earlier still counts
+  return out.filter((m) => { const t = Date.parse(m.date); return (t >= lo && t < hi) || m.state === "in"; }).sort((x, y) => x.date.localeCompare(y.date));
+}
+
+/** ESPN events -> one Match per competition (a race weekend has its sessions, a tournament its matches). */
+function parseEvents(l: League, raw: J[], full = false): Match[] {
   const seen = new Set<string>();
-  const events = pages.flatMap((j) => j.events ?? []).filter((ev: J) => !seen.has(ev.id) && seen.add(ev.id));
+  const events = raw.filter((ev: J) => !seen.has(ev.id) && seen.add(ev.id));
   const out: Match[] = [];
   for (const ev of events) {
     const comps: J[] = ev.competitions?.length ? ev.competitions : (ev.groupings ?? []).flatMap((g: J) => g.competitions ?? []);
@@ -96,24 +136,49 @@ export async function scoreboard(l: League, from = -3, to = 7): Promise<Match[]>
         record: x.records?.[0]?.summary,
       }));
       const o = c.odds?.[0];
+      const kind = c.type?.abbreviation ?? c.round?.displayName ?? c.type?.text;
+      const ranked = l.path.startsWith("racing") || l.path.startsWith("golf");
       out.push({
         id: String(c.id ?? ev.id),
-        name: comps.length > 1 ? `${ev.name ?? ev.shortName} · ${c.type?.abbreviation ?? c.round?.displayName ?? ""}`.replace(/ · $/, "") : ev.name ?? ev.shortName,
+        name: comps.length > 1 ? `${ev.name ?? ev.shortName} · ${kind ?? ""}`.replace(/ · $/, "") : ev.name ?? ev.shortName,
         date: c.date ?? ev.date,
         state: (st.state as Match["state"]) ?? "pre",
         status: st.shortDetail ?? st.description ?? "",
         venue: c.venue?.fullName ?? ev.venue?.displayName,
-        sides: l.path.startsWith("racing") || l.path.startsWith("golf") ? sides.sort((p, q) => (p.rank ?? 99) - (q.rank ?? 99)).slice(0, 10) : sides,
+        sides: ranked ? sides.sort((p, q) => (p.rank ?? 99) - (q.rank ?? 99)).slice(0, full ? 200 : 10) : sides,
         odds: o ? [o.details, o.overUnder ? `O/U ${o.overUnder}` : "", o.provider?.name ? `(${o.provider.name})` : ""].filter(Boolean).join(" ") : undefined,
         note: c.notes?.[0]?.headline,
         link: ev.links?.find((x: J) => x.rel?.includes("summary"))?.href ?? ev.links?.[0]?.href,
+        eventId: String(ev.id), eventName: ev.name ?? ev.shortName, kind,
       });
     }
   }
-  const lo = new Date(a.toDateString()).getTime();
-  const hi = new Date(b.toDateString()).getTime() + 864e5;
-  // a match in progress or a multi-day event (tennis draw, golf, race weekend) that started earlier still counts
-  return out.filter((m) => { const t = Date.parse(m.date); return (t >= lo && t < hi) || m.state === "in"; }).sort((x, y) => x.date.localeCompare(y.date));
+  return out;
+}
+
+/** Every match of one month (YYYYMM), for the calendar. */
+export async function monthBoard(l: League, month: string): Promise<Match[]> {
+  const j = await get(`${API}/site/v2/sports/${l.path}/scoreboard?dates=${month}&limit=500`);
+  return parseEvents(l, j.events ?? []).sort((x, y) => x.date.localeCompare(y.date));
+}
+
+export interface EventDetail { id: string; name: string; date: string; venue?: string; link?: string; parts: Match[] }
+
+/**
+ * A race weekend, a tennis tournament, a fight card or a golf event, with every session, match or fight and the
+ * full order: ESPN has no detail feed for these, but its scoreboard of that month lists them all.
+ */
+export async function eventDetail(l: League, eventId: string, date?: string): Promise<EventDetail> {
+  const d = date && /^\d{8}$/.test(date) ? date : undefined;
+  const months = d ? [d.slice(0, 6)] : [ym(new Date()), ym(new Date(Date.now() - 30 * 864e5)), ym(new Date(Date.now() + 30 * 864e5))];
+  for (const m of months) {
+    const j = await get(`${API}/site/v2/sports/${l.path}/scoreboard?dates=${m}&limit=500`);
+    const ev = ((j.events ?? []) as J[]).find((e) => String(e.id) === String(eventId));
+    if (!ev) continue;
+    const parts = parseEvents(l, [ev], true).sort((x, y) => x.date.localeCompare(y.date));
+    return { id: String(ev.id), name: ev.name ?? ev.shortName ?? "", date: ev.date, venue: ev.venues?.[0]?.fullName ?? parts[0]?.venue, link: parts[0]?.link, parts };
+  }
+  throw new Error("event not found");
 }
 
 export interface Row { id?: string; athlete?: boolean; rank: number; team: string; logo?: string; played?: string; won?: string; drawn?: string; lost?: string; diff?: string; points?: string; note?: string }
@@ -242,7 +307,12 @@ export function wikiHint(l: League, who: "team" | "athlete"): { en: string; fr: 
 }
 export const teamHref = (l: League, id: string) => `/sports/team/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
 export const athleteHref = (l: League, id: string) => `/sports/athlete/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
-export const matchHref = (l: League, id: string) => `/sports/match/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}`;
+export const matchHref = (l: League, id: string, m?: { date?: string; eventId?: string }) =>
+  `/sports/match/?l=${encodeURIComponent(l.id)}&id=${encodeURIComponent(id)}${m?.eventId ? `&e=${encodeURIComponent(m.eventId)}` : ""}${m?.date ? `&d=${dayKey(m.date)}` : ""}`;
+/** 2026-11-27T13:30Z -> 20261127 (the local day). */
+export const dayKey = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`; };
+/** Sports with one match per page (a summary feed); the others are events with many parts. */
+export const hasSummary = (l: League) => !/^(racing|tennis|mma|golf)/.test(l.path);
 /** Where a side of a match or a table row leads: its team page, or the athlete's page in tennis, golf, F1, MMA. */
 export const sideHref = (l: League, s: { id?: string; athlete?: boolean }) => (s.id ? (s.athlete ? athleteHref(l, s.id) : teamHref(l, s.id)) : undefined);
 

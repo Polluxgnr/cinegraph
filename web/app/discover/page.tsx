@@ -18,6 +18,7 @@ import { useDomain, useSpace } from "@/lib/hooks";
 import { LANG_NAMES } from "@/lib/text";
 import type { Entity } from "@/lib/types";
 import { useRecs } from "@/lib/useRecs";
+import { channelOf, useSubs } from "@/components/VideoHub";
 import { ALLERGEN_ICON, type Allergen, allergensOf, type Effort, effortOf, fridgeMatch, fridgeTerms, timeOf } from "@/lib/recipe";
 
 type Sort = "match" | "date" | "popular" | "rating" | "length" | "liked" | "price-up" | "price-down";
@@ -36,6 +37,10 @@ export default function Discover() {
   const [q, setQ] = useState("");
   const [more, setMore] = useState(false); // films: the "More filters" panel
   const [theme, setTheme] = useState<string | null>(null); // videos
+  const [vLen, setVLen] = useState<string | null>(null);
+  const [vLang, setVLang] = useState<string | null>(null);
+  const [vSubs, setVSubs] = useState(false);
+  const mySubs = useSubs();
   const [cuisine, setCuisine] = useState<string | null>(null); // recipes
   const [main, setMain] = useState<string | null>(null);
   const [diet, setDiet] = useState<Diet | null>(null);
@@ -98,6 +103,15 @@ export default function Discover() {
       if (inGroup && !inGroup(f)) return false;
     } else if (tag && !e.tags.includes(tag)) return false;
     if (theme && !videoThemes(e).includes(theme)) return false;
+    if (e.domain === "youtube") {
+      if (vLen) {
+        const [, lo, hi] = VIDEO_LENGTHS.find(([n]) => n === vLen)!;
+        const m = minutesOf(e);
+        if (!m || m < lo || m >= hi) return false;
+      }
+      if (vLang && e.item?.meta?.lang !== vLang) return false;
+      if (vSubs && !mySubs.has(channelOf(e).toLowerCase())) return false;
+    }
     if (engine && !engineOf(e).includes(engine)) return false;
     if (power) {
       const [, lo, hi] = POWER.find(([n]) => n === power)!;
@@ -117,7 +131,7 @@ export default function Discover() {
     }
     return true;
   };
-  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, country, theme, cuisine, main, diet, free.join(","), effort, terms.join(","), group, anim, sub, engine, power, seats, drive, words.join(" ")].join("|");
+  const key = [domain, kind, tag, lang, decade, maxRt, showAnswered, country, theme, vLen, vLang, vSubs, vSubs ? mySubs.size : 0, cuisine, main, diet, free.join(","), effort, terms.join(","), group, anim, sub, engine, power, seats, drive, words.join(" ")].join("|");
   const recs = useRecs(d, { n: 60, filter, explore: sort === "match" && !words.length ? 0.1 : 0, includeAnswered: showAnswered || words.length > 0, includeListed: true, diversity: words.length ? 1 : 0.9, noCaps: words.length > 0 }, key);
   const sorted = useMemo(() => {
     // fridge: most of your ingredients used first, then fewest still to buy
@@ -176,6 +190,15 @@ export default function Discover() {
           <div className="flex flex-wrap gap-1.5" aria-label={T("Themes")}>
             <button className="chip" data-on={!theme} onClick={() => setTheme(null)}>{T("All themes")}</button>
             {VIDEO_THEMES.map(([n]) => <button key={n} className="chip" data-on={theme === n} onClick={() => setTheme(theme === n ? null : n)}>{T(n)}</button>)}
+          </div>
+        )}
+        {domain === "youtube" && (
+          <div className="flex flex-wrap items-center gap-1.5" data-testid="video-filters">
+            {VIDEO_LENGTHS.map(([n]) => <button key={n} className="chip text-xs" data-on={vLen === n} onClick={() => setVLen(vLen === n ? null : n)}>{T(n)}</button>)}
+            <span className="mx-1 w-px self-stretch bg-line" />
+            {(["fr", "en"] as const).map((l) => <button key={l} className="chip text-xs" data-on={vLang === l} onClick={() => setVLang(vLang === l ? null : l)}>{l === "fr" ? "🇫🇷 Français" : "🇬🇧 English"}</button>)}
+            <span className="mx-1 w-px self-stretch bg-line" />
+            <button className="chip text-xs" data-on={vSubs} onClick={() => setVSubs(!vSubs)} disabled={!mySubs.size} title={mySubs.size ? undefined : T("Subscribe to channels on the Videos Home first")}>★ {T("My subscriptions")}{mySubs.size ? ` · ${mySubs.size}` : ""}</button>
           </div>
         )}
         {domain === "cars" && (
@@ -385,3 +408,6 @@ function FilmFilters({ T, kind, setKind, tags, tag, setTag, subs, sub, setSub, m
     </div>
   );
 }
+
+/** Video length buckets, in minutes: [label, from, to). */
+const VIDEO_LENGTHS: [string, number, number][] = [["Under 10 min", 0, 10], ["10–30 min", 10, 30], ["30–60 min", 30, 60], ["Over an hour", 60, 1e9]];

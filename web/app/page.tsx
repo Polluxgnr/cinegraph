@@ -18,13 +18,13 @@ import { DOMAIN } from "@/lib/domains";
 import { calibration } from "@/lib/engine/active";
 import { buildProfile } from "@/lib/engine/profile";
 import { runQuery, type QueryResult } from "@/lib/engine/query";
-import { recommend } from "@/lib/engine/recommend";
+import { type Rec, recommend } from "@/lib/engine/recommend";
 import { useDomain, useSpace } from "@/lib/hooks";
 import { getState, isDone, useLoaded, useStore } from "@/lib/store";
 import { useRecs } from "@/lib/useRecs";
 import { groupTest } from "@/lib/groups";
 import { careerInCatalog, personHref, personIndex } from "@/lib/people";
-import { CATEGORIES, categoryOf, LABEL as PIECE_LABEL } from "@/components/BrandPieces";
+import { Channels, SubscriptionsRow, VideoCategories } from "@/components/VideoHub";
 import type { Entity } from "@/lib/types";
 
 const HERO: Record<string, { title: string; sub: string }> = {
@@ -50,13 +50,15 @@ export default function Home() {
       <SyncNudge />
       <Hero space={space} d={d} />
       <ConnectStrip space={space} />
+      {space === "youtube" && <SubscriptionsRow d={d} />}
       {isFilmData(d) && <ContinueRow films={d} />}
       <ForYou d={d} />
       <BecauseYouLiked d={d} />
       {space === "youtube" && <Fresh d={d} />}
+      {space === "youtube" && <VideoCategories d={d} />}
+      {space === "youtube" && <Channels d={d} />}
       {space === "music" && <ExtraRow d={d} name="releases" title={T("New releases")} hint="out in the last weeks, artists you like first" />}
       {space === "brands" && <PieceFromLink d={d} />}
-      {space === "brands" && <Pieces d={d} />}
       {space === "brands" && <Catalogue d={d} />}
       <Mine d={d} />
     </div>
@@ -130,12 +132,83 @@ function FilmHome({ d }: { d: FilmData }) {
 }
 
 /** Out in the last four months, ranked for you. */
+/**
+ * New and upcoming: what came out in the last four months (best match first, with its date), and what is coming,
+ * by month, with a countdown and a mark on what is already on your list.
+ */
 function NewForYou({ d }: { d: FilmData }) {
   const T = useT();
+  const [tab, setTab] = useState<"out" | "soon">("out");
+  const [kind, setKind] = useState<"any" | "movie" | "tv">("any");
+  const lists = useStore((s) => s.lists);
+  const [now] = useState(() => Date.now());
   const isNew = useMemo(() => groupTest(d, "new"), [d]);
-  const recs = useRecs(d, { n: 14, explore: 0, includeListed: true, filter: (e) => !!e.film && isNew(e.film) }, "films-new");
-  if (!recs?.length) return null;
-  return <Row title={T("New releases for you")} hint={T("Out in the last four months")} href="/discover/">{recs.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</Row>;
+  const kindOk = (e: Entity) => kind === "any" || e.film?.k === kind;
+  const out = useRecs(d, { n: 24, explore: 0, includeListed: true, filter: (e) => !!e.film && isNew(e.film) && kindOk(e) }, `films-new|${kind}`);
+  const soon = useRecs(d, { n: 120, explore: 0, includeListed: true, includeAnswered: true, noCaps: true, filter: (e) => !!e.film?.d && Date.parse(e.film.d) > now && kindOk(e) }, `films-soon|${kind}`);
+  const byMonth = useMemo(() => {
+    const g = new Map<string, Rec[]>();
+    for (const r of [...(soon ?? [])].sort((x, y) => (x.entity.film!.d ?? "").localeCompare(y.entity.film!.d ?? ""))) {
+      const k = r.entity.film!.d!.slice(0, 7);
+      g.set(k, [...(g.get(k) ?? []), r]);
+    }
+    return [...g];
+  }, [soon]);
+  if (!out?.length && !soon?.length) return null;
+  const when = (iso: string) => {
+    const days = Math.round((Date.parse(iso) - now) / 864e5);
+    return days <= 0 ? T("today") : days === 1 ? T("tomorrow") : days < 60 ? T("in {n} days", { n: days }) : new Date(iso).toLocaleDateString(T.lang, { day: "numeric", month: "short", year: "numeric" });
+  };
+  return (
+    <section data-testid="releases">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex rounded-full border border-line bg-panel p-0.5 text-sm" role="tablist">
+          {([["out", "Out now"], ["soon", "Coming soon"]] as const).map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+                    className={`rounded-full px-4 py-1.5 font-display text-lg transition md:text-xl ${tab === k ? "bg-accent text-bg" : "text-muted hover:text-ink"}`}>
+              {T(l)}{k === "soon" && soon?.length ? <span className="ml-1 text-xs opacity-70">{soon.length}</span> : null}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5">
+          {(["any", "movie", "tv"] as const).map((k) => <button key={k} className="chip text-xs" data-on={kind === k} onClick={() => setKind(k)}>{k === "any" ? T("Both") : k === "movie" ? T("Films") : T("Series")}</button>)}
+        </div>
+      </div>
+      {tab === "out" && (
+        out?.length ? (
+          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {out.map((r) => (
+              <div key={r.entity.key} className="w-36 shrink-0 space-y-1 md:w-44">
+                <RecCard r={r} showWhy={false} />
+                <p className="px-1 text-[11px] text-muted">{T("Out")} {new Date(r.entity.film!.d!).toLocaleDateString(T.lang, { day: "numeric", month: "short" })}</p>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted">{T("Nothing new of this kind in the last four months.")}</p>
+      )}
+      {tab === "soon" && (
+        byMonth.length ? (
+          <div className="space-y-5">
+            {byMonth.map(([m, rs]) => (
+              <div key={m}>
+                <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">{new Date(`${m}-01T12:00:00`).toLocaleDateString(T.lang, { month: "long", year: "numeric" })} · {rs.length}</p>
+                <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                  {rs.map((r) => (
+                    <div key={r.entity.key} className="w-36 shrink-0 space-y-1 md:w-44" data-testid="upcoming">
+                      <RecCard r={r} showWhy={false} />
+                      <p className="px-1 text-[11px] text-muted">
+                        <b className="text-accent">{when(r.entity.film!.d!)}</b>{lists[r.entity.key] ? ` · ${T("on your list")}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted">{T("No announced date of this kind yet.")}</p>
+      )}
+    </section>
+  );
 }
 
 /** One row per actor or director you follow: their titles you haven't answered, best match first. */
@@ -300,44 +373,69 @@ function Fresh({ d }: { d: DomainData }) {
   return <Row title={T("New this week")} hint="latest from the channels, ranked for you">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
 }
 
-/** Style: every piece as a photo catalogue, by category, photographed pieces first, best match first within that. */
+/**
+ * Style: no open source lists a brand's whole range (Nike makes thousands of shoes), so the full catalogue is on each
+ * brand's own site: every brand here with its website, best match first, searchable and by style; then the iconic
+ * pieces that do have a real photo.
+ */
 function Catalogue({ d }: { d: DomainData }) {
   const T = useT();
-  const [cat, setCat] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [tag, setTag] = useState<string | null>(null);
   const [all, setAll] = useState(false);
-  const recs = useRecs(d, { n: 400, explore: 0, includeListed: true, noCaps: true, diversity: 1, filter: (e) => e.tags.includes("piece") }, "catalogue");
-  const cats = useMemo(() => {
+  const recs = useRecs(d, { n: 600, explore: 0, includeListed: true, includeAnswered: true, noCaps: true, diversity: 1, filter: (e) => e.item?.meta?.kind === "brand" }, "brand-directory");
+  const tags = useMemo(() => {
     const c = new Map<string, number>();
-    for (const r of recs ?? []) c.set(categoryOf(r.entity), (c.get(categoryOf(r.entity)) ?? 0) + 1);
-    return [...c].filter(([k]) => k !== "other").sort((a, b) => CATEGORIES.indexOf(a[0] as never) - CATEGORIES.indexOf(b[0] as never));
+    for (const r of recs ?? []) for (const t of r.entity.tags.slice(0, 2)) if (t && t !== "label") c.set(t, (c.get(t) ?? 0) + 1);
+    return [...c].filter(([, n]) => n >= 3).sort((x, y) => y[1] - x[1]).slice(0, 16).map(([t]) => t);
   }, [recs]);
+  const photos = useRecs(d, { n: 24, explore: 0, includeListed: true, noCaps: true, filter: (e) => e.tags.includes("piece") && !!(e.item?.meta?.photo || e.item?.meta?.from_shop) }, "photo-pieces");
   if (!recs?.length) return null;
-  const photo = (e: Entity) => !!e.item?.meta?.photo || !!e.item?.meta?.from_shop;
-  const list = recs.filter((r) => !cat || categoryOf(r.entity) === cat).sort((a, b) => Number(photo(b.entity)) - Number(photo(a.entity)));
-  const shown = all ? list : list.slice(0, 18);
+  const n = q.trim().toLowerCase();
+  const list = recs.filter((r) => (!n || `${r.entity.title} ${r.entity.subtitle} ${r.entity.tags.join(" ")}`.toLowerCase().includes(n)) && (!tag || r.entity.tags.includes(tag)));
+  const shown = all || n ? list : list.slice(0, 24);
   return (
-    <section data-testid="catalogue">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-3xl">{T("Catalogue")}</h2>
-        <span className="text-xs text-muted">{list.length} {T("pieces")}</span>
-      </div>
-      <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4">
-        <button className="chip shrink-0" data-on={!cat} onClick={() => setCat(null)}>{T("All")}</button>
-        {cats.map(([k, n]) => <button key={k} className="chip shrink-0" data-on={cat === k} onClick={() => setCat(cat === k ? null : k)}>{T(PIECE_LABEL[k] ?? k)} <span className="text-muted">{n}</span></button>)}
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{shown.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}</div>
-      {list.length > shown.length && <button className="btn-ghost mt-4 w-full" onClick={() => setAll(true)}>{T("Show all {n}", { n: list.length })}</button>}
-    </section>
+    <>
+      {photos && photos.length > 0 && (
+        <Row title={T("Iconic pieces")} hint={T("with a real photo · the full ranges are on the brands' sites below")}>
+          {photos.map((r) => <RecCard key={r.entity.key} r={r} showWhy={false} />)}
+        </Row>
+      )}
+      <section data-testid="catalogue">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-3xl">{T("Brands and their shops")}</h2>
+          <span className="text-xs text-muted">{list.length} {T("brands")}</span>
+        </div>
+        <input value={q} onChange={(e) => setQ(e.target.value)} type="search" placeholder={T("Find a brand: Nike, Our Legacy, Arc'teryx…")}
+               className="mb-2 w-full rounded-xl border border-line bg-panel px-4 py-2.5 text-sm outline-none focus:border-accent" />
+        <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4">
+          <button className="chip shrink-0 text-xs" data-on={!tag} onClick={() => setTag(null)}>{T("All")}</button>
+          {tags.map((t) => <button key={t} className="chip shrink-0 text-xs" data-on={tag === t} onClick={() => setTag(tag === t ? null : t)}>{T(t)}</button>)}
+        </div>
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map(({ entity: e, p }) => {
+            const site = e.item?.url && !/wikidata\.org/.test(e.item.url) ? e.item.url : undefined;
+            let host = "";
+            try { host = site ? new URL(site).host.replace(/^www\./, "") : ""; } catch { /* not a URL */ }
+            return (
+              <li key={e.key} className="card flex min-w-0 items-center gap-3 p-2.5" data-testid="brand-row">
+                <Link href={detailHref(e.key)} className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-panel-2"><EntityImage e={e} aspect="1/1" /></Link>
+                <span className="min-w-0 flex-1">
+                  <Link href={detailHref(e.key)} className="block truncate font-medium hover:text-accent">{e.title}</Link>
+                  <span className="block truncate text-[11px] text-muted">{e.subtitle} · {Math.round(p * 100)}% {T("for you")}</span>
+                </span>
+                {site ? <a href={site} target="_blank" rel="noreferrer" className="btn-ghost shrink-0 px-3 py-1 text-xs" title={host}>{T("Shop")} ↗</a>
+                  : <a href={`https://www.google.com/search?q=${encodeURIComponent(`${e.title} official site`)}`} target="_blank" rel="noreferrer" className="shrink-0 px-2 text-xs text-muted hover:text-ink">{T("Find site")} ↗</a>}
+              </li>
+            );
+          })}
+        </ul>
+        {!all && !n && list.length > shown.length && <button className="btn-ghost mt-4 w-full" onClick={() => setAll(true)}>{T("Show all {n}", { n: list.length })}</button>}
+      </section>
+    </>
   );
 }
 
-/** Style: individual pieces (with an approximate price), ranked by your taste in brands and pieces. */
-function Pieces({ d }: { d: DomainData }) {
-  const T = useT();
-  const recs = useRecs(d, { n: 16, explore: 0.1, filter: (e) => e.tags.includes("piece") }, "pieces");
-  if (!recs?.length) return null;
-  return <Row title={T("Pieces for you")} hint="iconic pieces from brands close to your style · ≈ retail price">{recs.map((r) => <RecCard key={r.entity.key} r={r} />)}</Row>;
-}
 
 function Mine({ d }: { d: DomainData }) {
   const T = useT();

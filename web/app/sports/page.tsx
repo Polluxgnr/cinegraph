@@ -5,10 +5,11 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { MatchDetail, MaybeLink, toggleTeam, useLoad } from "@/components/SportsBits";
 import { useT } from "@/lib/i18n";
-import { ELSEWHERE, type Injury, injuries, type League, type Match, matchHref, type News, news, scoreboard, sideHref, SPORTS, standings, type Table } from "@/lib/sports";
+import { dayKey, ELSEWHERE, type Injury, injuries, type League, leagueById, type Match, matchHref, monthBoard, type News, news, scoreboard, sideHref, sportOf, SPORTS, standings, type Table } from "@/lib/sports";
+import { useQueryParam } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 
-type Tab = "results" | "fixtures" | "table" | "news" | "injuries";
+type Tab = "results" | "fixtures" | "calendar" | "table" | "news" | "injuries";
 
 /**
  * Sports: pick a sport and a competition; see recent results, upcoming fixtures (with odds when the bookmakers
@@ -16,41 +17,38 @@ type Tab = "results" | "fixtures" | "table" | "news" | "injuries";
  */
 export default function SportsPage() {
   const T = useT();
-  const [sportId, setSportId] = useState(SPORTS[0].id);
-  const sport = SPORTS.find((s) => s.id === sportId)!;
-  const [leagueId, setLeagueId] = useState(sport.leagues[0].id);
-  const league = sport.leagues.find((l) => l.id === leagueId) ?? sport.leagues[0];
+  const [c, setC] = useQueryParam("c"); // the competition, in the URL so back links and shares land on it
+  const league = leagueById(c) ?? SPORTS[0].leagues[0];
+  const sport = sportOf(league);
   const [tab, setTab] = useState<Tab>("results");
   const mine = useStore((s) => s.settings.sportsTeams ?? []);
 
-  const tabs: [Tab, string][] = [["results", "Results"], ["fixtures", "Fixtures"], ["table", "Standings"], ["news", "News"], ...(league.injuries ? [["injuries", "Injuries"] as [Tab, string]] : [])];
+  const tabs: [Tab, string][] = [["results", "Results"], ["fixtures", "Fixtures"], ["calendar", "Calendar"], ["table", "Standings"], ["news", "News"], ...(league.injuries ? [["injuries", "Injuries"] as [Tab, string]] : [])];
+  const pick = (id: string) => {
+    setC(id);
+    setTab("results");
+  };
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="font-display text-4xl md:text-5xl">{T("Sports")}</h1>
-        {mine.length > 0 && <p className="text-xs text-muted">★ {mine.join(" · ")}</p>}
+        <div>
+          <h1 className="font-display text-4xl md:text-5xl">{T("Sports")}</h1>
+          <p className="text-sm text-muted">{sport.icon} {T(sport.label)} · <b className="text-ink">{league.label}</b></p>
+        </div>
+        {mine.length > 0 && <p className="max-w-md truncate text-xs text-muted">★ {mine.join(" · ")}</p>}
       </header>
 
-      <nav className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4" aria-label={T("Sports")}>
-        {SPORTS.map((s) => (
-          <button key={s.id} className="chip shrink-0" data-on={s.id === sportId} onClick={() => { setSportId(s.id); setLeagueId(s.leagues[0].id); setTab("results"); }}>
-            {s.icon} {T(s.label)}
-          </button>
-        ))}
-      </nav>
-      {sport.leagues.length > 1 && (
-        <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
-          {sport.leagues.map((l) => <button key={l.id} className="chip shrink-0 text-xs" data-on={l.id === league.id} onClick={() => setLeagueId(l.id)}>{l.label}</button>)}
-        </div>
-      )}
-      <div className="flex gap-1 border-b border-line">
+      <Competitions current={league.id} onPick={pick} />
+
+      <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line">
         {tabs.map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 py-2 text-sm transition ${tab === k ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}>{T(l)}</button>
+          <button key={k} onClick={() => setTab(k)} className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm transition ${tab === k ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}>{T(l)}</button>
         ))}
       </div>
 
       {(tab === "results" || tab === "fixtures") && <Matches key={`${league.id}-${tab}`} league={league} past={tab === "results"} mine={mine} />}
+      {tab === "calendar" && <Calendar key={league.id} league={league} mine={mine} />}
       {tab === "table" && <Standings key={league.id} league={league} mine={mine} />}
       {tab === "news" && <NewsList key={league.id} league={league} />}
       {tab === "injuries" && <Injuries key={league.id} league={league} mine={mine} />}
@@ -68,6 +66,90 @@ export default function SportsPage() {
         </div>
       </section>
       <p className="text-[11px] text-muted/80">{T("Data: ESPN's public scores feed. Odds are shown for information only, when bookmakers publish them for a fixture.")}</p>
+    </div>
+  );
+}
+
+/** Every sport and competition in one scrollable panel, with a search, so nothing is two taps away. */
+function Competitions({ current, onPick }: { current: string; onPick: (id: string) => void }) {
+  const T = useT();
+  const [q, setQ] = useState("");
+  const n = q.trim().toLowerCase();
+  const groups = SPORTS.map((s) => ({ s, ls: s.leagues.filter((l) => !n || `${l.label} ${T(s.label)} ${s.label}`.toLowerCase().includes(n)) })).filter((g) => g.ls.length);
+  return (
+    <section className="card p-3" data-testid="competitions">
+      <div className="mb-2 flex items-center gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} type="search" placeholder={T("Find a competition: Copa del Rey, NBA, F1…")}
+               className="min-w-0 flex-1 rounded-lg border border-line bg-panel-2 px-3 py-1.5 text-sm outline-none focus:border-accent" />
+        <span className="shrink-0 text-[11px] text-muted">{SPORTS.reduce((k, s) => k + s.leagues.length, 0)} {T("competitions")}</span>
+      </div>
+      <div className="max-h-56 space-y-2 overflow-y-auto pr-1 md:max-h-64">
+        {groups.map(({ s, ls }) => (
+          <div key={s.id} className="flex gap-2">
+            <span className="w-28 shrink-0 pt-1 text-xs text-muted">{s.icon} {T(s.label)}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {ls.map((l) => <button key={l.id} className="chip text-xs" data-on={l.id === current} onClick={() => onPick(l.id)}>{l.label}</button>)}
+            </div>
+          </div>
+        ))}
+        {!groups.length && <p className="text-sm text-muted">{T("No competition by that name.")}</p>}
+      </div>
+    </section>
+  );
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** A month of the competition: each day with its matches, tap a day to see them. */
+function Calendar({ league, mine }: { league: League; mine: string[] }) {
+  const T = useT();
+  const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const key = `${month.getFullYear()}${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const { data, err } = useLoad(() => monthBoard(league, key), [league.id, key]);
+  const today = dayKey(new Date().toISOString());
+  const [day, setDay] = useState<string | null>(null);
+  const byDay = useMemo(() => {
+    const g = new Map<string, Match[]>();
+    for (const m of data ?? []) g.set(dayKey(m.date), [...(g.get(dayKey(m.date)) ?? []), m]);
+    return g;
+  }, [data]);
+  const first = (month.getDay() + 6) % 7; // Monday first
+  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const cells = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+  const sel = day ?? (byDay.has(today) ? today : [...byDay.keys()].find((k) => k >= today) ?? null);
+  const shift = (n: number) => { setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); setDay(null); };
+  return (
+    <div className="space-y-4" data-testid="calendar">
+      <div className="flex items-center justify-between">
+        <button className="btn-ghost px-3 py-1" onClick={() => shift(-1)} aria-label={T("Previous month")}>←</button>
+        <p className="font-display text-2xl capitalize">{month.toLocaleDateString(T.lang, { month: "long", year: "numeric" })}</p>
+        <button className="btn-ghost px-3 py-1" onClick={() => shift(1)} aria-label={T("Next month")}>→</button>
+      </div>
+      {err && <p className="card p-3 text-sm text-nope">{T("Couldn't load")}: {err}</p>}
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted">{WEEKDAYS.map((w) => <span key={w}>{T(w)}</span>)}</div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (!d) return <span key={`x${i}`} />;
+          const k = `${key}${String(d).padStart(2, "0")}`;
+          const ms = byDay.get(k) ?? [];
+          const fav = ms.some((m) => m.sides.some((s) => mine.includes(s.name)));
+          return (
+            <button key={k} onClick={() => setDay(k)} disabled={!ms.length} data-on={sel === k}
+                    className={`min-h-14 rounded-lg border p-1 text-left text-[11px] transition disabled:opacity-40 ${sel === k ? "border-accent bg-accent/10" : "border-line/60 hover:border-accent"} ${k === today ? "ring-1 ring-accent/60" : ""}`}>
+              <span className="block font-medium tabular-nums">{d}</span>
+              {ms.length > 0 && <span className={`mt-0.5 block truncate ${fav ? "text-accent" : "text-muted"}`}>{fav ? "★ " : ""}{ms.length} {ms.length > 1 ? T("events") : T("event")}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {!data && !err && <div className="card h-24 animate-pulse" />}
+      {data && !data.length && <p className="text-sm text-muted">{T("Nothing scheduled this month.")}</p>}
+      {sel && byDay.get(sel) && (
+        <section className="space-y-2">
+          <h3 className="text-[11px] uppercase tracking-[0.18em] text-muted">{new Date(byDay.get(sel)![0].date).toLocaleDateString(T.lang, { weekday: "long", day: "numeric", month: "long" })}</h3>
+          {byDay.get(sel)!.map((m, i) => <MatchCard key={m.id} m={m} mine={mine} delay={i} league={league} />)}
+        </section>
+      )}
     </div>
   );
 }
@@ -135,7 +217,7 @@ function MatchCard({ m, mine, delay, league }: { m: Match; mine: string[]; delay
         {m.venue && <span>📍 {m.venue}</span>}
         {m.odds && <span>📊 {T("Odds")}: {m.odds}</span>}
         {m.link && <a className="hover:text-accent" href={m.link} target="_blank" rel="noreferrer">ESPN ↗</a>}
-        {!many && <Link className="ml-auto text-accent hover:underline" href={matchHref(league, m.id)} data-testid="match-page">{T("Full match page →")}</Link>}
+        <Link className="ml-auto text-accent hover:underline" href={matchHref(league, m.id, { date: m.date, eventId: m.eventId })} data-testid="match-page">{many ? T("Full results →") : T("Full match page →")}</Link>
       </p>
       {!many && (
         <button className="mt-2 w-full rounded-lg py-1 text-[11px] text-muted hover:bg-panel-2 hover:text-ink" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="match-more">
